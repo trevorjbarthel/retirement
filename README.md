@@ -135,6 +135,10 @@ the official DFAS pages**. The committed data lives in `public/data/pay-tables.j
 - **State tax** figures are damped‑effective‑rate *upper‑bound* estimates from a
   single top‑marginal rate per state, not bracket‑accurate; the UI labels them as
   approximate. For real accuracy, store a per‑state bracket schedule.
+- **Password reset** is not implemented (no email infrastructure yet). A full design —
+  token model, endpoints, front‑end, and the email‑provider prerequisite — is in
+  [`docs/PASSWORD_RESET.md`](docs/PASSWORD_RESET.md). Today the only password change is
+  `change-password` while signed in.
 - **Multi‑tab / concurrent edits** are guarded by optimistic concurrency on a monotonic
   `plans.rev` counter (migration `0002`). The client sends the last‑seen `rev` as
   `base_rev`; a stale write returns `409` with the server's current plan, and the front‑end

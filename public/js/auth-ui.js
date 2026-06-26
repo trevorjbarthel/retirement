@@ -29,13 +29,22 @@ function fmtSaved(ts) {
   }
 }
 
-// ---------- header account area ----------
+// ---------- account area ----------
+// Rendered into every container that exists: the results-screen header (#accountArea)
+// and the setup-screen control (#accountAreaSetup), so a guest can sign in before they
+// have built a plan.
 function renderAccountArea(status) {
-  const area = document.getElementById("accountArea");
-  if (!area) return;
+  ["accountArea", "accountAreaSetup"].forEach((id) => {
+    const area = document.getElementById(id);
+    if (area) renderAccountInto(area, status);
+  });
+  if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
+}
+
+function renderAccountInto(area, status) {
   area.innerHTML = "";
 
-  const indicator = el("span", { class: "text-xs text-navy-400 hidden sm:inline", id: "saveIndicator" });
+  const indicator = el("span", { class: "text-xs text-navy-400 hidden sm:inline" });
   if (status.mode === "auth") {
     indicator.textContent = status.lastSavedAt ? `Saved to account · ${fmtSaved(status.lastSavedAt)}` : "Synced to your account";
     indicator.style.color = "#047857";
@@ -76,7 +85,6 @@ function renderAccountArea(status) {
     signIn.addEventListener("click", () => openModal("login"));
     area.append(indicator, signIn);
   }
-  if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
 }
 
 // ---------- modal ----------
