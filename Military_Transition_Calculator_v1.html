@@ -1,0 +1,2247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Military Transition & Retirement Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest" defer></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        navy: { 50:'#f0f2f6', 100:'#d9dde8', 200:'#b3bbcf', 300:'#8d99b7', 400:'#67779e', 500:'#415586', 600:'#2e3f66', 700:'#1a2744', 800:'#131c32', 900:'#0c1220' },
+        gold: { 50:'#fdf9ed', 100:'#faf0cc', 200:'#f5e199', 300:'#f0d266', 400:'#e0be33', 500:'#c9a227', 600:'#a6841e', 700:'#836616', 800:'#5f490e', 900:'#3b2d06' },
+        base: { 50:'#ffffff', 100:'#f8f9fa', 200:'#e9ecef', 300:'#dee2e6', 400:'#ced4da', 500:'#adb5bd' },
+        success: { 100:'#d1fae5', 500:'#10b981', 700:'#047857' },
+        warning: { 100:'#fef3c7', 500:'#f59e0b', 700:'#b45309' },
+        danger: { 100:'#fee2e2', 500:'#ef4444', 700:'#b91c1c' },
+      },
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+      },
+      borderRadius: {
+        '3xl': '1.25rem',
+        '4xl': '1.5rem',
+      },
+    },
+  },
+};
+</script>
+<style>
+:root {
+  --navy: #1a2744;
+  --navy-dark: #0c1220;
+  --gold: #c9a227;
+  --gold-light: #f5e199;
+  --bg: #f8f9fa;
+  --white: #ffffff;
+}
+* { box-sizing: border-box; }
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: #1a2744; margin: 0; }
+.fade-in { animation: fadeIn 0.5s ease forwards; opacity: 0; }
+.fade-in-up { animation: fadeInUp 0.5s ease forwards; opacity: 0; }
+@keyframes fadeIn { to { opacity: 1; } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+.stagger-7 { animation-delay: 0.35s; }
+.stagger-8 { animation-delay: 0.4s; }
+.stagger-9 { animation-delay: 0.45s; }
+.stagger-10 { animation-delay: 0.5s; }
+.stagger-11 { animation-delay: 0.55s; }
+.stagger-12 { animation-delay: 0.6s; }
+.progress-animate { transition: width 1.2s cubic-bezier(0.4,0,0.2,1); }
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; }
+.toggle-track { width: 44px; height: 24px; border-radius: 12px; background: #ced4da; position: relative; cursor: pointer; transition: background 0.2s; }
+.toggle-track.active { background: var(--gold); }
+.toggle-thumb { width: 20px; height: 20px; border-radius: 50%; background: white; position: absolute; top: 2px; left: 2px; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.toggle-track.active .toggle-thumb { transform: translateX(20px); }
+.phase-content { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; }
+.phase-content.open { max-height: 3000px; }
+.tooltip-container { position: relative; display: inline-flex; }
+.tooltip-box { display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: var(--navy); color: white; padding: 8px 12px; border-radius: 8px; font-size: 12px; line-height: 1.5; width: 260px; z-index: 50; margin-bottom: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+.tooltip-container:hover .tooltip-box { display: block; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--navy); color: white; padding: 12px 24px; border-radius: 12px; font-size: 14px; font-weight: 500; z-index: 100; transition: transform 0.3s ease, opacity 0.3s ease; opacity: 0; pointer-events: none; }
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+.input-field { background: #e9ecef; border: 2px solid transparent; border-radius: 12px; padding: 10px 14px; font-size: 15px; width: 100%; transition: all 0.2s; font-family: 'Inter', sans-serif; color: #1a2744; }
+.input-field:focus { outline: none; background: white; border-color: #c9a227; box-shadow: 0 0 0 3px rgba(201,162,39,0.15); }
+.input-field::placeholder { color: #adb5bd; }
+select.input-field { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23667' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+.radio-card { border: 2px solid #e9ecef; border-radius: 12px; padding: 12px 16px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 10px; background: white; }
+.radio-card:hover { border-color: #c9a227; }
+.radio-card.selected { border-color: #c9a227; background: #fdf9ed; }
+.radio-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #ced4da; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.radio-card.selected .radio-dot { border-color: #c9a227; }
+.radio-card.selected .radio-dot::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #c9a227; }
+.helper-text { font-size: 12px; color: #67779e; margin-top: 4px; line-height: 1.4; }
+.error-msg { font-size: 12px; color: #ef4444; margin-top: 4px; display: none; }
+.error-msg.show { display: block; }
+.input-field.error { border-color: #ef4444; }
+.section-card { background: white; border-radius: 16px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(26,39,68,0.06); }
+.milestone-card { background: white; border-radius: 14px; padding: 16px; box-shadow: 0 1px 4px rgba(26,39,68,0.06); display: flex; flex-direction: column; gap: 6px; transition: transform 0.2s; }
+.milestone-card:hover { transform: translateY(-2px); }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.status-green { background: #10b981; }
+.status-gold { background: #f59e0b; }
+.status-red { background: #ef4444; }
+.branch-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 9999px; font-size: 13px; font-weight: 600; color: white; }
+.resource-card { background: white; border-radius: 14px; padding: 20px; box-shadow: 0 1px 4px rgba(26,39,68,0.06); }
+.resource-card h4 { font-weight: 600; font-size: 15px; margin-bottom: 8px; color: #1a2744; }
+.resource-card a { color: #c9a227; text-decoration: none; font-size: 13px; font-weight: 500; display: block; margin-bottom: 4px; word-break: break-all; }
+.resource-card a:hover { text-decoration: underline; }
+.phase-header { display: flex; align-items: center; gap: 12px; padding: 16px; cursor: pointer; border-radius: 12px; transition: background 0.2s; user-select: none; }
+.phase-header:hover { background: #f0f2f6; }
+.check-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; }
+.check-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: #c9a227; flex-shrink: 0; margin-top: 2px; cursor: pointer; }
+.sb-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; vertical-align: middle; margin-left: 6px; }
+.sb-badge-auto { background: #d1fae5; color: #047857; }
+.sb-badge-manual { background: #fef3c7; color: #b45309; }
+.sb-policy-note { margin-top: 6px; font-size: 13px; line-height: 1.5; padding: 8px 12px; border-radius: 10px; }
+.sb-edit-feedback { margin-top: 6px; font-size: 13px; line-height: 1.5; padding: 8px 12px; border-radius: 10px; display: none; }
+.sb-edit-feedback.show { display: block; }
+.va-rating-btn { min-width: 52px; padding: 8px 6px; border: 2px solid #e9ecef; border-radius: 10px; background: white; cursor: pointer; text-align: center; font-size: 13px; font-weight: 600; color: #67779e; transition: all 0.2s; }
+.va-rating-btn:hover { border-color: #c9a227; color: #c9a227; }
+.va-rating-btn.active { border-color: #c9a227; background: #fdf9ed; color: #c9a227; }
+.income-table-row { transition: background 0.15s; }
+.income-table-row.highlighted { background: #fdf9ed !important; font-weight: 600; }
+.income-table-row.crdp-eligible { background: rgba(16,185,129,0.04); }
+.income-table-row.va-waiver { background: rgba(239,68,68,0.03); }
+.bar-segment { transition: width 1s cubic-bezier(0.4,0,0.2,1); }
+.insight-card { border-radius: 14px; padding: 16px 20px; }
+.pay-section-inner { max-height: 0; overflow: hidden; transition: max-height 0.5s ease; }
+.pay-section-inner.open { max-height: 12000px; }
+.tsp-withdrawal-card { border: 2px solid #e9ecef; border-radius: 12px; padding: 12px 16px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 10px; background: white; }
+.tsp-withdrawal-card:hover { border-color: #c9a227; }
+.tsp-withdrawal-card.selected { border-color: #c9a227; background: #fdf9ed; }
+.tsp-withdrawal-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #ced4da; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.tsp-withdrawal-card.selected .tsp-withdrawal-dot { border-color: #c9a227; }
+.tsp-withdrawal-card.selected .tsp-withdrawal-dot::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #c9a227; }
+.range-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 8px; border-radius: 5px; background: linear-gradient(to right, #e9ecef, #c9a227); outline: none; }
+.range-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #c9a227; cursor: pointer; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+.range-slider::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: #c9a227; cursor: pointer; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+
+@media print {
+  body { background: white !important; color: black !important; font-size: 11px; }
+  .no-print { display: none !important; }
+  .phase-content { max-height: none !important; overflow: visible !important; }
+  .pay-section-inner { max-height: none !important; overflow: visible !important; }
+  .milestone-card, .section-card, .resource-card { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
+  .section-card { page-break-inside: avoid; }
+  h2 { page-break-after: avoid; }
+  footer { page-break-before: always; }
+}
+</style>
+</head>
+<body data-id="0" class="min-h-screen flex flex-col">
+<app-icon data-id="1" hidden data-icon="shield" data-palette="Blue"></app-icon>
+<app-disclaimer data-id="2" intent="financial"></app-disclaimer>
+
+<!-- TOAST -->
+<div data-id="3" id="toast" class="toast">Link copied!</div>
+
+<!-- ===== SETUP SCREEN ===== -->
+<div data-id="4" id="setup-screen" class="flex-1 flex items-start justify-center py-8 px-4 md:px-6">
+<div data-id="5" class="w-full max-w-2xl">
+<!-- Hero -->
+<div data-id="6" class="text-center mb-8 fade-in">
+  <div data-id="7" class="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4" style="background: linear-gradient(135deg, #1a2744 0%, #2e3f66 100%);">
+    <svg data-id="8" width="40" height="40" viewBox="0 0 40 40" fill="none">
+      <polygon data-id="9" points="20,4 24,15 36,15 26,22 30,34 20,26 10,34 14,22 4,15 16,15" fill="#c9a227" opacity="0.95"/>
+      <circle data-id="10" cx="20" cy="20" r="17" stroke="#c9a227" stroke-width="1.5" fill="none" opacity="0.4"/>
+    </svg>
+  </div>
+  <h1 data-id="11" class="text-2xl md:text-3xl font-bold text-navy-700 mb-2">Military Transition Calculator</h1>
+  <p data-id="12" class="text-navy-400 text-sm md:text-base max-w-md mx-auto">Your personalized transition plan — built around your dates.</p>
+  <div data-id="13" class="tooltip-container inline-flex mt-3">
+    <span data-id="14" class="inline-flex items-center gap-1 text-xs text-navy-400 cursor-help bg-navy-50 px-3 py-1.5 rounded-full">
+      <i data-id="15" data-lucide="info" class="w-3.5 h-3.5"></i> How to use this tool
+    </span>
+    <div data-id="16" class="tooltip-box">Enter your service details and key dates below. We'll calculate every milestone, build a personalized checklist, and estimate your retirement pay — all stored privately in your browser. Nothing leaves your device.</div>
+  </div>
+</div>
+
+<!-- Form -->
+<form data-id="17" id="setup-form" class="space-y-5 fade-in stagger-2" autocomplete="off">
+
+<!-- Section 1: About You -->
+<div data-id="18" class="section-card">
+  <h2 data-id="19" class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-id="20" data-lucide="user" class="w-5 h-5 text-gold-500"></i> About You</h2>
+  <div data-id="21" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div data-id="22">
+      <label data-id="23" class="block text-sm font-medium text-navy-600 mb-1">First Name <span data-id="24" class="text-danger-500">*</span></label>
+      <input data-id="25" type="text" id="firstName" class="input-field" placeholder="e.g., Alex" required />
+      <div data-id="26" class="error-msg" id="err-firstName">Please enter your first name.</div>
+    </div>
+    <div data-id="27">
+      <label data-id="28" class="block text-sm font-medium text-navy-600 mb-1">Branch of Service <span data-id="29" class="text-danger-500">*</span></label>
+      <select data-id="30" id="branch" class="input-field" required>
+        <option data-id="31" value="">Select branch…</option>
+        <option data-id="32" value="Army">Army</option>
+        <option data-id="33" value="Navy">Navy</option>
+        <option data-id="34" value="Air Force">Air Force</option>
+        <option data-id="35" value="Marine Corps">Marine Corps</option>
+        <option data-id="36" value="Space Force">Space Force</option>
+        <option data-id="37" value="Coast Guard">Coast Guard</option>
+      </select>
+      <div data-id="38" class="error-msg" id="err-branch">Please select your branch.</div>
+    </div>
+  </div>
+  <div data-id="39" class="mt-4">
+    <label data-id="40" class="block text-sm font-medium text-navy-600 mb-2">Rank Category <span data-id="41" class="text-danger-500">*</span></label>
+    <div data-id="42" class="grid grid-cols-1 sm:grid-cols-3 gap-3" id="rankCatGroup">
+      <div data-id="43" class="radio-card" data-value="E"><div data-id="44" class="radio-dot"></div><span data-id="45" class="text-sm font-medium">Enlisted (E)</span></div>
+      <div data-id="46" class="radio-card" data-value="W"><div data-id="47" class="radio-dot"></div><span data-id="48" class="text-sm font-medium">Warrant Officer (W)</span></div>
+      <div data-id="49" class="radio-card" data-value="O"><div data-id="50" class="radio-dot"></div><span data-id="51" class="text-sm font-medium">Officer (O)</span></div>
+    </div>
+    <div data-id="52" class="error-msg" id="err-rankCat">Please select a rank category.</div>
+    <div data-id="53" id="warrant-note" class="helper-text mt-2 hidden" style="color:#ef4444;">Warrant Officer ranks are not applicable for Air Force or Space Force.</div>
+  </div>
+  <div data-id="54" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+    <div data-id="55">
+      <label data-id="56" class="block text-sm font-medium text-navy-600 mb-1">Rank <span data-id="57" class="text-danger-500">*</span></label>
+      <select data-id="58" id="rank" class="input-field" required>
+        <option data-id="59" value="">Select rank category first…</option>
+      </select>
+      <div data-id="60" class="error-msg" id="err-rank">Please select your rank.</div>
+    </div>
+    <div data-id="61">
+      <label data-id="62" class="block text-sm font-medium text-navy-600 mb-1">Years of Service <span data-id="63" class="text-danger-500">*</span></label>
+      <input data-id="64" type="number" id="yos" class="input-field" min="1" max="40" placeholder="e.g., 20" required />
+      <div data-id="65" class="error-msg" id="err-yos">Enter years between 1 and 40.</div>
+    </div>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+    <div>
+      <label class="block text-sm font-medium text-navy-600 mb-1 flex items-center gap-1.5">Date of Rank
+        <span class="tooltip-container">
+          <i data-lucide="help-circle" class="w-3.5 h-3.5 text-navy-400 cursor-help"></i>
+          <span class="tooltip-box" style="width:280px;">Your Date of Rank (DOR) is the date you were promoted to your current grade. This is used to calculate your time in grade and refine your retirement pay estimate. Find it on your ERB/ORB or official record.</span>
+        </span>
+      </label>
+      <input type="date" id="dateOfRank" class="input-field" />
+      <p class="helper-text">Used to calculate time in current grade for pay accuracy.</p>
+    </div>
+    <div id="dorResultBox" class="hidden flex items-center">
+      <div class="bg-navy-50 rounded-xl p-3 w-full text-sm">
+        <p class="text-xs text-navy-400 uppercase tracking-wide font-medium mb-1">Time in Current Grade</p>
+        <p id="dorYearsDisplay" class="font-semibold text-navy-700"></p>
+        <p id="dorPayHint" class="text-xs text-navy-400 mt-1"></p>
+      </div>
+    </div>
+  </div>
+  <div data-id="66" class="mt-4">
+    <label data-id="67" class="block text-sm font-medium text-navy-600 mb-2">Type of Transition <span data-id="68" class="text-danger-500">*</span></label>
+    <div data-id="69" class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="transTypeGroup">
+      <div data-id="70" class="radio-card" data-value="Retirement"><div data-id="71" class="radio-dot"></div><div data-id="72"><span data-id="73" class="text-sm font-medium">Retirement</span><span data-id="74" class="text-xs text-navy-400 block">20+ years of service</span></div></div>
+      <div data-id="75" class="radio-card" data-value="Separation"><div data-id="76" class="radio-dot"></div><div data-id="77"><span data-id="78" class="text-sm font-medium">Separation</span><span data-id="79" class="text-xs text-navy-400 block">Under 20 years</span></div></div>
+    </div>
+    <div data-id="80" class="error-msg" id="err-transType">Please select transition type.</div>
+  </div>
+</div>
+
+<!-- Section 2: Key Dates -->
+<div data-id="81" class="section-card">
+  <h2 data-id="82" class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-id="83" data-lucide="calendar" class="w-5 h-5 text-gold-500"></i> Key Dates</h2>
+  <div data-id="84" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div data-id="85">
+      <label data-id="86" class="block text-sm font-medium text-navy-600 mb-1">Estimated Retirement / Separation Date <span data-id="87" class="text-danger-500">*</span></label>
+      <input data-id="88" type="date" id="sepDate" class="input-field" required />
+      <div data-id="89" class="error-msg" id="err-sepDate">Date must be in the future.</div>
+    </div>
+    <div data-id="90">
+      <label data-id="91" class="block text-sm font-medium text-navy-600 mb-1">Today's Date</label>
+      <input data-id="92" type="date" id="todayDate" class="input-field" />
+      <p data-id="93" class="helper-text">Auto-set. Edit only if needed.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Section 3: Leave & Time Off -->
+<div data-id="94" class="section-card">
+  <h2 data-id="95" class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-id="96" data-lucide="plane" class="w-5 h-5 text-gold-500"></i> Leave & Time Off</h2>
+  <div data-id="97" class="mb-4">
+    <label data-id="98" class="block text-sm font-medium text-navy-600 mb-1">Days of Accrued Leave Planned to Use</label>
+    <input data-id="99" type="number" id="leaveDays" class="input-field" min="0" max="120" value="60" />
+    <p data-id="100" class="helper-text">This becomes your terminal leave period before your separation date.</p>
+  </div>
+  <div data-id="101" class="mb-4">
+    <div data-id="102" class="flex items-center justify-between mb-1">
+      <label data-id="103" class="text-sm font-medium text-navy-600">Taking Permissive TDY?</label>
+      <div data-id="104" class="toggle-track active" id="ptdyToggle"><div data-id="105" class="toggle-thumb"></div></div>
+    </div>
+    <p data-id="106" class="helper-text">Per DAFI 36-3003 / service equivalent, members may be authorized up to 20 days for house and job hunting.</p>
+    <div data-id="107" id="ptdyFields" class="mt-3">
+      <label data-id="108" class="block text-sm font-medium text-navy-600 mb-1">Days of Permissive TDY</label>
+      <input data-id="109" type="number" id="ptdyDays" class="input-field" min="1" max="20" value="20" />
+      <p data-id="110" class="helper-text">Max 20 days per regulation.</p>
+    </div>
+  </div>
+  <div data-id="111">
+    <div data-id="112" class="flex items-center justify-between mb-1">
+      <label data-id="113" class="text-sm font-medium text-navy-600">Taking SkillBridge?</label>
+      <div data-id="114" class="toggle-track active" id="sbToggle"><div data-id="115" class="toggle-thumb"></div></div>
+    </div>
+    <p data-id="116" class="helper-text">DoD SkillBridge allows up to 180 days of civilian work experience before separation while receiving full military pay.</p>
+    <div data-id="117" id="sbFields" class="mt-3">
+      <label data-id="118" class="block text-sm font-medium text-navy-600 mb-1 flex items-center gap-1.5">Days of SkillBridge <i data-id="119" data-lucide="pencil" class="w-3.5 h-3.5 text-navy-400"></i> <span data-id="120" id="sbBadge" class="sb-badge sb-badge-auto" style="display:none;"></span></label>
+      <input data-id="121" type="number" id="sbDays" class="input-field" min="1" max="180" value="90" />
+      <div data-id="122" id="sbPolicyNote" class="sb-policy-note mt-1 text-sm text-navy-400">ℹ️ Select your branch and rank above to auto-populate your authorized SkillBridge days.</div>
+      <div data-id="123" id="sbEditFeedback" class="sb-edit-feedback"></div>
+      <div data-id="124" id="sbOverMaxError" class="error-msg"></div>
+      <p data-id="125" class="helper-text">Max 180 days per DoD policy.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Section 4: Post-Transition Plans -->
+<div data-id="126" class="section-card">
+  <h2 data-id="127" class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-id="128" data-lucide="compass" class="w-5 h-5 text-gold-500"></i> Post-Transition Plans</h2>
+  <div data-id="129" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div data-id="130">
+      <label data-id="131" class="block text-sm font-medium text-navy-600 mb-1">Desired Post-Transition Location</label>
+      <input data-id="132" type="text" id="postLocation" class="input-field" placeholder="e.g., San Antonio, TX" />
+    </div>
+    <div data-id="133">
+      <label data-id="134" class="block text-sm font-medium text-navy-600 mb-1">Career Interest</label>
+      <select data-id="135" id="careerInterest" class="input-field">
+        <option data-id="136" value="">Select…</option>
+        <option data-id="137">Defense/Government Contracting</option>
+        <option data-id="138">Technology/Cybersecurity</option>
+        <option data-id="139">Healthcare</option>
+        <option data-id="140">Education</option>
+        <option data-id="141">Law Enforcement/Public Safety</option>
+        <option data-id="142">Finance/Business</option>
+        <option data-id="143">Logistics/Supply Chain</option>
+        <option data-id="144">Aviation</option>
+        <option data-id="145">Engineering</option>
+        <option data-id="146">Entrepreneurship</option>
+        <option data-id="147">Undecided</option>
+      </select>
+    </div>
+  </div>
+  <div data-id="148" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div data-id="149" class="flex items-center justify-between">
+      <label data-id="150" class="text-sm font-medium text-navy-600">Planning to use GI Bill?</label>
+      <div data-id="151" class="toggle-track" id="giBillToggle"><div data-id="152" class="toggle-thumb"></div></div>
+    </div>
+    <div data-id="153" class="flex items-center justify-between">
+      <label data-id="154" class="text-sm font-medium text-navy-600">Planning to file VA disability?</label>
+      <div data-id="155" class="toggle-track" id="vaClaimToggle"><div data-id="156" class="toggle-thumb"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Submit -->
+<button data-id="157" type="submit" id="submitBtn" class="w-full py-3.5 rounded-xl font-semibold text-white text-base transition-all hover:shadow-lg active:scale-[0.98]" style="background: linear-gradient(135deg, #c9a227 0%, #a6841e 100%);">
+  Build My Transition Plan →
+</button>
+<p data-id="158" class="text-center text-xs text-navy-400 mt-3 mb-6"><i data-id="159" data-lucide="lock" class="w-3 h-3 inline-block mr-1 align-[-2px]"></i> All data stays in your browser. Nothing is sent to any server.</p>
+</form>
+</div>
+</div>
+
+<!-- ===== RESULTS SCREEN ===== -->
+<div data-id="160" id="results-screen" class="hidden flex-1">
+
+<!-- Header Bar -->
+<div data-id="161" class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-navy-100" style="border-color: rgba(26,39,68,0.08);">
+  <div data-id="162" class="max-w-6xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between flex-wrap gap-2">
+    <div data-id="163" class="flex items-center gap-3 flex-wrap">
+      <button data-id="164" id="editBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-700 transition-colors px-2 py-1 rounded-lg hover:bg-navy-50">
+        <i data-id="165" data-lucide="arrow-left" class="w-4 h-4"></i> Edit My Info
+      </button>
+      <h1 data-id="166" id="resultTitle" class="text-lg md:text-xl font-bold text-navy-700"></h1>
+      <span data-id="167" id="branchBadge" class="branch-badge text-xs"></span>
+      <span data-id="168" id="rankBadge" class="text-xs font-medium text-navy-400 hidden md:inline"></span>
+    </div>
+    <div data-id="169" class="flex items-center gap-2 flex-wrap">
+      <button data-id="170" id="jumpToPayBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-gold-600 hover:text-gold-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-gold-50">
+        <i data-id="171" data-lucide="bar-chart-3" class="w-4 h-4"></i> Pay Estimator
+      </button>
+      <button data-id="172" id="printBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-navy-50">
+        <i data-id="173" data-lucide="printer" class="w-4 h-4"></i> Print Plan
+      </button>
+    </div>
+  </div>
+</div>
+
+<div data-id="174" class="max-w-6xl mx-auto px-4 md:px-6 py-6 space-y-6">
+
+<!-- A. COUNTDOWN HERO -->
+<div data-id="175" id="countdownHero" class="section-card text-center fade-in-up" style="background: linear-gradient(135deg, #1a2744 0%, #2e3f66 100%); color: white;">
+  <div data-id="176" class="py-4 md:py-6">
+    <p data-id="177" id="countdownNumber" class="text-5xl md:text-7xl font-bold tabular-nums" style="color: #c9a227;"></p>
+    <p data-id="178" class="text-lg md:text-xl font-medium mt-2 text-white/90" id="countdownLabel"></p>
+    <p data-id="179" class="text-sm text-white/60 mt-1" id="countdownSub"></p>
+    <div data-id="180" class="mt-5 max-w-md mx-auto">
+      <div data-id="181" class="flex items-center justify-between text-xs text-white/50 mb-1">
+        <span data-id="182">2-Year Window</span>
+        <span data-id="183" id="progressPct" class="tabular-nums"></span>
+      </div>
+      <div data-id="184" class="w-full h-2.5 rounded-full bg-white/10 overflow-hidden">
+        <div data-id="185" id="progressBar" class="h-full rounded-full progress-animate" style="width:0%; background: linear-gradient(90deg, #c9a227, #f5e199);"></div>
+      </div>
+    </div>
+    <div data-id="186" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6" id="subCounters"></div>
+  </div>
+</div>
+
+<!-- B. MILESTONE DATES -->
+<div data-id="187" class="fade-in-up stagger-2">
+  <h2 data-id="188" class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-id="189" data-lucide="flag" class="w-5 h-5 text-gold-500"></i> Key Milestone Dates</h2>
+  <div data-id="190" id="milestoneGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+</div>
+
+<!-- C. PRE-TRANSITION SUMMARY -->
+<div data-id="191" class="section-card fade-in-up stagger-3">
+  <h2 data-id="192" class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-id="193" data-lucide="bar-chart-3" class="w-5 h-5 text-gold-500"></i> Total Pre-Transition Period</h2>
+  <p data-id="194" id="preSummaryText" class="text-sm text-navy-500 mb-2"></p>
+  <div data-id="195" id="sbAuthLine" class="hidden mb-3"></div>
+  <div data-id="196" class="w-full h-8 rounded-lg overflow-hidden flex" id="preBar"></div>
+  <div data-id="197" id="preBarLegend" class="flex flex-wrap gap-4 mt-3 text-xs font-medium"></div>
+</div>
+
+<!-- ===== PAY & INCOME ESTIMATOR ===== -->
+<div data-id="198" id="payEstimatorSection" class="fade-in-up stagger-4">
+  <div data-id="199" class="section-card" style="padding:0; overflow:hidden;">
+    <div data-id="200" id="payEstimatorHeader" class="flex items-center gap-3 px-6 py-5 cursor-pointer select-none hover:bg-navy-50 transition-colors rounded-t-2xl">
+      <div data-id="201" class="flex-1">
+        <h2 data-id="202" class="text-lg font-semibold text-navy-700 flex items-center gap-2">
+          <i data-id="203" data-lucide="wallet" class="w-5 h-5 text-gold-500"></i> Pay &amp; Income Estimator
+        </h2>
+        <p data-id="204" class="text-xs text-navy-400 mt-0.5">Retirement pay + VA disability + TSP — your full projected income</p>
+      </div>
+      <i data-id="205" data-lucide="chevron-down" class="w-5 h-5 text-navy-400 flex-shrink-0 transition-transform" id="payChevron"></i>
+    </div>
+
+    <div data-id="206" id="payEstimatorContent" class="pay-section-inner">
+      <div data-id="207" class="px-6 pb-6 space-y-6">
+
+        <!-- Separation notice -->
+        <div data-id="208" id="paySepNotice" class="hidden rounded-xl p-4 text-sm" style="background:#dbeafe; color:#1e40af; border:1px solid #93c5fd;">
+          <div data-id="209" class="flex items-start gap-2">
+            <i data-id="210" data-lucide="info" class="w-4 h-4 mt-0.5 flex-shrink-0" style="color:#3b82f6;"></i>
+            <p data-id="211">Retirement pay estimates apply to members retiring with 20+ years of service. For separations under 20 years, retirement pay does not apply — VA disability compensation may still apply. The VA compensation section below is still relevant to you.</p>
+          </div>
+        </div>
+
+        <!-- PART 1: Retirement Base Pay Calculator -->
+        <div data-id="212" id="payRetirementBlock">
+          <h3 data-id="213" class="text-base font-semibold text-navy-700 mb-4 flex items-center gap-2">
+            <i data-id="214" data-lucide="badge-dollar-sign" class="w-4 h-4 text-gold-500"></i> Retirement Pay Calculator
+          </h3>
+          <div data-id="215" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div data-id="216">
+              <label data-id="217" class="block text-sm font-medium text-navy-600 mb-1">Monthly Base Pay (2026 DFAS)</label>
+              <input data-id="218" type="number" id="payBasePay" class="input-field" placeholder="Auto-populated from rank & YOS" step="0.01" />
+              <p data-id="219" class="helper-text mt-1" id="payBasePayHint">Select rank and YOS to auto-populate.</p>
+            </div>
+            <div data-id="220">
+              <label data-id="221" class="block text-sm font-medium text-navy-600 mb-1">Years of Service at Retirement</label>
+              <input data-id="222" type="number" id="payYOS" class="input-field" min="1" max="40" />
+            </div>
+          </div>
+          <div data-id="223" class="mb-4">
+            <label data-id="224" class="block text-sm font-medium text-navy-600 mb-2 flex items-center gap-2">
+              Retirement System
+              <span data-id="225" class="tooltip-container">
+                <i data-id="226" data-lucide="help-circle" class="w-3.5 h-3.5 text-navy-400 cursor-help"></i>
+                <span data-id="227" class="tooltip-box" style="width:300px;">Not sure which system you're under? If you joined before Jan 1, 2018, you're likely under High-3. If you joined after Jan 1, 2018, you're under BRS. If you joined between 2006–2017, you may have opted into BRS.</span>
+              </span>
+            </label>
+            <div data-id="228" class="flex gap-3" id="payRetSystemGroup">
+              <div data-id="229" class="radio-card selected" data-value="high3" style="flex:1;"><div data-id="230" class="radio-dot"></div><div data-id="231"><span data-id="232" class="text-sm font-medium">High-3 / Legacy</span><span data-id="233" class="text-xs text-navy-400 block">YOS × 2.5%</span></div></div>
+              <div data-id="234" class="radio-card" data-value="brs" style="flex:1;"><div data-id="235" class="radio-dot"></div><div data-id="236"><span data-id="237" class="text-sm font-medium">BRS</span><span data-id="238" class="text-xs text-navy-400 block">YOS × 2.0%</span></div></div>
+            </div>
+          </div>
+          <div data-id="239" id="payRetResult" class="bg-navy-50 rounded-xl p-5 hidden">
+            <div data-id="240" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div data-id="241" class="text-center">
+                <p data-id="242" class="text-xs font-medium uppercase tracking-wide text-navy-400 mb-1">Monthly Retirement Pay</p>
+                <p data-id="243" id="payRetMonthly" class="text-3xl font-bold tabular-nums" style="color:#c9a227;"></p>
+              </div>
+              <div data-id="244" class="text-center">
+                <p data-id="245" class="text-xs font-medium uppercase tracking-wide text-navy-400 mb-1">Annual Retirement Pay</p>
+                <p data-id="246" id="payRetAnnual" class="text-2xl font-bold text-navy-700 tabular-nums"></p>
+              </div>
+            </div>
+            <p data-id="247" id="payRetFormula" class="text-xs text-navy-400 text-center"></p>
+            <p data-id="248" id="payBrsNote" class="text-xs text-gold-600 text-center mt-1 hidden">With BRS, you also receive up to 5% TSP matching from DoD during service.</p>
+          </div>
+          <p data-id="249" class="text-xs text-navy-400 mt-2 italic">Based on 2026 DFAS Basic Pay Tables, effective January 1, 2026. Source: dfas.mil. Your High-3 average may differ. Contact DFAS for your official figure.</p>
+        </div>
+
+        <div data-id="250" class="border-t" style="border-color:rgba(26,39,68,0.08);"></div>
+
+        <!-- PART 2: VA Disability Compensation -->
+        <div data-id="251">
+          <h3 data-id="252" class="text-base font-semibold text-navy-700 mb-4 flex items-center gap-2">
+            <i data-id="253" data-lucide="shield-check" class="w-4 h-4 text-gold-500"></i> VA Disability Compensation
+          </h3>
+          <label data-id="254" class="block text-sm font-medium text-navy-600 mb-3">Select Your VA Disability Rating</label>
+          <div data-id="255" id="vaRatingBtns" class="flex flex-wrap gap-2 mb-4"></div>
+          <div data-id="256" id="vaCompResult" class="bg-navy-50 rounded-xl p-5 mb-3 hidden">
+            <div data-id="257" class="text-center">
+              <p data-id="258" class="text-xs font-medium uppercase tracking-wide text-navy-400 mb-1">Monthly VA Compensation (<span data-id="259" id="vaRatingLabel">0%</span>)</p>
+              <p data-id="260" id="vaCompAmount" class="text-3xl font-bold tabular-nums" style="color:#c9a227;"></p>
+              <p data-id="261" class="text-xs text-navy-400 mt-1">Tax-free income</p>
+            </div>
+          </div>
+          <p data-id="262" class="text-xs text-navy-400 italic">Rates shown are for a Veteran with no dependents, effective Dec 1, 2024 (most current VA COLA adjustment). Rates increase with dependents (spouse, children, parents).</p>
+          <div data-id="263" class="mt-3 flex items-center justify-between">
+            <label data-id="264" class="text-sm font-medium text-navy-600">I have dependents</label>
+            <div data-id="265" class="toggle-track" id="depToggle"><div data-id="266" class="toggle-thumb"></div></div>
+          </div>
+          <div data-id="267" id="depNote" class="hidden mt-2 rounded-lg p-3 text-xs" style="background:#fef3c7; color:#b45309; border:1px solid #fcd34d;">
+            With dependents, your VA compensation increases. For 30%+ ratings with a spouse, add approximately $50–$150/month depending on rating and number of dependents. Visit va.gov/disability/compensation-rates for exact amounts with your dependent status.
+          </div>
+        </div>
+
+        <div data-id="268" class="border-t" style="border-color:rgba(26,39,68,0.08);"></div>
+
+        <!-- PART 3: Combined Income Summary -->
+        <div data-id="269">
+          <h3 data-id="270" class="text-base font-semibold text-navy-700 mb-4 flex items-center gap-2">
+            <i data-id="271" data-lucide="trending-up" class="w-4 h-4 text-gold-500"></i> Combined Income Summary
+          </h3>
+          <div data-id="272" id="crdpNotice" class="rounded-xl p-4 text-sm mb-4" style="background:#fef3c7; color:#92400e; border:1px solid #fcd34d;">
+            <div data-id="273" class="flex items-start gap-2">
+              <i data-id="274" data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 flex-shrink-0" style="color:#f59e0b;"></i>
+              <div data-id="275">
+                <p data-id="276" class="font-semibold mb-1">Concurrent Receipt Rules</p>
+                <p data-id="277">If your VA disability rating is below 50%, your retirement pay may be reduced by the amount of VA compensation (VA waiver). However, if you qualify for CRDP (Concurrent Retirement and Disability Pay) at 50% or higher VA rating, you can receive <strong data-id="278">both</strong> full retirement pay AND full VA compensation with no offset. Members with combat-related disabilities may qualify for CRSC regardless of rating percentage. Consult your finance office for your specific situation.</p>
+              </div>
+            </div>
+          </div>
+          <div data-id="279" class="overflow-x-auto rounded-xl border" style="border-color:rgba(26,39,68,0.1);">
+            <table data-id="280" class="w-full text-sm" id="incomeTable">
+              <thead data-id="281">
+                <tr data-id="282" class="bg-navy-50">
+                  <th data-id="283" class="text-left px-3 py-2.5 text-xs font-semibold text-navy-500 uppercase tracking-wide">Rating</th>
+                  <th data-id="284" class="text-right px-3 py-2.5 text-xs font-semibold text-navy-500 uppercase tracking-wide whitespace-nowrap">Ret. Pay</th>
+                  <th data-id="285" class="text-right px-3 py-2.5 text-xs font-semibold text-navy-500 uppercase tracking-wide whitespace-nowrap">VA Comp</th>
+                  <th data-id="286" class="text-right px-3 py-2.5 text-xs font-semibold text-navy-500 uppercase tracking-wide whitespace-nowrap">Total/Mo</th>
+                  <th data-id="287" class="text-right px-3 py-2.5 text-xs font-semibold text-navy-500 uppercase tracking-wide whitespace-nowrap">Annual</th>
+                  <th data-id="288" class="px-3 py-2.5 text-xs font-semibold text-navy-500 uppercase tracking-wide text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody data-id="289" id="incomeTableBody"></tbody>
+            </table>
+          </div>
+          <p data-id="290" class="text-xs text-navy-400 mt-2 italic">Total Monthly shown assumes CRDP eligibility (50%+ rating) or no offset. For ratings below 50%, actual retirement pay received may be reduced. This tool shows gross entitlements for planning purposes.</p>
+          <div data-id="291" class="mt-6">
+            <h4 data-id="292" class="text-sm font-semibold text-navy-600 mb-3">Income by VA Rating — Visual Comparison</h4>
+            <div data-id="293" id="incomeBarChart" class="space-y-1.5"></div>
+            <div data-id="294" class="flex items-center gap-4 mt-3 text-xs font-medium text-navy-500">
+              <span data-id="295" class="flex items-center gap-1.5"><span data-id="296" class="w-3 h-3 rounded-sm inline-block" style="background:#1a2744;"></span> Retirement Pay</span>
+              <span data-id="297" class="flex items-center gap-1.5"><span data-id="298" class="w-3 h-3 rounded-sm inline-block" style="background:#c9a227;"></span> VA Compensation</span>
+            </div>
+          </div>
+        </div>
+
+        <div data-id="299" class="border-t" style="border-color:rgba(26,39,68,0.08);"></div>
+
+        <!-- ===== PART 5: TSP INCOME ESTIMATOR ===== -->
+        <div data-id="300" id="tspEstimatorBlock">
+          <h3 data-id="301" class="text-base font-semibold text-navy-700 mb-4 flex items-center gap-2">
+            <i data-id="302" data-lucide="trending-up" class="w-4 h-4 text-gold-500"></i> TSP Savings &amp; Withdrawal Estimate
+          </h3>
+
+          <!-- TSP Inputs -->
+          <div data-id="303" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div data-id="304">
+              <label data-id="305" class="block text-sm font-medium text-navy-600 mb-1">Current TSP Balance ($)</label>
+              <input data-id="306" type="number" id="tspBalance" class="input-field" placeholder="e.g., 85000" min="0" step="100" />
+              <p data-id="307" class="helper-text">Enter your current Thrift Savings Plan balance.</p>
+            </div>
+            <div data-id="308">
+              <label data-id="309" class="block text-sm font-medium text-navy-600 mb-1">Estimated Years Until Retirement</label>
+              <input data-id="310" type="number" id="tspYearsToRet" class="input-field" min="0" max="40" step="0.1" />
+              <p data-id="311" class="helper-text">Auto-calculated from your separation date. Editable.</p>
+            </div>
+          </div>
+
+          <div data-id="312" class="mb-4">
+            <label data-id="313" class="block text-sm font-medium text-navy-600 mb-2">Expected Annual Growth Rate: <span data-id="314" id="tspRateDisplay" class="font-bold text-gold-600">6%</span></label>
+            <input data-id="315" type="range" id="tspRate" class="range-slider w-full" min="1" max="10" step="0.5" value="6" />
+            <div data-id="316" class="flex justify-between text-xs text-navy-400 mt-1 px-0.5">
+              <span data-id="317">1%</span><span data-id="318">3%</span><span data-id="319">5%</span><span data-id="320">6%</span><span data-id="321">7%</span><span data-id="322">8%</span><span data-id="323">10%</span>
+            </div>
+            <p data-id="324" class="helper-text mt-1">TSP L2040/L2050 funds have historically averaged ~6–7% annually. This is an estimate, not a guarantee.</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="block text-sm font-medium text-navy-600 mb-1">TSP Contribution Mode</label>
+              <div class="flex gap-2 mb-2" id="tspContribModeGroup">
+                <div class="radio-card selected flex-1" data-value="fixed" style="padding:8px 12px;">
+                  <div class="radio-dot"></div>
+                  <span class="text-sm font-medium">$ Fixed</span>
+                </div>
+                <div class="radio-card flex-1" data-value="pct" style="padding:8px 12px;">
+                  <div class="radio-dot"></div>
+                  <span class="text-sm font-medium">% of Base Pay</span>
+                </div>
+              </div>
+              <div id="tspContribFixedField">
+                <input type="number" id="tspContribution" class="input-field" value="200" min="0" step="10" />
+                <p class="helper-text">Monthly dollar amount contributed to TSP.</p>
+              </div>
+              <div id="tspContribPctField" class="hidden">
+                <div class="flex items-center gap-2">
+                  <input type="number" id="tspContribPct" class="input-field" value="5" min="0" max="100" step="0.5" style="max-width:110px;" />
+                  <span class="text-sm text-navy-500 font-medium">% of base pay</span>
+                </div>
+                <p class="helper-text">BRS: DoD matches up to 5%. = <span id="tspContribPctCalc" class="font-semibold text-navy-700">—</span>/mo.</p>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-navy-600 mb-1">Retirement Age</label>
+              <input type="number" id="tspRetAge" class="input-field" value="45" min="38" max="70" />
+              <p class="helper-text">Typical for 20-year military retiree joining at ~25.</p>
+            </div>
+          </div>
+
+          <!-- Projected Balance Result -->
+          <div data-id="334" id="tspProjectedResult" class="bg-navy-50 rounded-xl p-5 mb-4 hidden">
+            <div data-id="335" class="text-center mb-3">
+              <p data-id="336" class="text-xs font-medium uppercase tracking-wide text-navy-400 mb-1">Projected TSP Balance at Retirement</p>
+              <p data-id="337" id="tspProjectedBalance" class="text-3xl font-bold tabular-nums" style="color:#c9a227;"></p>
+            </div>
+            <div data-id="338" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-center">
+              <div data-id="339" class="bg-white rounded-lg p-3">
+                <p data-id="340" class="text-xs text-navy-400">Current balance grows to</p>
+                <p data-id="341" id="tspGrowthCurrent" class="text-lg font-semibold text-navy-700 tabular-nums"></p>
+              </div>
+              <div data-id="342" class="bg-white rounded-lg p-3">
+                <p data-id="343" class="text-xs text-navy-400">Contributions add</p>
+                <p data-id="344" id="tspGrowthContrib" class="text-lg font-semibold text-navy-700 tabular-nums"></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Withdrawal Method -->
+          <div data-id="345" class="mb-4">
+            <label data-id="346" class="block text-sm font-medium text-navy-600 mb-2">Withdrawal Method</label>
+            <div data-id="347" class="space-y-2" id="tspWithdrawalGroup">
+              <div data-id="348" class="tsp-withdrawal-card selected" data-value="fixed">
+                <div data-id="349" class="tsp-withdrawal-dot"></div>
+                <div data-id="350">
+                  <span data-id="351" class="text-sm font-medium flex items-center gap-1.5"><i data-id="352" data-lucide="calendar" class="w-3.5 h-3.5 text-navy-400"></i> Monthly Installments (Fixed Amount)</span>
+                  <span data-id="353" class="text-xs text-navy-400 block">You choose a fixed monthly withdrawal</span>
+                </div>
+              </div>
+              <div data-id="354" class="tsp-withdrawal-card" data-value="life">
+                <div data-id="355" class="tsp-withdrawal-dot"></div>
+                <div data-id="356">
+                  <span data-id="357" class="text-sm font-medium flex items-center gap-1.5"><i data-id="358" data-lucide="clock" class="w-3.5 h-3.5 text-navy-400"></i> Monthly Installments (Life Expectancy / IRS Tables)</span>
+                  <span data-id="359" class="text-xs text-navy-400 block">Payment recalculates annually based on IRS tables</span>
+                </div>
+              </div>
+              <div data-id="360" class="tsp-withdrawal-card" data-value="annuity">
+                <div data-id="361" class="tsp-withdrawal-dot"></div>
+                <div data-id="362">
+                  <span data-id="363" class="text-sm font-medium flex items-center gap-1.5"><i data-id="364" data-lucide="landmark" class="w-3.5 h-3.5 text-navy-400"></i> TSP Annuity (Lifetime Payments)</span>
+                  <span data-id="365" class="text-xs text-navy-400 block">Guaranteed income for life; balance is no longer yours</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fixed withdrawal sub-input -->
+          <div data-id="366" id="tspFixedFields" class="mb-4">
+            <label data-id="367" class="block text-sm font-medium text-navy-600 mb-1">Desired Monthly Withdrawal ($)</label>
+            <input data-id="368" type="number" id="tspFixedAmount" class="input-field" value="500" min="1" step="50" />
+          </div>
+
+          <!-- Withdrawal Result -->
+          <div data-id="369" id="tspWithdrawalResult" class="bg-navy-50 rounded-xl p-5 mb-4 hidden">
+            <div data-id="370" id="tspWithdrawalContent"></div>
+          </div>
+
+          <!-- BRS Callout -->
+          <div data-id="371" id="tspBrsCallout" class="rounded-xl p-4 text-sm mb-4 hidden" style="background:#fdf9ed; color:#92400e; border:1px solid #f0d266;">
+            <div data-id="372" class="flex items-start gap-2">
+              <i data-id="373" data-lucide="lightbulb" class="w-4 h-4 mt-0.5 flex-shrink-0" style="color:#c9a227;"></i>
+              <p data-id="374" id="tspBrsCalloutText"></p>
+            </div>
+          </div>
+
+          <!-- Full Monthly Income Picture -->
+          <div data-id="375" id="tspFullIncomeSummary" class="rounded-xl p-5 hidden" style="background: linear-gradient(135deg, #1a2744 0%, #2e3f66 100%); color: white;">
+            <h4 data-id="376" class="text-sm font-semibold text-white/90 mb-4 flex items-center gap-2">
+              <i data-id="377" data-lucide="bar-chart-3" class="w-4 h-4" style="color:#c9a227;"></i> Your Full Monthly Income Picture
+            </h4>
+            <div data-id="378" id="tspFullIncomeRows" class="space-y-3"></div>
+            <div data-id="379" class="mt-4 pt-3 border-t border-white/15">
+              <div data-id="380" class="flex items-center justify-between">
+                <span data-id="381" class="text-sm font-bold text-white/90 flex items-center gap-2"><i data-id="382" data-lucide="wallet" class="w-4 h-4" style="color:#c9a227;"></i> Total Estimated Monthly</span>
+                <span data-id="383" id="tspFullTotal" class="text-2xl font-bold tabular-nums" style="color:#c9a227;"></span>
+              </div>
+              <p data-id="384" id="tspFullAnnual" class="text-xs text-white/50 text-right mt-1 tabular-nums"></p>
+            </div>
+          </div>
+
+          <p data-id="385" class="text-xs text-navy-400 mt-3 italic leading-relaxed">All figures are estimates for planning purposes only. TSP projections assume consistent growth and do not account for market volatility, taxes, or inflation. Consult a CERTIFIED FINANCIAL PLANNER® or your installation's Personal Financial Counselor before making financial decisions.</p>
+
+          <!-- TSP Resources -->
+          <div data-id="386" class="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-xs">
+            <a data-id="387" href="https://www.tsp.gov/calculators/" target="_blank" rel="noopener" class="text-gold-500 hover:underline">TSP Official Calculator</a>
+            <a data-id="388" href="https://www.tsp.gov/calculators/tsp-annuity-calculator/" target="_blank" rel="noopener" class="text-gold-500 hover:underline">TSP Annuity Calculator</a>
+            <a data-id="389" href="https://www.tsp.gov/tsp-basics/when-you-separate/" target="_blank" rel="noopener" class="text-gold-500 hover:underline">TSP Withdrawal Options</a>
+          </div>
+        </div>
+        <!-- ===== END TSP ESTIMATOR ===== -->
+
+        <div data-id="390" class="border-t" style="border-color:rgba(26,39,68,0.08);"></div>
+
+        <!-- PART 4: Key Financial Takeaways -->
+        <div data-id="391">
+          <h3 data-id="392" class="text-base font-semibold text-navy-700 mb-4 flex items-center gap-2">
+            <i data-id="393" data-lucide="lightbulb" class="w-4 h-4 text-gold-500"></i> Key Financial Takeaways
+          </h3>
+          <div data-id="394" id="insightCards" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+          <!-- State Tax Panel -->
+          <div id="stateTaxPanel" class="grid grid-cols-1 gap-4 mt-4"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- D. RETIREMENT PAY (original — now hidden) -->
+<div data-id="395" id="retPaySection" class="section-card fade-in-up stagger-4 hidden" style="display:none !important;">
+  <h2 data-id="396" class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-id="397" data-lucide="dollar-sign" class="w-5 h-5 text-gold-500"></i> Estimated Retirement Pay</h2>
+  <div data-id="398" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div data-id="399">
+      <label data-id="400" class="block text-sm font-medium text-navy-600 mb-1">Monthly Base Pay ($)</label>
+      <input data-id="401" type="number" id="basePay" class="input-field" placeholder="Enter or use estimate" />
+      <p data-id="402" class="helper-text mt-1" id="basePayHint"></p>
+    </div>
+    <div data-id="403">
+      <label data-id="404" class="block text-sm font-medium text-navy-600 mb-2">Retirement System</label>
+      <div data-id="405" class="flex gap-3" id="retSystemGroup">
+        <div data-id="406" class="radio-card selected" data-value="high3" style="flex:1;"><div data-id="407" class="radio-dot"></div><span data-id="408" class="text-sm font-medium">High-3 / Legacy</span></div>
+        <div data-id="409" class="radio-card" data-value="brs" style="flex:1;"><div data-id="410" class="radio-dot"></div><span data-id="411" class="text-sm font-medium">BRS</span></div>
+      </div>
+    </div>
+  </div>
+  <div data-id="412" id="retPayResult" class="bg-navy-50 rounded-xl p-5 text-center hidden">
+    <p data-id="413" class="text-xs font-medium uppercase tracking-wide text-navy-400 mb-1">Estimated Monthly Gross Retirement Pay</p>
+    <p data-id="414" id="retPayAmount" class="text-3xl font-bold text-navy-700 tabular-nums"></p>
+    <p data-id="415" id="retPayFormula" class="text-xs text-navy-400 mt-2"></p>
+    <p data-id="416" id="brsNote" class="text-xs text-gold-600 mt-2 hidden">With BRS, you also receive up to 5% TSP matching from DoD during service.</p>
+  </div>
+  <p data-id="417" class="text-xs text-navy-400 mt-3 italic">This is a gross estimate. Contact DFAS for your official calculation.</p>
+</div>
+
+<!-- E. PHASE CHECKLIST -->
+<div data-id="418" class="fade-in-up stagger-5">
+  <h2 data-id="419" class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-id="420" data-lucide="list-checks" class="w-5 h-5 text-gold-500"></i> Personalized Phase Checklist</h2>
+  <div data-id="421" id="phaseList" class="space-y-3"></div>
+</div>
+
+<!-- F. RESOURCES -->
+<div data-id="422" class="fade-in-up stagger-6">
+  <h2 data-id="423" class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-id="424" data-lucide="external-link" class="w-5 h-5 text-gold-500"></i> Key Resources</h2>
+  <div data-id="425" id="resourceGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+</div>
+
+</div>
+
+<!-- G. FOOTER -->
+<footer data-id="426" class="text-center py-8 mt-4 border-t" style="border-color: rgba(26,39,68,0.08);">
+  <p data-id="427" class="text-sm text-navy-500">Built for the military community — by someone who served 🇺🇸</p>
+  <p data-id="428" class="text-xs text-navy-400 mt-1">Share this tool with your fellow service members</p>
+  <button data-id="429" id="copyLinkBtn" class="no-print mt-3 inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl transition-all hover:shadow" style="background: #1a2744; color: #c9a227;">
+    <i data-id="430" data-lucide="link" class="w-4 h-4"></i> Copy Shareable Link
+  </button>
+  <p data-id="431" class="text-xs text-navy-400 mt-4">Made by Copilot</p>
+</footer>
+</div>
+
+<script>
+// ===== DATA =====
+const STORAGE_KEY = 'military-transition-calc-v5';
+
+const BRANCH_META = {
+  'Army':        { color:'#2d6a4f', emoji:'⭐', terms:{ spec:'MOS', member:'Soldier', nco:'NCO' }},
+  'Navy':        { color:'#1a2744', emoji:'⚓', terms:{ spec:'Rate/NEC', member:'Sailor', nco:'Petty Officer' }},
+  'Air Force':   { color:'#3468b0', emoji:'✈️', terms:{ spec:'AFSC', member:'Airman', nco:'NCO' }},
+  'Marine Corps':{ color:'#b91c1c', emoji:'🦅', terms:{ spec:'MOS', member:'Marine', nco:'NCO' }},
+  'Space Force': { color:'#1e3f6e', emoji:'🛸', terms:{ spec:'AFSC', member:'Guardian', nco:'NCO' }},
+  'Coast Guard': { color:'#c2410c', emoji:'🔱', terms:{ spec:'Rating', member:'Member', nco:'Petty Officer' }},
+};
+
+const RANKS = {
+  E: {
+    'Army':['E-1 Private','E-2 Private Second Class','E-3 Private First Class','E-4 Specialist/Corporal','E-5 Sergeant','E-6 Staff Sergeant','E-7 Sergeant First Class','E-8 Master Sergeant/First Sergeant','E-9 Sergeant Major'],
+    'Navy':['E-1 Seaman Recruit','E-2 Seaman Apprentice','E-3 Seaman','E-4 Petty Officer 3rd Class','E-5 Petty Officer 2nd Class','E-6 Petty Officer 1st Class','E-7 Chief Petty Officer','E-8 Senior Chief Petty Officer','E-9 Master Chief Petty Officer'],
+    'Air Force':['E-1 Airman Basic','E-2 Airman','E-3 Airman First Class','E-4 Senior Airman','E-5 Staff Sergeant','E-6 Technical Sergeant','E-7 Master Sergeant','E-8 Senior Master Sergeant','E-9 Chief Master Sergeant'],
+    'Marine Corps':['E-1 Private','E-2 Private First Class','E-3 Lance Corporal','E-4 Corporal','E-5 Sergeant','E-6 Staff Sergeant','E-7 Gunnery Sergeant','E-8 Master Sergeant/First Sergeant','E-9 Master Gunnery Sergeant/Sergeant Major'],
+    'Space Force':['E-1 Specialist 1','E-2 Specialist 2','E-3 Specialist 3','E-4 Specialist 4','E-5 Sergeant','E-6 Technical Sergeant','E-7 Master Sergeant','E-8 Senior Master Sergeant','E-9 Chief Master Sergeant'],
+    'Coast Guard':['E-1 Seaman Recruit','E-2 Seaman Apprentice','E-3 Seaman','E-4 Petty Officer 3rd Class','E-5 Petty Officer 2nd Class','E-6 Petty Officer 1st Class','E-7 Chief Petty Officer','E-8 Senior Chief Petty Officer','E-9 Master Chief Petty Officer'],
+  },
+  W: {
+    'Army':['W-1 Warrant Officer 1','W-2 Chief Warrant Officer 2','W-3 Chief Warrant Officer 3','W-4 Chief Warrant Officer 4','W-5 Chief Warrant Officer 5'],
+    'Navy':['W-1 Warrant Officer 1','W-2 Chief Warrant Officer 2','W-3 Chief Warrant Officer 3','W-4 Chief Warrant Officer 4','W-5 Chief Warrant Officer 5'],
+    'Marine Corps':['W-1 Warrant Officer 1','W-2 Chief Warrant Officer 2','W-3 Chief Warrant Officer 3','W-4 Chief Warrant Officer 4','W-5 Chief Warrant Officer 5'],
+    'Coast Guard':['W-1 Warrant Officer 1','W-2 Chief Warrant Officer 2','W-3 Chief Warrant Officer 3','W-4 Chief Warrant Officer 4'],
+    'Air Force':[], 'Space Force':[]
+  },
+  O: {
+    '_all':['O-1 Second Lieutenant','O-2 First Lieutenant','O-3 Captain','O-4 Major','O-5 Lieutenant Colonel','O-6 Colonel','O-7 Brigadier General','O-8 Major General','O-9 Lieutenant General','O-10 General'],
+    'Navy':['O-1 Ensign','O-2 Lieutenant Junior Grade','O-3 Lieutenant','O-4 Lieutenant Commander','O-5 Commander','O-6 Captain','O-7 Rear Admiral Lower Half','O-8 Rear Admiral','O-9 Vice Admiral','O-10 Admiral'],
+    'Coast Guard':['O-1 Ensign','O-2 Lieutenant Junior Grade','O-3 Lieutenant','O-4 Lieutenant Commander','O-5 Commander','O-6 Captain','O-7 Rear Admiral Lower Half','O-8 Rear Admiral','O-9 Vice Admiral','O-10 Admiral'],
+  }
+};
+
+const BASE_PAY_EST = {
+  'E-5':{ 20:3200 },'E-6':{ 20:3700 },'E-7':{ 20:4200 },'E-8':{ 20:4800 },'E-9':{ 20:5500 },
+  'O-1':{ 20:5200 },'O-2':{ 20:5800 },'O-3':{ 20:6500 },'O-4':{ 20:7200 },'O-5':{ 20:8300 },'O-6':{ 20:9900 },'O-7':{ 20:11000 },'O-8':{ 20:12500 },'O-9':{ 20:14000 },'O-10':{ 20:16500 },
+  'W-1':{ 20:4800 },'W-2':{ 20:5300 },'W-3':{ 20:5800 },'W-4':{ 20:6600 },'W-5':{ 20:7400 },
+};
+
+const SKILLBRIDGE_LIMITS = {
+  'Army': { 'E-2': 120, 'E-3': 120, 'E-4': 120, 'E-5': 120, 'E-6': 90, 'E-7': 90, 'E-8': 60, 'E-9': 60, 'W-1': 90, 'W-2': 90, 'W-3': 90, 'W-4': 60, 'W-5': 60, 'O-1': 120, 'O-2': 120, 'O-3': 120, 'O-4': 90, 'O-5': 60 },
+  'Air Force': { 'E-2': 120, 'E-3': 120, 'E-4': 120, 'E-5': 120, 'E-6': 90, 'E-7': 90, 'E-8': 60, 'E-9': 60, 'O-1': 120, 'O-2': 120, 'O-3': 120, 'O-4': 90, 'O-5': 60 },
+  'Navy': { 'E-2': 180, 'E-3': 180, 'E-4': 180, 'E-5': 180, 'E-6': 120, 'E-7': 120, 'E-8': 120, 'E-9': 120, 'W-1': 120, 'W-2': 120, 'W-3': 120, 'W-4': 120, 'W-5': 120, 'O-1': 120, 'O-2': 120, 'O-3': 120, 'O-4': 120, 'O-5': 90 },
+  'Space Force': { 'E-2': 120, 'E-3': 120, 'E-4': 120, 'E-5': 120, 'E-6': 120, 'E-7': 120, 'E-8': 120, 'E-9': 90, 'O-1': 120, 'O-2': 120, 'O-3': 120, 'O-4': 120, 'O-5': 90 },
+  'Marine Corps': { 'E-2': 120, 'E-3': 120, 'E-4': 120, 'E-5': 120, 'E-6': 90, 'E-7': 90, 'E-8': 90, 'E-9': 90, 'W-1': 90, 'W-2': 90, 'W-3': 90, 'W-4': 90, 'W-5': 90, 'O-1': 90, 'O-2': 90, 'O-3': 90, 'O-4': 90, 'O-5': 90, 'O-6': 90, 'O-7': 90 },
+  'Coast Guard': {}
+};
+
+const BASE_PAY_2026 = {
+  'E-1': { 2: 2407.20 },
+  'E-2': { 2: 2697.90 },
+  'E-3': { 2: 2836.80, 3: 3015.00, 4: 3198.00 },
+  'E-4': { 2: 3142.20, 3: 3303.00, 4: 3482.40, 6: 3658.50, 8: 3815.40 },
+  'E-5': { 2: 3342.90, 3: 3598.20, 4: 3775.80, 6: 3946.80, 8: 4110.00, 10: 4299.90, 12: 4395.30, 14: 4421.70 },
+  'E-6': { 2: 3401.10, 3: 3743.10, 4: 3908.10, 6: 4068.90, 8: 4235.70, 10: 4612.80, 12: 4759.50, 14: 5043.30, 16: 5130.30, 18: 5193.60, 20: 5267.70 },
+  'E-7': { 2: 3932.10, 3: 4291.50, 4: 4456.20, 6: 4673.10, 8: 4843.80, 10: 5135.70, 12: 5300.40, 14: 5591.70, 16: 5835.00, 18: 6000.90, 20: 6177.30, 22: 6245.70, 24: 6475.20, 26: 6598.20, 28: 7067.40 },
+  'E-8': { 8: 5656.50, 10: 5907.00, 12: 6061.80, 14: 6247.20, 16: 6448.20, 18: 6811.20, 20: 6995.40, 22: 7308.30, 24: 7481.70, 26: 7908.90, 30: 8067.30 },
+  'E-9': { 10: 6910.20, 12: 7066.50, 14: 7263.60, 16: 7496.10, 18: 7730.70, 20: 8105.10, 22: 8423.10, 24: 8756.70, 26: 9267.90, 30: 9730.20, 34: 10217.40, 38: 10729.20 },
+  'W-1': { 2: 4056.60, 3: 4493.70, 4: 4611.00, 6: 4859.10, 8: 5152.20, 10: 5584.20, 12: 5786.10, 14: 6069.30, 16: 6346.50, 18: 6564.90, 20: 6766.20, 22: 7010.10 },
+  'W-2': { 2: 4621.80, 3: 5058.90, 4: 5193.30, 6: 5286.00, 8: 5585.40, 10: 6051.00, 12: 6282.60, 14: 6509.40, 16: 6787.50, 18: 7005.00, 20: 7201.50, 22: 7437.00, 24: 7591.50, 26: 7714.20 },
+  'W-3': { 2: 5223.30, 3: 5440.50, 4: 5664.30, 6: 5736.90, 8: 5970.90, 10: 6431.10, 12: 6910.50, 14: 7136.40, 16: 7397.70, 18: 7665.90, 20: 8150.40, 22: 8476.50, 24: 8671.80, 26: 8879.70, 28: 9162.60 },
+  'W-4': { 2: 5719.80, 3: 6152.10, 4: 6328.50, 6: 6502.20, 8: 6801.90, 10: 7098.00, 12: 7398.00, 14: 7848.30, 16: 8243.70, 18: 8619.90, 20: 8928.60, 22: 9228.90, 24: 9669.60, 26: 10032.00, 28: 10445.40, 30: 10653.60 },
+  'W-5': { 20: 10169.70, 22: 10685.70, 24: 11070.30, 26: 11495.10, 30: 12070.80, 34: 12673.50, 38: 13308.30 },
+  'O-1': { 2: 4150.20, 3: 4320.00, 4: 5222.40, 6: 5222.40, 8: 5222.40, 10: 5222.40, 12: 5222.40, 14: 5222.40, 16: 5222.40, 20: 5222.40 },
+  'O-2': { 2: 4782.00, 3: 5446.20, 4: 6272.40, 6: 6484.50, 8: 6617.70, 10: 6617.70, 12: 6617.70, 14: 6617.70, 16: 6617.70, 20: 6617.70 },
+  'O-3': { 2: 5534.10, 3: 6273.90, 4: 6770.40, 6: 7382.70, 8: 7737.00, 10: 8125.50, 12: 8375.70, 14: 8788.20, 16: 9004.20, 20: 9004.20 },
+  'O-4': { 2: 6294.60, 3: 7286.40, 4: 7773.60, 6: 7881.00, 8: 8332.20, 10: 8816.40, 12: 9420.00, 14: 9888.30, 16: 10214.40, 18: 10401.60, 20: 10509.90 },
+  'O-5': { 2: 7295.40, 3: 8218.20, 4: 8787.00, 6: 8894.10, 8: 9249.60, 10: 9461.40, 12: 9928.50, 14: 10271.70, 16: 10715.10, 18: 11391.30, 20: 12032.70, 22: 12394.80 },
+  'O-6': { 2: 8751.30, 3: 9613.80, 4: 10245.00, 6: 10284.30, 8: 10725.00, 10: 10783.50, 12: 10783.50, 14: 11396.40, 16: 12479.70, 20: 13751.10, 22: 14112.90, 24: 14479.20, 26: 15188.70, 30: 15408.30 },
+  'O-7': { 2: 11540.10, 3: 12076.20, 4: 12324.30, 6: 12522.00, 8: 12878.70, 10: 13231.80, 12: 13639.20, 14: 14045.70, 16: 14454.30, 18: 15735.30, 20: 16817.70, 26: 16904.40, 30: 17242.20 },
+};
+
+function getBasePay2026(rank, yearsOfService) {
+  const rankData = BASE_PAY_2026[rank];
+  if (!rankData) return null;
+  const brackets = Object.keys(rankData).map(Number).sort((a, b) => a - b);
+  let selected = brackets[0];
+  for (const b of brackets) {
+    if (yearsOfService >= b) selected = b;
+    else break;
+  }
+  return rankData[selected];
+}
+
+const VA_RATES_2025 = { 0:0, 10:175.51, 20:346.95, 30:508.05, 40:731.86, 50:1041.82, 60:1319.65, 70:1663.06, 80:1933.15, 90:2172.39, 100:3737.85 };
+
+// ===== STATE TAX DATA =====
+// militaryRetirementTax: 'exempt' | 'partial' | 'taxed'
+// vaCompTax: always federal-exempt; some states tax it — 'exempt' is universal here
+// Notes: based on 2025 enacted law. Rates shown are top marginal state income tax %.
+const STATE_TAX_DATA = {
+  'AL': { name:'Alabama', militaryRetirementTax:'exempt', topRate:5.0, note:'Military retirement pay is fully exempt from Alabama income tax.' },
+  'AK': { name:'Alaska', militaryRetirementTax:'exempt', topRate:0, note:'Alaska has no state income tax.' },
+  'AZ': { name:'Arizona', militaryRetirementTax:'exempt', topRate:2.5, note:'Military retirement pay is fully exempt from Arizona income tax (as of 2021).' },
+  'AR': { name:'Arkansas', militaryRetirementTax:'partial', topRate:3.9, note:'Military retirement pay is partially exempt (first $6,000 exempt for under age 59½; fully exempt at 59½+).' },
+  'CA': { name:'California', militaryRetirementTax:'taxed', topRate:13.3, note:'California taxes military retirement pay as regular income. CA has the highest top marginal rate in the US.' },
+  'CO': { name:'Colorado', militaryRetirementTax:'partial', topRate:4.4, note:'Up to $24,000 of military retirement pay exempt for those 65+; $20,000 for ages 55–64.' },
+  'CT': { name:'Connecticut', militaryRetirementTax:'partial', topRate:6.99, note:'50% of military retirement pay exempt if federal AGI is under $75,000 (single) or $100,000 (joint).' },
+  'DE': { name:'Delaware', militaryRetirementTax:'partial', topRate:6.6, note:'Up to $12,500 of military retirement pay is exempt.' },
+  'FL': { name:'Florida', militaryRetirementTax:'exempt', topRate:0, note:'Florida has no state income tax — very favorable for retirees.' },
+  'GA': { name:'Georgia', militaryRetirementTax:'exempt', topRate:5.49, note:'Military retirement pay is fully exempt from Georgia income tax (as of 2022).' },
+  'HI': { name:'Hawaii', militaryRetirementTax:'exempt', topRate:11.0, note:'Military retirement pay is fully exempt from Hawaii income tax.' },
+  'ID': { name:'Idaho', militaryRetirementTax:'taxed', topRate:5.8, note:'Idaho taxes military retirement pay as regular income.' },
+  'IL': { name:'Illinois', militaryRetirementTax:'exempt', topRate:4.95, note:'Military retirement pay is fully exempt from Illinois income tax.' },
+  'IN': { name:'Indiana', militaryRetirementTax:'exempt', topRate:3.05, note:'Military retirement pay is fully exempt from Indiana income tax.' },
+  'IA': { name:'Iowa', militaryRetirementTax:'exempt', topRate:5.7, note:'Military retirement pay is fully exempt from Iowa income tax (as of 2024).' },
+  'KS': { name:'Kansas', militaryRetirementTax:'exempt', topRate:5.7, note:'Military retirement pay is fully exempt from Kansas income tax.' },
+  'KY': { name:'Kentucky', militaryRetirementTax:'exempt', topRate:4.0, note:'Military retirement pay is fully exempt from Kentucky income tax.' },
+  'LA': { name:'Louisiana', militaryRetirementTax:'exempt', topRate:3.0, note:'Military retirement pay is fully exempt from Louisiana income tax.' },
+  'ME': { name:'Maine', militaryRetirementTax:'partial', topRate:7.15, note:'Up to $10,000 of military retirement pay is exempt.' },
+  'MD': { name:'Maryland', militaryRetirementTax:'partial', topRate:5.75, note:'Up to $5,000 exempt under age 55; up to $15,000 exempt at 55+. Local taxes also apply.' },
+  'MA': { name:'Massachusetts', militaryRetirementTax:'exempt', topRate:5.0, note:'Military retirement pay is fully exempt from Massachusetts income tax.' },
+  'MI': { name:'Michigan', militaryRetirementTax:'partial', topRate:4.25, note:'Up to $54,404 (single) / $108,808 (joint) exempt for those born after 1952 if retired before 2013.' },
+  'MN': { name:'Minnesota', militaryRetirementTax:'taxed', topRate:9.85, note:'Minnesota taxes military retirement pay as regular income (limited exemption for some Combat-Related Special Compensation).' },
+  'MS': { name:'Mississippi', militaryRetirementTax:'exempt', topRate:4.7, note:'Military retirement pay is fully exempt from Mississippi income tax.' },
+  'MO': { name:'Missouri', militaryRetirementTax:'exempt', topRate:4.8, note:'Military retirement pay is fully exempt from Missouri income tax (as of 2016).' },
+  'MT': { name:'Montana', militaryRetirementTax:'partial', topRate:6.75, note:'Up to $4,640 of military retirement pay may be deducted.' },
+  'NE': { name:'Nebraska', militaryRetirementTax:'exempt', topRate:3.84, note:'Military retirement pay is fully exempt from Nebraska income tax (as of 2022).' },
+  'NV': { name:'Nevada', militaryRetirementTax:'exempt', topRate:0, note:'Nevada has no state income tax.' },
+  'NH': { name:'New Hampshire', militaryRetirementTax:'exempt', topRate:0, note:'New Hampshire has no income tax on wages/retirement (only taxes interest/dividends, phasing out by 2025).' },
+  'NJ': { name:'New Jersey', militaryRetirementTax:'exempt', topRate:10.75, note:'Military retirement pay is fully exempt from New Jersey income tax.' },
+  'NM': { name:'New Mexico', militaryRetirementTax:'partial', topRate:5.9, note:'Up to $10,000 of military retirement pay is exempt.' },
+  'NY': { name:'New York', militaryRetirementTax:'exempt', topRate:10.9, note:'Military retirement pay from the US government is fully exempt from New York income tax.' },
+  'NC': { name:'North Carolina', militaryRetirementTax:'partial', topRate:4.5, note:'Military retirement pay exempt if member had 5+ years of creditable service before August 12, 1989; otherwise taxed.' },
+  'ND': { name:'North Dakota', militaryRetirementTax:'exempt', topRate:1.1, note:'Military retirement pay is fully exempt from North Dakota income tax.' },
+  'OH': { name:'Ohio', militaryRetirementTax:'exempt', topRate:3.5, note:'Military retirement pay is fully exempt from Ohio income tax.' },
+  'OK': { name:'Oklahoma', militaryRetirementTax:'partial', topRate:4.75, note:'Up to $10,000 of military retirement pay is exempt from Oklahoma income tax.' },
+  'OR': { name:'Oregon', militaryRetirementTax:'partial', topRate:9.9, note:'Federal pension subtraction may apply up to certain limits; Oregon has one of the highest tax rates.' },
+  'PA': { name:'Pennsylvania', militaryRetirementTax:'exempt', topRate:3.07, note:'Military retirement pay is fully exempt from Pennsylvania income tax.' },
+  'RI': { name:'Rhode Island', militaryRetirementTax:'partial', topRate:5.99, note:'Military retirement pay may be partially exempt for those over 59½ up to $20,000.' },
+  'SC': { name:'South Carolina', militaryRetirementTax:'exempt', topRate:6.2, note:'Military retirement pay is fully exempt from South Carolina income tax (as of 2022).' },
+  'SD': { name:'South Dakota', militaryRetirementTax:'exempt', topRate:0, note:'South Dakota has no state income tax.' },
+  'TN': { name:'Tennessee', militaryRetirementTax:'exempt', topRate:0, note:'Tennessee has no state income tax on wages or retirement income.' },
+  'TX': { name:'Texas', militaryRetirementTax:'exempt', topRate:0, note:'Texas has no state income tax — very favorable for military retirees.' },
+  'UT': { name:'Utah', militaryRetirementTax:'partial', topRate:4.65, note:'Up to $7,500 (single) / $15,000 (joint) credit against retirement income tax for ages 65+; phase-out applies.' },
+  'VT': { name:'Vermont', militaryRetirementTax:'taxed', topRate:8.75, note:'Vermont taxes military retirement pay as regular income.' },
+  'VA': { name:'Virginia', militaryRetirementTax:'partial', topRate:5.75, note:'Up to $20,000 exempt for ages 55–64; up to $30,000 exempt at 65+ (2024 amounts, increasing through 2025).' },
+  'WA': { name:'Washington', militaryRetirementTax:'exempt', topRate:0, note:'Washington has no state income tax.' },
+  'WV': { name:'West Virginia', militaryRetirementTax:'exempt', topRate:5.12, note:'Military retirement pay is fully exempt from West Virginia income tax.' },
+  'WI': { name:'Wisconsin', militaryRetirementTax:'taxed', topRate:7.65, note:'Wisconsin taxes military retirement pay as regular income.' },
+  'WY': { name:'Wyoming', militaryRetirementTax:'exempt', topRate:0, note:'Wyoming has no state income tax.' },
+  'DC': { name:'District of Columbia', militaryRetirementTax:'taxed', topRate:10.75, note:'DC taxes military retirement pay as regular income.' },
+};
+
+function parseStateFromLocation(locationStr) {
+  if (!locationStr) return null;
+  const upper = locationStr.trim().toUpperCase();
+  // Direct 2-letter state code
+  if (STATE_TAX_DATA[upper]) return upper;
+  // Check for state abbreviation after comma: "San Antonio, TX"
+  const commaMatch = upper.match(/,\s*([A-Z]{2})\s*$/);
+  if (commaMatch && STATE_TAX_DATA[commaMatch[1]]) return commaMatch[1];
+  // Full state name search
+  for (const [code, data] of Object.entries(STATE_TAX_DATA)) {
+    if (upper.includes(data.name.toUpperCase())) return code;
+  }
+  return null;
+}
+
+// ===== TSP ANNUITY FACTORS =====
+const ANNUITY_FACTORS = {
+  38: 4.20, 40: 4.35, 42: 4.52, 44: 4.70, 45: 4.80, 46: 4.90,
+  48: 5.12, 50: 5.35, 52: 5.60, 54: 5.87, 55: 6.02, 56: 6.17,
+  58: 6.50, 60: 6.86, 62: 7.25, 64: 7.68, 65: 7.91, 67: 8.42,
+  70: 9.35
+};
+
+function interpolateAnnuityFactor(age) {
+  age = Math.max(38, Math.min(70, age));
+  const ages = Object.keys(ANNUITY_FACTORS).map(Number).sort((a, b) => a - b);
+  if (ANNUITY_FACTORS[age] !== undefined) return ANNUITY_FACTORS[age];
+  let lower = ages[0], upper = ages[ages.length - 1];
+  for (let i = 0; i < ages.length - 1; i++) {
+    if (ages[i] <= age && ages[i + 1] >= age) {
+      lower = ages[i]; upper = ages[i + 1]; break;
+    }
+  }
+  const ratio = (age - lower) / (upper - lower);
+  return ANNUITY_FACTORS[lower] + ratio * (ANNUITY_FACTORS[upper] - ANNUITY_FACTORS[lower]);
+}
+
+function getLifeExpDistributionPeriod(age) {
+  // Simplified IRS Uniform Lifetime Table approximation
+  const table = { 45: 47.5, 50: 42.5, 55: 37.5, 60: 32.5, 65: 27.5, 70: 22.5 };
+  const ages = Object.keys(table).map(Number).sort((a, b) => a - b);
+  age = Math.max(ages[0], Math.min(ages[ages.length - 1], age));
+  if (table[age] !== undefined) return table[age];
+  let lower = ages[0], upper = ages[ages.length - 1];
+  for (let i = 0; i < ages.length - 1; i++) {
+    if (ages[i] <= age && ages[i + 1] >= age) {
+      lower = ages[i]; upper = ages[i + 1]; break;
+    }
+  }
+  const ratio = (age - lower) / (upper - lower);
+  return table[lower] + ratio * (table[upper] - table[lower]);
+}
+
+// ===== UTILITIES =====
+function $(id) { return document.getElementById(id); }
+function subDays(d, n) { const r = new Date(d); r.setDate(r.getDate() - n); return r; }
+function addDays(d, n) { return subDays(d, -n); }
+function fmtDate(d) { return d.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }); }
+function fmtDateShort(d) { return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'2-digit' }); }
+function daysBetween(a, b) { return Math.round((b - a) / 86400000); }
+function firstOfNextMonth(d) { const r = new Date(d.getFullYear(), d.getMonth() + 1, 1); return r; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function fmtCurrency(val) { return val.toLocaleString('en-US', { style:'currency', currency:'USD' }); }
+function fmtCurrencyWhole(val) { return val.toLocaleString('en-US', { style:'currency', currency:'USD', maximumFractionDigits:0 }); }
+
+function showToast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function getRankGrade(rankStr) {
+  if (!rankStr) return '';
+  const match = rankStr.match(/^([EWO]-\d+)/);
+  return match ? match[1] : '';
+}
+
+let sbAutoMax = null;
+
+// ===== PAY ESTIMATOR STATE =====
+let payRetSystem = 'high3';
+let selectedVARating = 0;
+let hasDependents = false;
+
+// ===== TSP STATE =====
+let tspWithdrawalMethod = 'fixed';
+
+// ===== SKILLBRIDGE AUTO-POPULATE =====
+function updateSkillbridgeLimit() {
+  const branch = $('branch').value;
+  const rankVal = $('rank').value;
+  const rg = getRankGrade(rankVal);
+  const sbInput = $('sbDays');
+  const policyNote = $('sbPolicyNote');
+  const badge = $('sbBadge');
+  const editFeedback = $('sbEditFeedback');
+  const overMaxError = $('sbOverMaxError');
+
+  sbInput.readOnly = false;
+  sbInput.classList.remove('sb-readonly');
+  editFeedback.classList.remove('show');
+  editFeedback.innerHTML = '';
+  overMaxError.classList.remove('show');
+  overMaxError.innerHTML = '';
+
+  if (!toggles.sb) {
+    badge.style.display = 'none';
+    sbAutoMax = null;
+    policyNote.innerHTML = 'ℹ️ Select your branch and rank above to auto-populate your authorized SkillBridge days.';
+    policyNote.className = 'sb-policy-note mt-1 text-sm text-navy-400';
+    return;
+  }
+
+  if (!branch || !rg) {
+    sbInput.value = 90;
+    sbInput.max = 180;
+    sbAutoMax = null;
+    badge.style.display = 'none';
+    policyNote.innerHTML = 'ℹ️ Select your branch and rank above to auto-populate your authorized SkillBridge days.';
+    policyNote.className = 'sb-policy-note mt-1 text-sm text-navy-400';
+    return;
+  }
+
+  const branchLimits = SKILLBRIDGE_LIMITS[branch] || {};
+  const maxDays = branchLimits[rg];
+
+  if (maxDays !== undefined) {
+    sbInput.value = maxDays;
+    sbInput.max = maxDays;
+    sbAutoMax = maxDays;
+    badge.textContent = '✦ Auto-calculated';
+    badge.className = 'sb-badge sb-badge-auto';
+    badge.style.display = 'inline-flex';
+    policyNote.innerHTML = '✅ <strong>Auto-set to ' + maxDays + ' days</strong> — this is the authorized maximum for ' + rg + ' in the ' + branch + ' per current DoD SkillBridge policy. Your actual duration is subject to leadership approval and may be fewer days. You may edit this field.';
+    policyNote.className = 'sb-policy-note mt-1 text-sm border rounded-lg px-3 py-2';
+    policyNote.style.color = '#047857';
+    policyNote.style.background = '#d1fae5';
+    policyNote.style.borderColor = '#a7f3d0';
+  } else if (branch === 'Coast Guard') {
+    sbInput.value = 120;
+    sbInput.max = 180;
+    sbAutoMax = null;
+    badge.textContent = '✎ Manual entry';
+    badge.className = 'sb-badge sb-badge-manual';
+    badge.style.display = 'inline-flex';
+    policyNote.innerHTML = 'ℹ️ Coast Guard SkillBridge limits vary — please confirm with your command. Default set to 120 days. You may edit this field.';
+    policyNote.className = 'sb-policy-note mt-1 text-sm border rounded-lg px-3 py-2';
+    policyNote.style.color = '#1e40af';
+    policyNote.style.background = '#dbeafe';
+    policyNote.style.borderColor = '#93c5fd';
+  } else if (rg === 'E-1') {
+    sbInput.value = 0;
+    sbAutoMax = 0;
+    badge.textContent = '⚠ Not eligible';
+    badge.className = 'sb-badge sb-badge-manual';
+    badge.style.display = 'inline-flex';
+    policyNote.innerHTML = '⚠️ E-1 members are generally not eligible for SkillBridge. Please verify eligibility with your command.';
+    policyNote.className = 'sb-policy-note mt-1 text-sm border rounded-lg px-3 py-2';
+    policyNote.style.color = '#b45309';
+    policyNote.style.background = '#fef3c7';
+    policyNote.style.borderColor = '#fcd34d';
+  } else {
+    sbAutoMax = null;
+    const numPart = parseInt(rg.replace(/[^\d]/g, ''));
+    if (numPart >= 6 && branch !== 'Marine Corps') {
+      sbInput.value = 60;
+      sbInput.max = 180;
+    } else {
+      sbInput.value = 90;
+      sbInput.max = 180;
+    }
+    badge.textContent = '✎ Manual entry';
+    badge.className = 'sb-badge sb-badge-manual';
+    badge.style.display = 'inline-flex';
+    policyNote.innerHTML = 'ℹ️ SkillBridge eligibility for ' + rg + ' in the ' + branch + ' — please confirm limits with your command. Field is editable.';
+    policyNote.className = 'sb-policy-note mt-1 text-sm border rounded-lg px-3 py-2';
+    policyNote.style.color = '#1e40af';
+    policyNote.style.background = '#dbeafe';
+    policyNote.style.borderColor = '#93c5fd';
+  }
+}
+
+function updateSbEditFeedback() {
+  const editFeedback = $('sbEditFeedback');
+  const overMaxError = $('sbOverMaxError');
+  const sbInput = $('sbDays');
+  const enteredVal = parseInt(sbInput.value);
+
+  editFeedback.classList.remove('show');
+  editFeedback.innerHTML = '';
+  overMaxError.classList.remove('show');
+  overMaxError.innerHTML = '';
+
+  if (!toggles.sb || sbAutoMax === null || sbAutoMax === 0 || isNaN(enteredVal)) return;
+
+  const branch = $('branch').value;
+  const rg = getRankGrade($('rank').value);
+
+  if (enteredVal > sbAutoMax) {
+    overMaxError.innerHTML = '⚠️ ' + enteredVal + ' days exceeds your authorized maximum of ' + sbAutoMax + ' days for ' + rg + ' in the ' + branch + '. Please enter ' + sbAutoMax + ' days or fewer.';
+    overMaxError.classList.add('show');
+    sbInput.classList.add('error');
+  } else {
+    sbInput.classList.remove('error');
+    if (enteredVal < sbAutoMax) {
+      const diff = sbAutoMax - enteredVal;
+      editFeedback.innerHTML = 'ℹ️ You\'ve entered ' + enteredVal + ' days — ' + diff + ' days less than your authorized maximum of ' + sbAutoMax + ' days. This reflects your leadership-approved duration.';
+      editFeedback.style.color = '#b45309';
+      editFeedback.style.background = '#fef3c7';
+      editFeedback.style.borderColor = '#fcd34d';
+      editFeedback.className = 'sb-edit-feedback border rounded-lg px-3 py-2 text-sm show';
+    }
+  }
+}
+
+function getSkillbridgeAuthorizedMax(branch, rankGrade) {
+  if (!branch || !rankGrade) return null;
+  const branchLimits = SKILLBRIDGE_LIMITS[branch] || {};
+  return branchLimits[rankGrade] !== undefined ? branchLimits[rankGrade] : null;
+}
+
+// ===== STATE =====
+let state = {};
+let rankCat = '';
+let transType = '';
+let retSystem = 'high3';
+let tspContribMode = 'fixed';
+let toggles = { ptdy: true, sb: true, giBill: false, vaClaim: false };
+
+// ===== TOGGLE LOGIC =====
+function initToggle(id, key) {
+  const el = $(id);
+  el.addEventListener('click', () => {
+    toggles[key] = !toggles[key];
+    el.classList.toggle('active', toggles[key]);
+    if (key === 'ptdy') $('ptdyFields').classList.toggle('hidden', !toggles[key]);
+    if (key === 'sb') {
+      $('sbFields').classList.toggle('hidden', !toggles[key]);
+      if (toggles[key]) updateSkillbridgeLimit();
+    }
+  });
+}
+
+// ===== RADIO GROUP =====
+function initRadioGroup(containerId, cb) {
+  const cards = $(containerId).querySelectorAll('.radio-card');
+  cards.forEach(card => {
+    card.addEventListener('click', () => {
+      cards.forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      cb(card.dataset.value);
+    });
+  });
+}
+
+// ===== RANK POPULATION =====
+function populateRanks() {
+  const sel = $('rank');
+  const branch = $('branch').value;
+  sel.innerHTML = '<option value="">Select rank…</option>';
+  if (!rankCat || !branch) { updateSkillbridgeLimit(); return; }
+  const warnNote = $('warrant-note');
+  if (rankCat === 'W' && (branch === 'Air Force' || branch === 'Space Force')) {
+    warnNote.classList.remove('hidden');
+    updateSkillbridgeLimit();
+    return;
+  }
+  warnNote.classList.add('hidden');
+  let list;
+  if (rankCat === 'O') {
+    list = RANKS.O[branch] || RANKS.O['_all'];
+  } else {
+    list = (RANKS[rankCat] && RANKS[rankCat][branch]) || [];
+  }
+  list.forEach(r => {
+    const o = document.createElement('option');
+    o.value = r; o.textContent = r; sel.appendChild(o);
+  });
+  updateSkillbridgeLimit();
+}
+
+// ===== VALIDATION =====
+function showErr(id, show) { const el = $(id); if (el) el.classList.toggle('show', show); }
+
+function validate() {
+  let ok = true;
+  const fn = $('firstName').value.trim();
+  if (!fn) { showErr('err-firstName', true); $('firstName').classList.add('error'); ok = false; } else { showErr('err-firstName', false); $('firstName').classList.remove('error'); }
+  if (!$('branch').value) { showErr('err-branch', true); ok = false; } else { showErr('err-branch', false); }
+  if (!rankCat) { showErr('err-rankCat', true); ok = false; } else { showErr('err-rankCat', false); }
+  if (!$('rank').value) { showErr('err-rank', true); ok = false; } else { showErr('err-rank', false); }
+  const yos = parseInt($('yos').value);
+  if (!yos || yos < 1 || yos > 40) { showErr('err-yos', true); $('yos').classList.add('error'); ok = false; } else { showErr('err-yos', false); $('yos').classList.remove('error'); }
+  if (!transType) { showErr('err-transType', true); ok = false; } else { showErr('err-transType', false); }
+  if (transType === 'Retirement' && yos < 20) { showErr('err-yos', true); $('yos').classList.add('error'); ok = false; }
+  const sd = $('sepDate').value;
+  const today = new Date($('todayDate').value || new Date().toISOString().split('T')[0]);
+  if (!sd || new Date(sd + 'T00:00:00') <= today) { showErr('err-sepDate', true); $('sepDate').classList.add('error'); ok = false; } else { showErr('err-sepDate', false); $('sepDate').classList.remove('error'); }
+  if (toggles.sb && sbAutoMax !== null) {
+    const sbVal = parseInt($('sbDays').value);
+    if (!isNaN(sbVal) && sbVal > sbAutoMax) { ok = false; updateSbEditFeedback(); }
+  }
+  return ok;
+}
+
+// ===== BUILD STATE =====
+function buildState() {
+  const s = {};
+  s.firstName = $('firstName').value.trim();
+  s.branch = $('branch').value;
+  s.rankCat = rankCat;
+  s.rank = $('rank').value;
+  s.yos = parseInt($('yos').value);
+  s.dateOfRank = $('dateOfRank').value || '';
+  s.transType = transType;
+  s.sepDate = $('sepDate').value;
+  s.todayDate = $('todayDate').value;
+  s.leaveDays = clamp(parseInt($('leaveDays').value) || 60, 0, 120);
+  s.ptdy = toggles.ptdy;
+  s.ptdyDays = toggles.ptdy ? clamp(parseInt($('ptdyDays').value) || 20, 1, 20) : 0;
+  s.sb = toggles.sb;
+  s.sbDays = toggles.sb ? clamp(parseInt($('sbDays').value) || 90, 1, 180) : 0;
+  s.postLocation = $('postLocation').value.trim();
+  s.careerInterest = $('careerInterest').value;
+  s.giBill = toggles.giBill;
+  s.vaClaim = toggles.vaClaim;
+  s.payRetSystem = payRetSystem;
+  s.selectedVARating = selectedVARating;
+  s.hasDependents = hasDependents;
+  // TSP state
+  s.tspBalance = parseFloat($('tspBalance')?.value) || 0;
+  s.tspYearsToRet = parseFloat($('tspYearsToRet')?.value) || 0;
+  s.tspRate = parseFloat($('tspRate')?.value) || 6;
+  s.tspContribMode = tspContribMode;
+  s.tspContribution = parseFloat($('tspContribution')?.value) || 200;
+  s.tspContribPct = parseFloat($('tspContribPct')?.value) || 5;
+  s.tspRetAge = parseInt($('tspRetAge')?.value) || 45;
+  s.tspWithdrawalMethod = tspWithdrawalMethod;
+  s.tspFixedAmount = parseFloat($('tspFixedAmount')?.value) || 500;
+  return s;
+}
+
+// ===== SAVE / LOAD =====
+function saveState(s) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
+function loadState() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch(e) { return null; } }
+function clearState() { localStorage.removeItem(STORAGE_KEY); }
+
+function getCheckKey() { return `mtc-checks-${state.firstName}-${state.sepDate}`; }
+function saveChecks(checks) { localStorage.setItem(getCheckKey(), JSON.stringify(checks)); }
+function loadChecks() { try { return JSON.parse(localStorage.getItem(getCheckKey())) || {}; } catch(e) { return {}; } }
+
+// ===== SHOW RESULTS =====
+function showResults() {
+  $('setup-screen').classList.add('hidden');
+  $('results-screen').classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  renderResults();
+}
+
+function showSetup() {
+  $('results-screen').classList.add('hidden');
+  $('setup-screen').classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ===== RENDER =====
+function renderResults() {
+  const s = state;
+  const bm = BRANCH_META[s.branch];
+  const today = new Date(s.todayDate + 'T00:00:00');
+  const sep = new Date(s.sepDate + 'T00:00:00');
+  const isRet = s.transType === 'Retirement';
+
+  $('resultTitle').textContent = `${s.firstName}'s Transition Plan`;
+  $('branchBadge').textContent = `${bm.emoji} ${s.branch}`;
+  $('branchBadge').style.background = bm.color;
+  $('rankBadge').textContent = `${s.rank} · ${s.yos} years`;
+  $('rankBadge').classList.remove('hidden');
+
+  const daysLeft = daysBetween(today, sep);
+  $('countdownNumber').textContent = daysLeft;
+  $('countdownLabel').textContent = `Days Until ${s.transType}`;
+  $('countdownSub').textContent = `${fmtDate(sep)} · ${s.transType}`;
+
+  const twoYearStart = subDays(sep, 730);
+  let pct = 0;
+  if (today >= twoYearStart) pct = clamp(Math.round((daysBetween(twoYearStart, today) / 730) * 100), 0, 100);
+  $('progressPct').textContent = today < twoYearStart ? `2-Year Window Opens: ${fmtDateShort(twoYearStart)}` : `${pct}% through 2-year window`;
+  setTimeout(() => { $('progressBar').style.width = pct + '%'; }, 200);
+
+  const termStart = subDays(sep, s.leaveDays);
+  const ptdyEnd = termStart;
+  const ptdyStart = subDays(termStart, s.ptdyDays);
+  const sbEnd = s.ptdy ? ptdyStart : termStart;
+  const sbStart = subDays(sbEnd, s.sbDays);
+  const tapDeadline = subDays(sep, isRet ? 365 : 90);
+  const cmdApproval = s.sb ? subDays(sbStart, 60) : null;
+  const firstRetPay = isRet ? firstOfNextMonth(sep) : null;
+  const tricareDeadline = subDays(sep, 90);
+  const vaClaimBy = subDays(sep, 365);
+
+  const subs = [];
+  if (s.sb) subs.push({ label: 'SkillBridge Starts', val: `${daysBetween(today, sbStart)} days`, icon: 'briefcase' });
+  subs.push({ label: 'Terminal Leave', val: `${daysBetween(today, termStart)} days`, icon: 'palm-tree' });
+  subs.push({ label: 'Freedom Day', val: fmtDateShort(sep), icon: 'flag' });
+
+  $('subCounters').innerHTML = subs.map(c => `
+    <div class="bg-white/10 rounded-xl px-4 py-3 text-center">
+      <p class="text-xs text-white/50 uppercase tracking-wide mb-1">${c.label}</p>
+      <p class="text-lg font-bold tabular-nums" style="color:#f5e199;">${c.val}</p>
+    </div>
+  `).join('');
+
+  const milestones = [];
+  milestones.push({ label: 'Today', date: today, icon: 'calendar-check' });
+  milestones.push({ label: 'TAP Must Begin By', date: tapDeadline, icon: 'book-open' });
+  if (s.vaClaim) milestones.push({ label: 'VA Claim Recommended By', date: vaClaimBy, icon: 'file-text' });
+  if (s.sb && cmdApproval) milestones.push({ label: 'Commander Approval Needed', date: cmdApproval, icon: 'shield-check' });
+  milestones.push({ label: 'TRICARE Enrollment Window', date: tricareDeadline, icon: 'heart-pulse' });
+  if (s.sb) {
+    milestones.push({ label: 'SkillBridge Start', date: sbStart, icon: 'briefcase' });
+    milestones.push({ label: 'SkillBridge End', date: sbEnd, icon: 'check-circle' });
+  }
+  if (s.ptdy) {
+    milestones.push({ label: 'Permissive TDY Start', date: ptdyStart, icon: 'map-pin' });
+    milestones.push({ label: 'Permissive TDY End', date: ptdyEnd, icon: 'map-pin-off' });
+  }
+  milestones.push({ label: 'Terminal Leave Begins', date: termStart, icon: 'palm-tree' });
+  milestones.push({ label: `${s.transType} Date`, date: sep, icon: 'flag' });
+  if (firstRetPay) milestones.push({ label: 'First Retirement Pay', date: firstRetPay, icon: 'dollar-sign' });
+
+  // Government Paid Move: 3 years from sep (retirement) or 6 months from sep (separation)
+  const govMoveDeadline = isRet ? addDays(sep, 3 * 365) : addDays(sep, 182);
+  milestones.push({
+    label: isRet ? 'Gov\'t Paid Move Deadline (3 yrs)' : 'Gov\'t Paid Move Deadline (6 mo)',
+    date: govMoveDeadline,
+    icon: 'truck'
+  });
+
+  milestones.sort((a, b) => a.date - b.date);
+
+  $('milestoneGrid').innerHTML = milestones.map((m, i) => {
+    const diff = daysBetween(today, m.date);
+    let statusClass = 'status-green';
+    let relText = '';
+    if (diff === 0) { relText = 'Today'; statusClass = 'status-gold'; }
+    else if (diff > 0 && diff <= 30) { relText = `In ${diff} days`; statusClass = 'status-gold'; }
+    else if (diff > 30) { relText = `In ${diff} days`; statusClass = 'status-green'; }
+    else { relText = `${Math.abs(diff)} days ago`; statusClass = 'status-red'; }
+    return `
+      <div class="milestone-card fade-in-up stagger-${Math.min(i+1,12)}">
+        <div class="flex items-center gap-2">
+          <div class="status-dot ${statusClass}"></div>
+          <span class="text-xs font-medium text-navy-400 uppercase tracking-wide">${m.label}</span>
+        </div>
+        <p class="text-base font-semibold text-navy-700 flex items-center gap-2"><i data-lucide="${m.icon}" class="w-4 h-4 text-gold-500"></i> ${fmtDate(m.date)}</p>
+        <p class="text-xs tabular-nums" style="color:${statusClass === 'status-red' ? '#ef4444' : statusClass === 'status-gold' ? '#f59e0b' : '#10b981'}">${relText}</p>
+      </div>`;
+  }).join('');
+
+  const totalPre = s.sbDays + s.ptdyDays + s.leaveDays;
+  const parts = [];
+  if (s.sb) parts.push(`${s.sbDays} days SkillBridge`);
+  if (s.ptdy) parts.push(`${s.ptdyDays} days Permissive TDY`);
+  parts.push(`${s.leaveDays} days Terminal Leave`);
+  $('preSummaryText').textContent = parts.join(' + ') + ` = ${totalPre} days total pre-transition period`;
+
+  const sbAuthLine = $('sbAuthLine');
+  if (s.sb) {
+    const rg = getRankGrade(s.rank);
+    const authMax = getSkillbridgeAuthorizedMax(s.branch, rg);
+    if (authMax !== null) {
+      const matchesMax = s.sbDays === authMax;
+      const iconName = matchesMax ? 'check-circle' : 'info';
+      const iconColor = matchesMax ? '#10b981' : '#f59e0b';
+      const textColor = matchesMax ? '#047857' : '#b45309';
+      const bgColor = matchesMax ? '#d1fae5' : '#fef3c7';
+      sbAuthLine.innerHTML = `<div class="flex items-center gap-2 text-sm font-medium rounded-lg px-3 py-2" style="background:${bgColor}; color:${textColor};"><i data-lucide="${iconName}" class="w-4 h-4" style="color:${iconColor};"></i> SkillBridge authorized maximum: <strong>${authMax} days</strong> (${rg}, ${s.branch})${!matchesMax ? ' — you selected ' + s.sbDays + ' days' : ''}</div>`;
+      sbAuthLine.classList.remove('hidden');
+    } else if (s.branch === 'Coast Guard') {
+      sbAuthLine.innerHTML = '<div class="flex items-center gap-2 text-sm font-medium rounded-lg px-3 py-2" style="background:#dbeafe; color:#1e40af;"><i data-lucide="info" class="w-4 h-4" style="color:#3b82f6;"></i> Coast Guard SkillBridge limit: confirm with your command (using ' + s.sbDays + ' days)</div>';
+      sbAuthLine.classList.remove('hidden');
+    } else {
+      sbAuthLine.innerHTML = '<div class="flex items-center gap-2 text-sm font-medium rounded-lg px-3 py-2" style="background:#dbeafe; color:#1e40af;"><i data-lucide="info" class="w-4 h-4" style="color:#3b82f6;"></i> SkillBridge days for ' + getRankGrade(s.rank) + ' in the ' + s.branch + ': confirm with your command (using ' + s.sbDays + ' days)</div>';
+      sbAuthLine.classList.remove('hidden');
+    }
+  } else {
+    sbAuthLine.classList.add('hidden');
+    sbAuthLine.innerHTML = '';
+  }
+
+  const segments = [];
+  if (s.sb) segments.push({ days: s.sbDays, color: '#3468b0', label: 'SkillBridge' });
+  if (s.ptdy) segments.push({ days: s.ptdyDays, color: '#c9a227', label: 'PTDY' });
+  segments.push({ days: s.leaveDays, color: '#2d6a4f', label: 'Terminal Leave' });
+
+  $('preBar').innerHTML = segments.map(seg => {
+    const w = Math.max((seg.days / totalPre) * 100, 2);
+    return `<div style="width:${w}%; background:${seg.color};" class="flex items-center justify-center text-white text-xs font-medium">${seg.days}d</div>`;
+  }).join('');
+
+  $('preBarLegend').innerHTML = segments.map(seg =>
+    `<span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm inline-block" style="background:${seg.color};"></span>${seg.label}</span>`
+  ).join('');
+
+  renderPayEstimator(isRet);
+  renderPhases(today, sep, termStart, ptdyStart, ptdyEnd, sbStart, sbEnd, tapDeadline, isRet);
+  renderResources();
+
+  if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') lucide.createIcons();
+}
+
+// ===== PAY ESTIMATOR RENDERING =====
+function renderPayEstimator(isRet) {
+  const s = state;
+  const rg = getRankGrade(s.rank);
+
+  if (!isRet) {
+    $('paySepNotice').classList.remove('hidden');
+    $('payRetirementBlock').style.display = 'none';
+    $('crdpNotice').style.display = 'none';
+  } else {
+    $('paySepNotice').classList.add('hidden');
+    $('payRetirementBlock').style.display = '';
+    $('crdpNotice').style.display = '';
+  }
+
+  // DOR: calculate time in grade
+  if (s.dateOfRank) {
+    const dorDate = new Date(s.dateOfRank + 'T00:00:00');
+    const today = new Date(s.todayDate + 'T00:00:00');
+    const sep = new Date(s.sepDate + 'T00:00:00');
+    const tigDays = daysBetween(dorDate, sep);
+    const tigYears = (tigDays / 365.25).toFixed(1);
+    const tigAtToday = Math.max(0, daysBetween(dorDate, today));
+    const tigYearsToday = (tigAtToday / 365.25).toFixed(1);
+    const dorBox = $('dorResultBox');
+    if (dorBox) {
+      dorBox.classList.remove('hidden');
+      $('dorYearsDisplay').textContent = `${tigYearsToday} years at current grade (${rg})`;
+      $('dorPayHint').textContent = `Time in grade at retirement: ${tigYears} years. DOR is used for pay table accuracy — your base pay is auto-set from 2026 DFAS tables.`;
+    }
+    // Use DOR to refine pay table lookup: time in grade as additional YOS context
+    const basePay2026 = getBasePay2026(rg, s.yos);
+    if (basePay2026 !== null) {
+      $('payBasePay').value = basePay2026.toFixed(2);
+      $('payBasePayHint').textContent = `2026 DFAS table: ${rg} at ${s.yos} YOS = ${fmtCurrency(basePay2026)}/mo · DOR: ${fmtDate(dorDate)} (${tigYearsToday} yrs in grade)`;
+    }
+  } else {
+    const dorBox = $('dorResultBox');
+    if (dorBox) dorBox.classList.add('hidden');
+    const basePay2026 = getBasePay2026(rg, s.yos);
+    if (basePay2026 !== null) {
+      $('payBasePay').value = basePay2026.toFixed(2);
+      $('payBasePayHint').textContent = `2026 DFAS table: ${rg} at ${s.yos} YOS = ${fmtCurrency(basePay2026)}/mo`;
+    } else {
+      $('payBasePayHint').textContent = 'Could not auto-populate — enter your monthly base pay from your LES.';
+    }
+  }
+
+  $('payYOS').value = s.yos;
+
+  payRetSystem = s.payRetSystem || 'high3';
+  const retCards = $('payRetSystemGroup').querySelectorAll('.radio-card');
+  retCards.forEach(c => c.classList.toggle('selected', c.dataset.value === payRetSystem));
+
+  selectedVARating = s.selectedVARating || 0;
+  hasDependents = s.hasDependents || false;
+  $('depToggle').classList.toggle('active', hasDependents);
+  $('depNote').classList.toggle('hidden', !hasDependents);
+
+  const ratingBtns = $('vaRatingBtns');
+  ratingBtns.innerHTML = '';
+  [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].forEach(r => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = `va-rating-btn${r === selectedVARating ? ' active' : ''}`;
+    btn.textContent = r + '%';
+    btn.dataset.rating = r;
+    ratingBtns.appendChild(btn);
+  });
+
+  // TSP: auto-populate years to retirement
+  const today = new Date(s.todayDate + 'T00:00:00');
+  const sep = new Date(s.sepDate + 'T00:00:00');
+  const daysToRet = daysBetween(today, sep);
+  const yearsToRet = Math.max(0, (daysToRet / 365.25)).toFixed(1);
+
+  $('tspYearsToRet').value = s.tspYearsToRet || yearsToRet;
+  if (s.tspBalance) $('tspBalance').value = s.tspBalance;
+  if (s.tspRate) { $('tspRate').value = s.tspRate; $('tspRateDisplay').textContent = s.tspRate + '%'; }
+  if (s.tspContribution !== undefined) $('tspContribution').value = s.tspContribution;
+  if (s.tspContribPct !== undefined) $('tspContribPct').value = s.tspContribPct;
+  if (s.tspRetAge) $('tspRetAge').value = s.tspRetAge;
+  if (s.tspFixedAmount) $('tspFixedAmount').value = s.tspFixedAmount;
+
+  // TSP contribution mode
+  tspContribMode = s.tspContribMode || 'fixed';
+  const cmCards = $('tspContribModeGroup').querySelectorAll('.radio-card');
+  cmCards.forEach(c => c.classList.toggle('selected', c.dataset.value === tspContribMode));
+  $('tspContribFixedField').classList.toggle('hidden', tspContribMode !== 'fixed');
+  $('tspContribPctField').classList.toggle('hidden', tspContribMode !== 'pct');
+
+  tspWithdrawalMethod = s.tspWithdrawalMethod || 'fixed';
+
+  // Set withdrawal method radio
+  const wCards = $('tspWithdrawalGroup').querySelectorAll('.tsp-withdrawal-card');
+  wCards.forEach(c => c.classList.toggle('selected', c.dataset.value === tspWithdrawalMethod));
+  $('tspFixedFields').style.display = tspWithdrawalMethod === 'fixed' ? '' : 'none';
+
+  recalcPayEstimator();
+}
+
+function recalcPayEstimator() {
+  const s = state;
+  const isRet = s.transType === 'Retirement';
+  const bp = parseFloat($('payBasePay').value) || 0;
+  const yos = parseInt($('payYOS').value) || s.yos;
+  const mult = payRetSystem === 'high3' ? 0.025 : 0.02;
+  const pctMult = yos * mult;
+  const monthlyRet = isRet ? Math.round(bp * pctMult * 100) / 100 : 0;
+  const annualRet = monthlyRet * 12;
+
+  if (isRet && bp > 0) {
+    $('payRetResult').classList.remove('hidden');
+    $('payRetMonthly').textContent = fmtCurrency(monthlyRet);
+    $('payRetAnnual').textContent = fmtCurrency(annualRet);
+    $('payRetFormula').textContent = `${yos} yrs × ${(mult * 100).toFixed(1)}% × ${fmtCurrency(bp)} = ${fmtCurrency(monthlyRet)}/mo (${Math.round(pctMult * 100)}% of base pay)`;
+    $('payBrsNote').classList.toggle('hidden', payRetSystem !== 'brs');
+  } else {
+    $('payRetResult').classList.add('hidden');
+  }
+
+  const vaComp = VA_RATES_2025[selectedVARating] || 0;
+  $('vaCompResult').classList.remove('hidden');
+  $('vaRatingLabel').textContent = selectedVARating + '%';
+  $('vaCompAmount').textContent = fmtCurrency(vaComp);
+
+  renderIncomeTable(monthlyRet, isRet);
+  renderIncomeBarChart(monthlyRet, isRet);
+
+  // TSP calculations
+  const tspMonthlyIncome = recalcTSP(monthlyRet, isRet, bp);
+
+  renderInsightCards(monthlyRet, isRet);
+
+  // Full income summary
+  renderFullIncomeSummary(monthlyRet, vaComp, tspMonthlyIncome, isRet);
+
+  // State tax panel
+  renderStateTaxPanel(monthlyRet, isRet);
+
+  state.payRetSystem = payRetSystem;
+  state.selectedVARating = selectedVARating;
+  state.hasDependents = hasDependents;
+  state.tspBalance = parseFloat($('tspBalance').value) || 0;
+  state.tspYearsToRet = parseFloat($('tspYearsToRet').value) || 0;
+  state.tspRate = parseFloat($('tspRate').value) || 6;
+  state.tspContribMode = tspContribMode;
+  state.tspContribution = parseFloat($('tspContribution').value) || 200;
+  state.tspContribPct = parseFloat($('tspContribPct').value) || 5;
+  state.tspRetAge = parseInt($('tspRetAge').value) || 45;
+  state.tspWithdrawalMethod = tspWithdrawalMethod;
+  state.tspFixedAmount = parseFloat($('tspFixedAmount').value) || 500;
+  saveState(state);
+
+  if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') lucide.createIcons();
+}
+
+// ===== TSP CALCULATIONS =====
+function recalcTSP(monthlyRet, isRet, basePay) {
+  const currentBalance = parseFloat($('tspBalance').value) || 0;
+  const yearsToRet = parseFloat($('tspYearsToRet').value) || 0;
+  const annualRate = (parseFloat($('tspRate').value) || 6) / 100;
+  const retAge = parseInt($('tspRetAge').value) || 45;
+  const fixedAmount = parseFloat($('tspFixedAmount').value) || 500;
+
+  // Resolve monthly contribution based on mode
+  let monthlyContrib = 0;
+  if (tspContribMode === 'pct') {
+    const pct = parseFloat($('tspContribPct').value) || 0;
+    monthlyContrib = basePay > 0 ? (basePay * pct / 100) : 0;
+    // Update the hint display
+    const calcEl = $('tspContribPctCalc');
+    if (calcEl) calcEl.textContent = basePay > 0 ? fmtCurrencyWhole(monthlyContrib) + '/mo' : '(enter base pay above)';
+  } else {
+    monthlyContrib = parseFloat($('tspContribution').value) || 0;
+  }
+
+  const monthlyRate = annualRate / 12;
+  const months = Math.round(yearsToRet * 12);
+
+  let fvBalance = 0;
+  let fvContrib = 0;
+
+  if (months > 0 && monthlyRate > 0) {
+    fvBalance = currentBalance * Math.pow(1 + monthlyRate, months);
+    fvContrib = monthlyContrib * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate);
+  } else if (months > 0 && monthlyRate === 0) {
+    fvBalance = currentBalance;
+    fvContrib = monthlyContrib * months;
+  } else {
+    fvBalance = currentBalance;
+    fvContrib = 0;
+  }
+
+  const projectedBalance = fvBalance + fvContrib;
+
+  let tspMonthlyIncome = 0;
+
+  if (currentBalance > 0 || monthlyContrib > 0) {
+    $('tspProjectedResult').classList.remove('hidden');
+    $('tspProjectedBalance').textContent = fmtCurrencyWhole(projectedBalance);
+    $('tspGrowthCurrent').textContent = fmtCurrencyWhole(fvBalance);
+    $('tspGrowthContrib').textContent = fmtCurrencyWhole(fvContrib);
+
+    // Withdrawal result
+    const wResult = $('tspWithdrawalResult');
+    const wContent = $('tspWithdrawalContent');
+
+    if (projectedBalance > 0) {
+      wResult.classList.remove('hidden');
+
+      if (tspWithdrawalMethod === 'fixed') {
+        if (fixedAmount > 0) {
+          const totalMonths = Math.floor(projectedBalance / fixedAmount);
+          const years = Math.floor(totalMonths / 12);
+          const remMonths = totalMonths % 12;
+          const depletionAge = retAge + years + (remMonths / 12);
+
+          let warningHtml = '';
+          if (depletionAge < 85) {
+            warningHtml = `<div class="mt-3 rounded-lg p-3 flex items-start gap-2 text-xs" style="background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5;">
+              <i data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+              <span>At this withdrawal rate, your TSP may be depleted by age ${Math.round(depletionAge)}. Consider a lower withdrawal or annuity option.</span>
+            </div>`;
+          }
+
+          wContent.innerHTML = `<div class="text-center">
+            <p class="text-xs font-medium uppercase tracking-wide text-navy-400 mb-1">Fixed Monthly Withdrawal</p>
+            <p class="text-2xl font-bold tabular-nums" style="color:#c9a227;">${fmtCurrencyWhole(fixedAmount)}/mo</p>
+            <p class="text-sm text-navy-500 mt-2">At ${fmtCurrencyWhole(fixedAmount)}/month, your TSP will last approximately <strong class="text-navy-700">${years} years ${remMonths} months</strong></p>
+            ${warningHtml}
+          </div>`;
+          tspMonthlyIncome = fixedAmount;
+        }
+      } else if (tspWithdrawalMethod === 'life') {
+        const distPeriod = getLifeExpDistributionPeriod(retAge);
+        const firstYearAnnual = projectedBalance / distPeriod;
+        const firstYearMonthly = firstYearAnnual / 12;
+
+        wContent.innerHTML = `<div class="text-center">
+          <p class="text-xs font-medium uppercase tracking-wide text-navy-400 mb-1">Life Expectancy Monthly Payment (First Year)</p>
+          <p class="text-2xl font-bold tabular-nums" style="color:#c9a227;">${fmtCurrencyWhole(firstYearMonthly)}/mo</p>
+          <p class="text-sm text-navy-500 mt-2">Based on IRS distribution period of <strong class="text-navy-700">${distPeriod.toFixed(1)} years</strong> at age ${retAge}</p>
+          <p class="text-xs text-navy-400 mt-1 italic">Amount recalculates each January based on remaining balance and updated life expectancy tables.</p>
+        </div>`;
+        tspMonthlyIncome = firstYearMonthly;
+      } else if (tspWithdrawalMethod === 'annuity') {
+        const factor = interpolateAnnuityFactor(retAge);
+        const monthlyAnnuity = (projectedBalance / 1000) * factor;
+
+        let annuityNote = '';
+        if (projectedBalance < 3500) {
+          annuityNote = `<div class="mt-3 rounded-lg p-3 flex items-start gap-2 text-xs" style="background:#fef3c7; color:#b45309; border:1px solid #fcd34d;">
+            <i data-lucide="info" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+            <span>Minimum TSP balance to purchase an annuity is $3,500. Your projected balance is below this threshold.</span>
+          </div>`;
+        }
+
+        wContent.innerHTML = `<div class="text-center">
+          <p class="text-xs font-medium uppercase tracking-wide text-navy-400 mb-1">Estimated Lifetime Monthly Annuity</p>
+          <p class="text-2xl font-bold tabular-nums" style="color:#c9a227;">${fmtCurrencyWhole(monthlyAnnuity)}/mo</p>
+          <p class="text-sm text-navy-500 mt-2">Based on single-life annuity factor of <strong class="text-navy-700">$${factor.toFixed(2)}</strong> per $1,000 at age ${retAge}</p>
+          <p class="text-xs text-navy-400 mt-1 italic">Once purchased, annuity payments are guaranteed for life but the balance is no longer yours to manage.</p>
+          ${annuityNote}
+        </div>`;
+        tspMonthlyIncome = monthlyAnnuity;
+      }
+    } else {
+      wResult.classList.add('hidden');
+    }
+  } else {
+    $('tspProjectedResult').classList.add('hidden');
+    $('tspWithdrawalResult').classList.add('hidden');
+  }
+
+  // BRS callout
+  const brsCallout = $('tspBrsCallout');
+  if (payRetSystem === 'brs' && basePay > 0) {
+    const fivePercent = Math.round(basePay * 0.05);
+    $('tspBrsCalloutText').innerHTML = `<strong>BRS Tip:</strong> As a BRS member, DoD matches up to 5% of your base pay in TSP contributions. If you're contributing at least 5% (<strong>${fmtCurrencyWhole(fivePercent)}/month</strong> based on your base pay), you're capturing your full match — a powerful wealth-building tool.`;
+    brsCallout.classList.remove('hidden');
+  } else {
+    brsCallout.classList.add('hidden');
+  }
+
+  return tspMonthlyIncome;
+}
+
+function renderFullIncomeSummary(monthlyRet, vaComp, tspMonthlyIncome, isRet) {
+  const summary = $('tspFullIncomeSummary');
+  const hasAnyIncome = monthlyRet > 0 || vaComp > 0 || tspMonthlyIncome > 0;
+
+  if (!hasAnyIncome) {
+    summary.classList.add('hidden');
+    return;
+  }
+
+  summary.classList.remove('hidden');
+
+  const total = (isRet ? monthlyRet : 0) + vaComp + tspMonthlyIncome;
+  const rows = [];
+
+  if (isRet && monthlyRet > 0) {
+    rows.push({ icon: 'medal', label: 'Military Retirement Pay', amount: monthlyRet, color: '#c9a227' });
+  }
+  if (vaComp > 0) {
+    rows.push({ icon: 'shield-check', label: 'VA Disability Compensation', amount: vaComp, color: '#10b981' });
+  }
+  if (tspMonthlyIncome > 0) {
+    rows.push({ icon: 'trending-up', label: 'TSP Estimated Income', amount: tspMonthlyIncome, color: '#3468b0' });
+  }
+
+  $('tspFullIncomeRows').innerHTML = rows.map(r => `
+    <div class="flex items-center justify-between">
+      <span class="text-sm text-white/80 flex items-center gap-2"><i data-lucide="${r.icon}" class="w-4 h-4" style="color:${r.color};"></i> ${r.label}</span>
+      <span class="text-lg font-semibold tabular-nums text-white">${fmtCurrencyWhole(r.amount)}</span>
+    </div>
+  `).join('');
+
+  $('tspFullTotal').textContent = fmtCurrencyWhole(total);
+  $('tspFullAnnual').textContent = `${fmtCurrencyWhole(total * 12)}/year`;
+}
+
+function renderIncomeTable(monthlyRet, isRet) {
+  const tbody = $('incomeTableBody');
+  const ratings = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+  let html = '';
+  ratings.forEach(r => {
+    const vaComp = VA_RATES_2025[r];
+    const totalMo = (isRet ? monthlyRet : 0) + vaComp;
+    const totalYr = totalMo * 12;
+    const isHighlighted = r === selectedVARating;
+    const isCrdp = r >= 50;
+    let rowClass = 'income-table-row';
+    if (isHighlighted) rowClass += ' highlighted';
+    if (isRet) rowClass += isCrdp ? ' crdp-eligible' : ' va-waiver';
+    const statusHtml = isRet ? (isCrdp
+      ? '<span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full" style="background:#d1fae5; color:#047857;">CRDP</span>'
+      : '<span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full" style="background:#fee2e2; color:#b91c1c;">Waiver</span>'
+    ) : '<span class="text-xs text-navy-400">—</span>';
+    html += `<tr class="${rowClass}" style="${isHighlighted ? 'border-left:3px solid #c9a227;' : ''}">
+      <td class="px-3 py-2 text-sm font-medium text-navy-700 tabular-nums">${r}%</td>
+      <td class="px-3 py-2 text-sm text-right tabular-nums text-navy-600">${isRet ? fmtCurrency(monthlyRet) : '—'}</td>
+      <td class="px-3 py-2 text-sm text-right tabular-nums" style="color:#c9a227; font-weight:500;">${fmtCurrency(vaComp)}</td>
+      <td class="px-3 py-2 text-sm text-right tabular-nums font-semibold text-navy-700">${fmtCurrency(totalMo)}</td>
+      <td class="px-3 py-2 text-sm text-right tabular-nums text-navy-500">${fmtCurrency(totalYr)}</td>
+      <td class="px-3 py-2 text-center">${statusHtml}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function renderIncomeBarChart(monthlyRet, isRet) {
+  const container = $('incomeBarChart');
+  const ratings = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+  const retPay = isRet ? monthlyRet : 0;
+  const maxTotal = retPay + VA_RATES_2025[100];
+  if (maxTotal === 0) {
+    container.innerHTML = '<p class="text-sm text-navy-400 italic">Enter base pay to see the chart.</p>';
+    return;
+  }
+  let html = '';
+  ratings.forEach(r => {
+    const vaComp = VA_RATES_2025[r];
+    const total = retPay + vaComp;
+    const retW = maxTotal > 0 ? (retPay / maxTotal) * 100 : 0;
+    const vaW = maxTotal > 0 ? (vaComp / maxTotal) * 100 : 0;
+    const isActive = r === selectedVARating;
+    const opacity = isActive ? '1' : '0.65';
+    html += `<div class="flex items-center gap-2" style="opacity:${opacity}; transition: opacity 0.2s;">
+      <span class="text-xs font-medium text-navy-500 w-8 text-right tabular-nums">${r}%</span>
+      <div class="flex-1 flex h-6 rounded-md overflow-hidden" style="background:#f0f2f6;">
+        ${retPay > 0 ? `<div class="bar-segment h-full" style="width:${retW}%; background:#1a2744;"></div>` : ''}
+        ${vaComp > 0 ? `<div class="bar-segment h-full" style="width:${vaW}%; background:#c9a227;"></div>` : ''}
+      </div>
+      <span class="text-xs font-semibold text-navy-600 tabular-nums w-20 text-right">${fmtCurrency(total)}</span>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+function renderInsightCards(monthlyRet, isRet) {
+  const container = $('insightCards');
+  const retPay = isRet ? monthlyRet : 0;
+  const at0 = retPay + VA_RATES_2025[0];
+  const at50 = retPay + VA_RATES_2025[50];
+  const at100 = retPay + VA_RATES_2025[100];
+  const diff50 = at50 - at0;
+  const diffAnnual = diff50 * 12;
+
+  let cards = '';
+  cards += `<div class="insight-card" style="background:#f0f2f6;">
+    <div class="flex items-center gap-2 mb-2"><i data-lucide="target" class="w-4 h-4 text-gold-500"></i><h4 class="text-sm font-semibold text-navy-700">Break-Even Insight</h4></div>
+    <p class="text-xs text-navy-500 leading-relaxed">At a 50% VA rating, your estimated total monthly income is <strong class="text-navy-700">${fmtCurrency(at50)}</strong> — <strong class="text-navy-700">${fmtCurrency(diff50)}</strong> more per month than with no VA rating. At 50%+, you qualify for CRDP (full concurrent receipt).</p>
+  </div>`;
+  cards += `<div class="insight-card" style="background:#fdf9ed;">
+    <div class="flex items-center gap-2 mb-2"><i data-lucide="trophy" class="w-4 h-4 text-gold-500"></i><h4 class="text-sm font-semibold text-navy-700">100% Rating Scenario</h4></div>
+    <p class="text-xs text-navy-500 leading-relaxed">If rated at 100%, your estimated combined monthly income would be <strong class="text-navy-700">${fmtCurrency(at100)}</strong> (<strong class="text-navy-700">${fmtCurrency(at100 * 12)}</strong>/year). At 100% P&T, additional benefits include commissary access, full TRICARE, and potential property tax exemptions.</p>
+  </div>`;
+  cards += `<div class="insight-card" style="background:#d1fae5;">
+    <div class="flex items-center gap-2 mb-2"><i data-lucide="calendar-check" class="w-4 h-4" style="color:#047857;"></i><h4 class="text-sm font-semibold text-navy-700">Annual Impact</h4></div>
+    <p class="text-xs text-navy-500 leading-relaxed">The difference between a 0% and 50% VA rating is approximately <strong class="text-navy-700">${fmtCurrency(diffAnnual)}</strong> per year in additional tax-free income. VA compensation is not subject to federal or state income tax.</p>
+  </div>`;
+  container.innerHTML = cards;
+}
+
+// ===== STATE TAX PANEL =====
+function renderStateTaxPanel(monthlyRet, isRet) {
+  const s = state;
+  let panel = $('stateTaxPanel');
+  if (!panel) return; // panel doesn't exist yet in DOM — it's injected below the insight cards
+
+  const stateCode = parseStateFromLocation(s.postLocation);
+  if (!stateCode) {
+    panel.innerHTML = `<div class="insight-card" style="background:#f0f2f6; grid-column: 1 / -1;">
+      <div class="flex items-center gap-2 mb-2"><i data-lucide="map-pin" class="w-4 h-4 text-gold-500"></i><h4 class="text-sm font-semibold text-navy-700">State Tax Impact</h4></div>
+      <p class="text-xs text-navy-500">Enter a post-transition location (e.g., "San Antonio, TX") on the setup screen to see how your state's tax laws will affect your retirement income.</p>
+    </div>`;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    return;
+  }
+
+  const td = STATE_TAX_DATA[stateCode];
+  const annualRet = isRet ? monthlyRet * 12 : 0;
+  const annualVA = (VA_RATES_2025[selectedVARating] || 0) * 12;
+
+  // Estimated state tax on retirement pay
+  let retTaxAnnual = 0;
+  let retTaxNote = '';
+  if (td.militaryRetirementTax === 'exempt') {
+    retTaxAnnual = 0;
+    retTaxNote = 'Fully exempt';
+  } else if (td.militaryRetirementTax === 'taxed') {
+    retTaxAnnual = isRet ? annualRet * (td.topRate / 100) : 0;
+    retTaxNote = `Est. ~${fmtCurrencyWhole(retTaxAnnual)}/yr at ${td.topRate}% top rate`;
+  } else {
+    // partial — rough estimate at half effective rate
+    retTaxAnnual = isRet ? annualRet * (td.topRate / 100) * 0.5 : 0;
+    retTaxNote = `Partial exemption — est. ~${fmtCurrencyWhole(retTaxAnnual)}/yr (varies by age/income)`;
+  }
+
+  const afterTaxMonthly = isRet ? ((annualRet - retTaxAnnual) / 12) : 0;
+  const noTaxLabel = td.topRate === 0 ? '🏖️ No state income tax' : '';
+
+  let colorBg, colorText, icon;
+  if (td.militaryRetirementTax === 'exempt' || td.topRate === 0) {
+    colorBg = '#d1fae5'; colorText = '#047857'; icon = 'check-circle';
+  } else if (td.militaryRetirementTax === 'partial') {
+    colorBg = '#fef3c7'; colorText = '#b45309'; icon = 'alert-triangle';
+  } else {
+    colorBg = '#fee2e2'; colorText = '#b91c1c'; icon = 'alert-circle';
+  }
+
+  panel.innerHTML = `<div class="insight-card" style="background:${colorBg}; grid-column: 1 / -1;">
+    <div class="flex items-center gap-2 mb-2">
+      <i data-lucide="${icon}" class="w-4 h-4" style="color:${colorText};"></i>
+      <h4 class="text-sm font-semibold" style="color:${colorText};">${td.name} — Military Retirement Tax Status</h4>
+      ${noTaxLabel ? `<span class="text-xs font-medium px-2 py-0.5 rounded-full" style="background:white; color:#047857;">${noTaxLabel}</span>` : ''}
+    </div>
+    <p class="text-xs leading-relaxed mb-2" style="color:${colorText};">${td.note}</p>
+    ${isRet && annualRet > 0 ? `
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2">
+      <div class="bg-white/70 rounded-lg p-2 text-center">
+        <p class="text-xs text-navy-400">Gross Ret. Pay</p>
+        <p class="text-sm font-semibold text-navy-700">${fmtCurrencyWhole(monthlyRet)}/mo</p>
+      </div>
+      <div class="bg-white/70 rounded-lg p-2 text-center">
+        <p class="text-xs text-navy-400">Est. State Tax</p>
+        <p class="text-sm font-semibold" style="color:${colorText};">${retTaxAnnual > 0 ? '-' + fmtCurrencyWhole(retTaxAnnual / 12) + '/mo' : 'None'}</p>
+      </div>
+      <div class="bg-white/70 rounded-lg p-2 text-center">
+        <p class="text-xs text-navy-400">After-State-Tax</p>
+        <p class="text-sm font-semibold text-navy-700">${fmtCurrencyWhole(afterTaxMonthly)}/mo</p>
+      </div>
+    </div>` : ''}
+    <p class="text-xs mt-2" style="color:${colorText}; opacity:0.8;">Note: VA disability compensation is always federal and state tax-exempt. State tax estimates are approximations — consult a tax professional for your specific situation.</p>
+  </div>`;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function calcRetPay() {
+  const bp = parseFloat($('basePay').value);
+  if (!bp || bp <= 0) { $('retPayResult').classList.add('hidden'); return; }
+  $('retPayResult').classList.remove('hidden');
+  const yos = state.yos;
+  const mult = retSystem === 'high3' ? 0.025 : 0.02;
+  const pct = yos * mult;
+  const monthly = Math.round(bp * pct);
+  $('retPayAmount').textContent = '$' + monthly.toLocaleString();
+  $('retPayFormula').textContent = `${yos} yrs × ${mult * 100}% × $${bp.toLocaleString()} = $${monthly.toLocaleString()}/mo (${Math.round(pct*100)}% of base pay)`;
+  $('brsNote').classList.toggle('hidden', retSystem !== 'brs');
+}
+
+// ===== PHASES =====
+function renderPhases(today, sep, termStart, ptdyStart, ptdyEnd, sbStart, sbEnd, tapDeadline, isRet) {
+  const s = state;
+  const checks = loadChecks();
+  const m18 = subDays(sep, 547);
+  const tapMinus6 = subDays(tapDeadline, 180);
+  const sbPrepStart = s.sb ? subDays(sbStart, 180) : subDays(sep, 365);
+
+  const phases = [
+    { id:'p1', name:'Phase 1: Foundation', range:`${fmtDateShort(today > m18 ? today : m18)} — ${fmtDateShort(subDays(tapMinus6, 1))}`,
+      tasks:['Create/update financial plan and emergency fund','Review TSP allocations and contributions','Collect and organize all service records','Create or update LinkedIn profile','Begin VA disability documentation — gather medical records','Research housing options in target location' + (s.postLocation ? ` (${s.postLocation})` : ''),'Update will, power of attorney, and advance directive','Review SGLI beneficiary designations','Build a detailed post-transition budget','Verify myPay account access and settings'] },
+    { id:'p2', name:'Phase 2: TAP & Benefits', range:`${fmtDateShort(tapMinus6)} — ${fmtDateShort(tapDeadline)}`,
+      tasks:['Register for Transition Assistance Program (TAP)','Complete 5-day TAP core curriculum','Complete Individual Transition Plan (ITP)','Choose TAP track: Employment / Education / Entrepreneurship','Complete Capstone requirements',s.vaClaim ? 'File VA disability claim (BDD program if 90-180 days out)' : 'Research VA disability claim process','Research TRICARE options for post-transition healthcare','Identify target career fields and required certifications','Attend veteran hiring events and career fairs','Request copies of training records and evaluations'] },
+    s.sb ? { id:'p3', name:'Phase 3: SkillBridge Prep', range:`${fmtDateShort(sbPrepStart)} — ${fmtDateShort(subDays(sbStart, 1))}`,
+      tasks:['Research SkillBridge employers at skillbridge.defense.gov','Identify top 3 SkillBridge program choices','Submit commander approval package (60+ days before start)','Get SkillBridge approval memo signed','Finalize and tailor civilian resume','Optimize LinkedIn — headline, summary, keywords','Schedule C&P exams for VA disability (if applicable)',s.giBill ? 'Research GI Bill benefits and eligible programs' : 'Research education benefits options','Research professional certifications in target field','Network with SkillBridge alumni in your career field'] }
+    : { id:'p3', name:'Phase 3: Job Search & Networking', range:`${fmtDateShort(sbPrepStart)} — ${fmtDateShort(subDays(s.ptdy ? ptdyStart : termStart, 1))}`,
+      tasks:['Finalize and tailor civilian resume for target roles','Optimize LinkedIn profile for civilian job search','Begin submitting job applications','Conduct informational interviews in target industry','Attend veteran-specific job fairs and networking events','Research professional certifications in target field',s.giBill ? 'Research GI Bill benefits and school options' : 'Research continuing education options','Schedule C&P exams for VA disability (if applicable)','Build professional network in target location','Practice interviewing — use ACP or Hire Heroes USA mock interviews'] },
+    { id:'p4', name: s.sb ? 'Phase 4: SkillBridge & Active Prep' : 'Phase 4: Final Active Duty Prep',
+      range: s.sb ? `${fmtDateShort(sbStart)} — ${fmtDateShort(sbEnd)}` : `${fmtDateShort(subDays(s.ptdy ? ptdyStart : termStart, 180))} — ${fmtDateShort(subDays(s.ptdy ? ptdyStart : termStart, 1))}`,
+      tasks:[s.sb ? 'Begin SkillBridge program — treat it like your first civilian job' : 'Continue civilian job applications and interviews','Request reference/recommendation letters from leadership','Complete pre-retirement briefing (if retiring)','Confirm DFAS retirement pay setup (if retiring)','Enroll in TRICARE retiree plan (90-day window)','Register for retired/veteran ID card','Complete all medical and dental appointments','Evaluate SBP election (if retiring)','Research VA home loan eligibility and pre-approval','Update resume with SkillBridge experience (if applicable)'] },
+    { id:'p5', name:'Phase 5: Out-Processing' + (s.ptdy ? ' & PTDY' : ''),
+      range: s.ptdy ? `${fmtDateShort(ptdyStart)} — ${fmtDateShort(ptdyEnd)}` : `${fmtDateShort(subDays(termStart, 14))} — ${fmtDateShort(termStart)}`,
+      tasks:['Begin formal out-processing checklist','Return all government equipment and property','Clear all base agencies (finance, housing, medical, etc.)','Complete house/job hunting during PTDY (if applicable)','Pick up DD-214 on final out-processing day','Review DD-214 carefully for accuracy and errors','Register DD-214 with local county clerk','Confirm final leave and pay settlement','Transfer medical records to VA','Confirm retirement/separation orders are correct'] },
+    { id:'p6', name:'Phase 6: Terminal Leave & Freedom',
+      range:`${fmtDateShort(termStart)} — ${fmtDateShort(sep)}`,
+      tasks:['Continue job search or accept final offer before separation','Activate TRICARE post-service coverage','Confirm first retirement pay date and amount (if retiring)','Update all beneficiary designations for civilian accounts','Apply for state veteran benefits in ' + (s.postLocation || 'your new state'),'Open VA.gov claim tracking — monitor status','Set up civilian healthcare if not using TRICARE','Complete final PCS move (if applicable)','Update driver\'s license and vehicle registration','Celebrate your service and transition! 🎉'] }
+  ];
+
+  let html = '';
+  phases.forEach((phase, pi) => {
+    const taskChecks = phase.tasks.map((_, ti) => checks[`${phase.id}-${ti}`] || false);
+    const done = taskChecks.filter(Boolean).length;
+    const total = phase.tasks.length;
+    const pctDone = Math.round((done / total) * 100);
+    html += `
+      <div class="section-card" style="padding:0; overflow:hidden;">
+        <div class="phase-header" data-phase="${phase.id}">
+          <div class="flex-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-sm font-semibold text-navy-700">${phase.name}</span>
+              <span class="text-xs font-medium px-2 py-0.5 rounded-full tabular-nums" style="background:${pctDone === 100 ? '#d1fae5' : '#f0f2f6'}; color:${pctDone === 100 ? '#047857' : '#67779e'};">${pctDone}%</span>
+            </div>
+            <p class="text-xs text-navy-400 mt-0.5">${phase.range}</p>
+            <div class="w-full h-1.5 rounded-full mt-2 overflow-hidden" style="background:#e9ecef;">
+              <div class="h-full rounded-full progress-animate" style="width:${pctDone}%; background: ${pctDone === 100 ? '#10b981' : '#c9a227'};"></div>
+            </div>
+          </div>
+          <i data-lucide="chevron-down" class="w-5 h-5 text-navy-400 flex-shrink-0 transition-transform phase-chevron"></i>
+        </div>
+        <div class="phase-content" id="content-${phase.id}">
+          <div class="px-4 pb-4 pt-1 space-y-1">
+            ${phase.tasks.map((task, ti) => `
+              <label class="check-item">
+                <input type="checkbox" data-phase="${phase.id}" data-task="${ti}" ${taskChecks[ti] ? 'checked' : ''} />
+                <span class="text-sm text-navy-600" style="${taskChecks[ti] ? 'text-decoration:line-through; opacity:0.5;' : ''}">${task}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+      </div>`;
+  });
+  $('phaseList').innerHTML = html;
+
+  document.querySelectorAll('.phase-header').forEach(h => {
+    h.addEventListener('click', () => {
+      const id = h.dataset.phase;
+      const content = $('content-' + id);
+      content.classList.toggle('open');
+      const chev = h.querySelector('.phase-chevron');
+      if (chev) chev.style.transform = content.classList.contains('open') ? 'rotate(180deg)' : '';
+    });
+  });
+
+  document.querySelectorAll('#phaseList input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const checks = loadChecks();
+      checks[`${cb.dataset.phase}-${cb.dataset.task}`] = cb.checked;
+      saveChecks(checks);
+      const span = cb.nextElementSibling;
+      if (span) { span.style.textDecoration = cb.checked ? 'line-through' : ''; span.style.opacity = cb.checked ? '0.5' : '1'; }
+      const phaseId = cb.dataset.phase;
+      const allInPhase = document.querySelectorAll(`input[data-phase="${phaseId}"]`);
+      const doneCount = [...allInPhase].filter(c => c.checked).length;
+      const pctNew = Math.round((doneCount / allInPhase.length) * 100);
+      const header = document.querySelector(`.phase-header[data-phase="${phaseId}"]`);
+      if (header) {
+        const badge = header.querySelector('.rounded-full:first-of-type');
+        if (badge) { badge.textContent = pctNew + '%'; badge.style.background = pctNew === 100 ? '#d1fae5' : '#f0f2f6'; badge.style.color = pctNew === 100 ? '#047857' : '#67779e'; }
+        const bar = header.querySelector('.progress-animate');
+        if (bar) { bar.style.width = pctNew + '%'; bar.style.background = pctNew === 100 ? '#10b981' : '#c9a227'; }
+      }
+    });
+  });
+}
+
+// ===== RESOURCES =====
+function renderResources() {
+  const s = state;
+  const resources = [
+    { title:'TAP / Transition', links:[['militaryonesource.mil','https://www.militaryonesource.mil'],['tapevents.mil','https://www.tapevents.mil']], icon:'book-open' },
+    { title:'SkillBridge', links:[['skillbridge.defense.gov','https://skillbridge.osd.mil']], icon:'briefcase' },
+    { title:'VA Benefits', links:[['va.gov','https://www.va.gov'],['benefits.va.gov','https://benefits.va.gov']], icon:'shield' },
+    { title:'Resume Help', links:[['hireheroesusa.org','https://www.hireheroesusa.org'],['acp-usa.org','https://www.acp-usa.org']], icon:'file-text' },
+    { title:'Federal Jobs', links:[['usajobs.gov — Veterans Preference','https://www.usajobs.gov']], icon:'building-2' },
+    { title:'Financial', links:[['mypay.dfas.mil','https://mypay.dfas.mil'],['tsp.gov','https://www.tsp.gov']], icon:'dollar-sign' },
+    { title:'TRICARE', links:[['tricare.mil','https://www.tricare.mil']], icon:'heart-pulse' },
+  ];
+  if (s.giBill) resources.push({ title:'GI Bill', links:[['benefits.va.gov/gibill','https://benefits.va.gov/gibill']], icon:'graduation-cap' });
+  if (s.vaClaim) resources.push({ title:'VA Disability', links:[['va.gov/disability','https://www.va.gov/disability']], icon:'clipboard-list' });
+
+  $('resourceGrid').innerHTML = resources.map(r => `
+    <div class="resource-card">
+      <h4 class="flex items-center gap-2"><i data-lucide="${r.icon}" class="w-4 h-4 text-gold-500"></i> ${r.title}</h4>
+      ${r.links.map(l => `<a href="${l[1]}" target="_blank" rel="noopener">${l[0]}</a>`).join('')}
+    </div>
+  `).join('');
+}
+
+// ===== INIT =====
+function init() {
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  $('todayDate').value = todayStr;
+
+  initToggle('ptdyToggle', 'ptdy');
+  initToggle('sbToggle', 'sb');
+  initToggle('giBillToggle', 'giBill');
+  initToggle('vaClaimToggle', 'vaClaim');
+
+  initRadioGroup('rankCatGroup', val => { rankCat = val; populateRanks(); });
+  initRadioGroup('transTypeGroup', val => { transType = val; });
+
+  $('branch').addEventListener('change', () => { populateRanks(); });
+  $('rank').addEventListener('change', () => { updateSkillbridgeLimit(); });
+  $('sbDays').addEventListener('input', () => { updateSbEditFeedback(); });
+
+  $('setup-form').addEventListener('submit', e => {
+    e.preventDefault();
+    if (!validate()) return;
+    state = buildState();
+    saveState(state);
+    showResults();
+  });
+
+  $('editBtn').addEventListener('click', () => {
+    showSetup();
+    if (state.firstName) $('firstName').value = state.firstName;
+    if (state.branch) $('branch').value = state.branch;
+    if (state.rankCat) {
+      rankCat = state.rankCat;
+      document.querySelectorAll('#rankCatGroup .radio-card').forEach(c => c.classList.toggle('selected', c.dataset.value === rankCat));
+      populateRanks();
+      if (state.rank) setTimeout(() => { $('rank').value = state.rank; updateSkillbridgeLimit(); }, 50);
+    }
+    if (state.yos) $('yos').value = state.yos;
+    if (state.dateOfRank) $('dateOfRank').value = state.dateOfRank;
+    if (state.transType) {
+      transType = state.transType;
+      document.querySelectorAll('#transTypeGroup .radio-card').forEach(c => c.classList.toggle('selected', c.dataset.value === transType));
+    }
+    if (state.sepDate) $('sepDate').value = state.sepDate;
+    if (state.todayDate) $('todayDate').value = state.todayDate;
+    if (state.leaveDays !== undefined) $('leaveDays').value = state.leaveDays;
+    toggles.ptdy = state.ptdy;
+    $('ptdyToggle').classList.toggle('active', toggles.ptdy);
+    $('ptdyFields').classList.toggle('hidden', !toggles.ptdy);
+    if (state.ptdyDays) $('ptdyDays').value = state.ptdyDays;
+    toggles.sb = state.sb;
+    $('sbToggle').classList.toggle('active', toggles.sb);
+    $('sbFields').classList.toggle('hidden', !toggles.sb);
+    if (state.sbDays) $('sbDays').value = state.sbDays;
+    if (state.postLocation) $('postLocation').value = state.postLocation;
+    if (state.careerInterest) $('careerInterest').value = state.careerInterest;
+    toggles.giBill = state.giBill;
+    $('giBillToggle').classList.toggle('active', toggles.giBill);
+    toggles.vaClaim = state.vaClaim;
+    $('vaClaimToggle').classList.toggle('active', toggles.vaClaim);
+  });
+
+  $('printBtn').addEventListener('click', () => {
+    document.querySelectorAll('.phase-content').forEach(c => c.classList.add('open'));
+    $('payEstimatorContent').classList.add('open');
+    setTimeout(() => window.print(), 200);
+  });
+
+  $('copyLinkBtn').addEventListener('click', () => {
+    navigator.clipboard.writeText(window.location.href).then(() => showToast('Link copied!')).catch(() => showToast('Could not copy link'));
+  });
+
+  initRadioGroup('retSystemGroup', val => { retSystem = val; calcRetPay(); });
+  $('basePay').addEventListener('input', calcRetPay);
+
+  // Pay estimator header toggle
+  $('payEstimatorHeader').addEventListener('click', () => {
+    const content = $('payEstimatorContent');
+    content.classList.toggle('open');
+    $('payChevron').style.transform = content.classList.contains('open') ? 'rotate(180deg)' : '';
+  });
+
+  $('jumpToPayBtn').addEventListener('click', () => {
+    const section = $('payEstimatorSection');
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const content = $('payEstimatorContent');
+    if (!content.classList.contains('open')) {
+      content.classList.add('open');
+      $('payChevron').style.transform = 'rotate(180deg)';
+    }
+  });
+
+  initRadioGroup('payRetSystemGroup', val => { payRetSystem = val; recalcPayEstimator(); });
+  $('payBasePay').addEventListener('input', () => { recalcPayEstimator(); });
+  $('payYOS').addEventListener('input', () => { recalcPayEstimator(); });
+
+  $('vaRatingBtns').addEventListener('click', (e) => {
+    const btn = e.target.closest('.va-rating-btn');
+    if (!btn) return;
+    selectedVARating = parseInt(btn.dataset.rating);
+    $('vaRatingBtns').querySelectorAll('.va-rating-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.rating) === selectedVARating));
+    recalcPayEstimator();
+  });
+
+  $('depToggle').addEventListener('click', () => {
+    hasDependents = !hasDependents;
+    $('depToggle').classList.toggle('active', hasDependents);
+    $('depNote').classList.toggle('hidden', !hasDependents);
+    if (state.firstName) { state.hasDependents = hasDependents; saveState(state); }
+  });
+
+  // ===== TSP EVENTS =====
+  $('tspBalance').addEventListener('input', () => { recalcPayEstimator(); });
+  $('tspYearsToRet').addEventListener('input', () => { recalcPayEstimator(); });
+  $('tspRate').addEventListener('input', () => {
+    $('tspRateDisplay').textContent = $('tspRate').value + '%';
+    recalcPayEstimator();
+  });
+  $('tspContribution').addEventListener('input', () => { recalcPayEstimator(); });
+  $('tspContribPct').addEventListener('input', () => { recalcPayEstimator(); });
+  $('tspRetAge').addEventListener('input', () => { recalcPayEstimator(); });
+  $('tspFixedAmount').addEventListener('input', () => { recalcPayEstimator(); });
+
+  // TSP contribution mode radio
+  $('tspContribModeGroup').querySelectorAll('.radio-card').forEach(card => {
+    card.addEventListener('click', () => {
+      $('tspContribModeGroup').querySelectorAll('.radio-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      tspContribMode = card.dataset.value;
+      $('tspContribFixedField').classList.toggle('hidden', tspContribMode !== 'fixed');
+      $('tspContribPctField').classList.toggle('hidden', tspContribMode !== 'pct');
+      recalcPayEstimator();
+    });
+  });
+
+  // TSP withdrawal method radio
+  $('tspWithdrawalGroup').querySelectorAll('.tsp-withdrawal-card').forEach(card => {
+    card.addEventListener('click', () => {
+      $('tspWithdrawalGroup').querySelectorAll('.tsp-withdrawal-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      tspWithdrawalMethod = card.dataset.value;
+      $('tspFixedFields').style.display = tspWithdrawalMethod === 'fixed' ? '' : 'none';
+      recalcPayEstimator();
+    });
+  });
+
+  // Date of Rank live update
+  $('dateOfRank').addEventListener('change', () => {
+    // Update dorResultBox on the setup form if data is available
+    const dorVal = $('dateOfRank').value;
+    const todayVal = $('todayDate').value;
+    const sepVal = $('sepDate').value;
+    const rankVal = $('rank').value;
+    const rg = getRankGrade(rankVal);
+    const dorBox = $('dorResultBox');
+    if (dorVal && todayVal) {
+      const dorDate = new Date(dorVal + 'T00:00:00');
+      const todayDate = new Date(todayVal + 'T00:00:00');
+      const tigDays = Math.max(0, daysBetween(dorDate, todayDate));
+      const tigYears = (tigDays / 365.25).toFixed(1);
+      if (dorBox) {
+        dorBox.classList.remove('hidden');
+        $('dorYearsDisplay').textContent = `${tigYears} years at ${rg || 'current grade'}`;
+        if (sepVal) {
+          const sepDate = new Date(sepVal + 'T00:00:00');
+          const tigAtSep = (daysBetween(dorDate, sepDate) / 365.25).toFixed(1);
+          $('dorPayHint').textContent = `Time in grade at retirement: ${tigAtSep} years.`;
+        }
+      }
+    } else {
+      if (dorBox) dorBox.classList.add('hidden');
+    }
+  });
+
+  // Check for saved state
+  const saved = loadState();
+  if (saved && saved.firstName && saved.sepDate) {
+    state = saved;
+    toggles.ptdy = state.ptdy;
+    toggles.sb = state.sb;
+    toggles.giBill = state.giBill || false;
+    toggles.vaClaim = state.vaClaim || false;
+    rankCat = state.rankCat;
+    transType = state.transType;
+    payRetSystem = state.payRetSystem || 'high3';
+    selectedVARating = state.selectedVARating || 0;
+    hasDependents = state.hasDependents || false;
+    tspWithdrawalMethod = state.tspWithdrawalMethod || 'fixed';
+    tspContribMode = state.tspContribMode || 'fixed';
+    showResults();
+  }
+
+  updateSkillbridgeLimit();
+}
+
+if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+  lucide.createIcons();
+}
+
+init();
+</script>
+</body>
+</html>
