@@ -93,6 +93,77 @@ describe("encodeState / decodeState", () => {
   });
 });
 
+describe("computeSBP", () => {
+  it("premium = 6.5% of base, annuity = 55% of base", () => {
+    const r = calc.computeSBP({ baseAmount: 5000, retireeAge: 45 });
+    expect(r.monthlyPremium).toBe(325);
+    expect(r.survivorMonthly).toBe(2750);
+  });
+  it("paid-up requires at least 360 payments, more if young at retirement", () => {
+    expect(calc.computeSBP({ baseAmount: 5000, retireeAge: 45 }).paidUpPayments).toBe(360);
+    expect(calc.computeSBP({ baseAmount: 5000, retireeAge: 38 }).paidUpPayments).toBe(384); // (70-38)*12
+  });
+  it("computes a break-even horizon", () => {
+    const r = calc.computeSBP({ baseAmount: 5000, retireeAge: 45 });
+    expect(r.totalPremiums).toBe(325 * 360);
+    expect(r.breakEvenMonths).toBe(Math.ceil((325 * 360) / 2750));
+  });
+});
+
+describe("compareConcurrentReceipt", () => {
+  it("applies the VA waiver and flags CRDP eligibility at 20yr + 50%", () => {
+    const r = calc.compareConcurrentReceipt({ grossRetiredPay: 3000, vaRating: 50, combatRelatedPct: 100, marginalRate: 0.22, yos: 20 });
+    expect(r.vaComp).toBe(calc.VA_RATES_2025[50]);
+    expect(r.waived).toBeCloseTo(calc.VA_RATES_2025[50], 2);
+    expect(r.crdpEligible).toBe(true);
+    // 100% combat-related, tax-free CRSC beats taxable CRDP here
+    expect(r.recommend).toBe("crsc");
+  });
+  it("does not offer CRDP below 50%", () => {
+    const r = calc.compareConcurrentReceipt({ grossRetiredPay: 3000, vaRating: 30, combatRelatedPct: 0, yos: 20 });
+    expect(r.crdpEligible).toBe(false);
+  });
+});
+
+describe("estimateRetireeHealthcareCost + TRICARE_FEES_2026", () => {
+  it("uses the verified 2026 Select fees", () => {
+    expect(calc.TRICARE_FEES_2026.select.groupB.individual).toBe(594.96);
+    expect(calc.TRICARE_FEES_2026.select.groupA.family).toBe(375);
+  });
+  it("sums enrollment + Rx + FEDVIP into an annual total", () => {
+    const r = calc.estimateRetireeHealthcareCost({ group: "B", coverage: "family", annualRx: 600, fedvipMonthly: 50 });
+    expect(r.enrollmentFee).toBe(1191);
+    expect(r.annualFedvip).toBe(600);
+    expect(r.totalAnnual).toBe(1191 + 600 + 600);
+  });
+});
+
+describe("compareStates", () => {
+  it("ranks no-tax states ahead of taxing states", () => {
+    const ranked = calc.compareStates(["CA", "TX", "VA"], 60000);
+    expect(ranked[0].code).toBe("TX");
+    expect(ranked[0].estAnnualTax).toBe(0);
+    expect(ranked[ranked.length - 1].code).toBe("CA");
+  });
+});
+
+describe("estimatePPM", () => {
+  it("incentive minus expenses, less 22% withholding on profit", () => {
+    const r = calc.estimatePPM({ gcc: 10000, expenses: 4000 });
+    expect(r.profit).toBe(6000);
+    expect(r.taxWithheld).toBeCloseTo(1320, 2);
+    expect(r.netProfit).toBeCloseTo(4680, 2);
+  });
+});
+
+describe("tspKeepVsRoll", () => {
+  it("flags the age-55 rule and projects fee drag", () => {
+    const r = calc.tspKeepVsRoll({ ageAtSeparation: 56, tradBalance: 200000, years: 20, advisoryFeePct: 1, tspFeePct: 0.05 });
+    expect(r.flags.some((f: string) => f.includes("55"))).toBe(true);
+    expect(r.feeDrag).toBeGreaterThan(0);
+  });
+});
+
 describe("isValidState", () => {
   const good = {
     firstName: "Pat",
