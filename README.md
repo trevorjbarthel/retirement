@@ -79,9 +79,14 @@ npx wrangler deploy
 | POST | `/api/auth/logout` | – | – | `204` |
 | POST | `/api/auth/change-password` | ✓ | `{current,next}` | `204` |
 | GET | `/api/me` | opt | – | `{user|null}` |
-| GET | `/api/plan` | ✓ | – | `{plan, schema_version, updated_at}` |
-| PUT | `/api/plan` | ✓ | `{plan, schema_version}` | `{updated_at}` |
+| GET | `/api/plan` | ✓ | – | `{plan, schema_version, updated_at, rev}` |
+| PUT | `/api/plan` | ✓ | `{plan, schema_version, base_rev?}` | `{updated_at, rev}` or `409 {error:"conflict", current}` |
 | DELETE | `/api/account` | ✓ | – | `204` (cascades plan) |
+
+`PUT /api/plan` uses optimistic concurrency: send `base_rev` (the `rev` you last loaded;
+`0` to create) and the write is rejected with `409` + the server's `current` plan if a
+newer revision exists, instead of silently overwriting it. Omitting `base_rev` keeps the
+legacy unconditional upsert. Every successful write returns the new monotonic `rev`.
 
 State‑changing requests require an `X-Requested-With: fetch` header (the CSRF guard);
 request bodies, when present, are parsed as JSON. (`Content-Type` itself is not
@@ -130,8 +135,8 @@ the official DFAS pages**. The committed data lives in `public/data/pay-tables.j
 - **State tax** figures are damped‑effective‑rate *upper‑bound* estimates from a
   single top‑marginal rate per state, not bracket‑accurate; the UI labels them as
   approximate. For real accuracy, store a per‑state bracket schedule.
-- **Multi‑tab / concurrent edits** use last‑write‑wins: two tabs of the same account
-  autosave independently and the later PUT silently wins. A robust fix is optimistic
-  concurrency on `plans.updated_at` (send the loaded `updated_at` as `base_updated_at`,
-  return `409` on mismatch, and reconcile client‑side) — a deliberate follow‑up, not yet
-  implemented.
+- **Multi‑tab / concurrent edits** are guarded by optimistic concurrency on a monotonic
+  `plans.rev` counter (migration `0002`). The client sends the last‑seen `rev` as
+  `base_rev`; a stale write returns `409` with the server's current plan, and the front‑end
+  prompts to keep this tab's version (overwrite) or load the other one. A counter is used
+  rather than `updated_at` because the latter is only second‑precision.

@@ -2284,6 +2284,21 @@ async function init() {
     const decoded = decodeState(location.hash.slice(7));
     if (decoded && isValidState(decoded)) hashPlan = decoded;
   }
+  // Concurrent-edit (multi-tab / multi-device) conflict resolution.
+  store.onConflict(async (serverPlan) => {
+    const keepMine = confirm(
+      'Your plan was changed in another tab or on another device.\n\n' +
+      'OK — keep the version in THIS tab (overwrite the other).\n' +
+      'Cancel — load the other version (discard unsaved changes here).'
+    );
+    if (keepMine) return 'mine';
+    if (serverPlan && serverPlan.firstName && serverPlan.sepDate) {
+      applyLoadedPlan(serverPlan);
+      showToast('Loaded the latest version of your plan');
+    }
+    return 'theirs';
+  });
+
   await store.bootAuth();
   initAuthUI({
     getCurrentState: () => state,

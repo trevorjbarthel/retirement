@@ -11,7 +11,13 @@ let mode = "guest"; // "guest" | "auth"
 let currentUser = null;
 let lastSavedAt = null;
 let saveTimer = null;
+let knownRev = 0; // last server revision this tab has seen (0 = no saved plan yet)
+let conflictHandler = null; // async (serverPlan) => "mine" | "theirs"
 const listeners = new Set();
+
+// The host page registers how to resolve a concurrent-edit conflict (another tab/device
+// wrote a newer version). "mine" overwrites with this tab's state; "theirs" keeps the server's.
+export function onConflict(fn) { conflictHandler = fn; }
 
 // Cancel any queued debounced PUT. MUST run before an identity/state transition (and
 // before any await) so a stale write can't fire during the request or after a cache clear.
@@ -71,19 +77,19 @@ export async function bootAuth() {
 }
 
 export async function register(email, password) {
-  cancelPendingSave();
+  cancelPendingSave(); knownRev = 0;
   const r = await apiFetch("/api/auth/register", { body: { email, password } });
   if (r.ok && r.data) { currentUser = r.data.user; mode = "auth"; emit(); }
   return r;
 }
 export async function login(email, password) {
-  cancelPendingSave();
+  cancelPendingSave(); knownRev = 0;
   const r = await apiFetch("/api/auth/login", { body: { email, password } });
   if (r.ok && r.data) { currentUser = r.data.user; mode = "auth"; emit(); }
   return r;
 }
 export async function logout() {
-  cancelPendingSave();
+  cancelPendingSave(); knownRev = 0;
   await apiFetch("/api/auth/logout", { method: "POST" });
   // Clear the local cache too (mirrors deleteAccount): the cached plan belongs to the
   // account we're leaving, and must not leak to the next person on a shared browser.
@@ -94,7 +100,7 @@ export async function changePassword(current, next) {
   return apiFetch("/api/auth/change-password", { body: { current, next } });
 }
 export async function deleteAccount() {
-  cancelPendingSave();
+  cancelPendingSave(); knownRev = 0;
   const r = await apiFetch("/api/account", { method: "DELETE" });
   if (r.ok) { currentUser = null; mode = "guest"; lastSavedAt = null; lsClear(); emit(); }
   return r;
@@ -132,6 +138,7 @@ export async function loadPlan() {
   if (mode === "auth") {
     const { ok, status, data } = await apiFetch("/api/plan");
     if (ok && data) {
+      knownRev = typeof data.rev === "number" ? data.rev : 0; // base for optimistic concurrency
       if (data.schema_version != null && data.schema_version < SCHEMA_VERSION) {
         // No client-side migration ladder exists yet; make the gap observable rather than
         // letting the next autosave silently re-stamp it to the current version.
@@ -163,14 +170,30 @@ export function savePlan(state) {
   }
 }
 
-// Immediate sync (used for guest→account migration and "save now").
+// Immediate sync (used for guest→account migration and "save now"). Uses optimistic
+// concurrency: sends the last-seen rev as base_rev; a 409 means another tab/device wrote
+// a newer version, which we resolve via the host's conflict handler instead of clobbering.
 export async function pushPlan(state) {
   if (mode !== "auth") { lsSave(state); lastSavedAt = Date.now(); emit(); return true; }
-  const { ok } = await apiFetch("/api/plan", {
+  const res = await apiFetch("/api/plan", {
     method: "PUT",
-    body: { plan: state, schema_version: SCHEMA_VERSION },
+    body: { plan: state, schema_version: SCHEMA_VERSION, base_rev: knownRev },
   });
-  if (ok) { lastSavedAt = Date.now(); emit(); return true; }
+  if (res.ok && res.data) {
+    if (typeof res.data.rev === "number") knownRev = res.data.rev;
+    lastSavedAt = Date.now(); emit(); return true;
+  }
+  if (res.status === 409) {
+    lsSave(state); // never lose the user's local edits
+    const current = res.data && res.data.current;
+    // Adopt the server's rev so a "keep mine" retry can succeed at the new base.
+    if (current && typeof current.rev === "number") knownRev = current.rev;
+    if (conflictHandler) {
+      const choice = await conflictHandler(current ? current.plan : null);
+      if (choice === "mine") return pushPlan(state); // retry at the new base → overwrites
+    }
+    return false; // "theirs" (handler applied the server plan) or no handler
+  }
   lsSave(state); // network failure → keep a local copy
   return false;
 }

@@ -3,7 +3,7 @@ import type { AppContext } from "../env";
 import { jsonError } from "../lib/json";
 import { optionalAuth, requireAuth } from "../auth/middleware";
 import { clearSession } from "../auth/session";
-import { deleteUser, getPlan, getUserById, upsertPlan } from "../db/queries";
+import { deleteUser, getPlan, getUserById, upsertPlan, upsertPlanCAS } from "../db/queries";
 
 const api = new Hono<AppContext>();
 
@@ -21,15 +21,27 @@ api.get("/me", optionalAuth, async (c) => {
 api.get("/plan", requireAuth, async (c) => {
   const userId = c.get("userId")!;
   const row = await getPlan(c.env.DB, userId);
-  if (!row) return c.json({ plan: null, schema_version: null, updated_at: null });
+  if (!row) return c.json({ plan: null, schema_version: null, updated_at: null, rev: 0 });
   let plan: unknown = null;
   try {
     plan = JSON.parse(row.plan_json);
   } catch {
     plan = null;
   }
-  return c.json({ plan, schema_version: row.schema_version, updated_at: row.updated_at });
+  return c.json({ plan, schema_version: row.schema_version, updated_at: row.updated_at, rev: row.rev });
 });
+
+// Shape the server's current row for a conflict response (parse plan_json once).
+function planView(row: { plan_json: string; schema_version: number; updated_at: number; rev: number } | null) {
+  if (!row) return null;
+  let plan: unknown = null;
+  try {
+    plan = JSON.parse(row.plan_json);
+  } catch {
+    plan = null;
+  }
+  return { plan, schema_version: row.schema_version, updated_at: row.updated_at, rev: row.rev };
+}
 
 api.put("/plan", requireAuth, async (c) => {
   const userId = c.get("userId")!;
@@ -55,8 +67,22 @@ api.put("/plan", requireAuth, async (c) => {
   // Store a positive, bounded integer schema_version; anything else normalizes to 1.
   const rawVersion = Math.trunc(Number(body?.schema_version));
   const schemaVersion = Number.isInteger(rawVersion) && rawVersion >= 1 && rawVersion <= 1000 ? rawVersion : 1;
-  const updated_at = await upsertPlan(c.env.DB, userId, planJson, schemaVersion);
-  return c.json({ updated_at });
+
+  // Optimistic concurrency: a client that sends base_rev gets compare-and-set semantics
+  // (stale token → 409 with the server's current plan). A client that omits it (legacy)
+  // keeps the old unconditional behavior.
+  const rawBaseRev = body?.base_rev;
+  if (rawBaseRev === undefined || rawBaseRev === null) {
+    const r = await upsertPlan(c.env.DB, userId, planJson, schemaVersion);
+    return c.json({ updated_at: r.updated_at, rev: r.rev });
+  }
+  const expectedRev = Math.trunc(Number(rawBaseRev));
+  if (!Number.isInteger(expectedRev) || expectedRev < 0) {
+    return jsonError(c, "invalid_input", 400, "base_rev must be a non-negative integer.");
+  }
+  const r = await upsertPlanCAS(c.env.DB, userId, planJson, schemaVersion, expectedRev);
+  if (r.ok) return c.json({ updated_at: r.updated_at, rev: r.rev });
+  return c.json({ error: "conflict", current: planView(r.current) }, 409);
 });
 
 api.delete("/account", requireAuth, async (c) => {

@@ -18,7 +18,13 @@ export interface PlanRow {
   schema_version: number;
   plan_json: string;
   updated_at: number;
+  rev: number;
 }
+
+/** Result of a compare-and-set plan write. */
+export type PlanWriteResult =
+  | { ok: true; updated_at: number; rev: number }
+  | { ok: false; current: PlanRow | null };
 
 const nowSeconds = () => Math.floor(Date.now() / 1000);
 
@@ -90,23 +96,64 @@ export async function getPlan(db: D1Database, userId: number): Promise<PlanRow |
   return db.prepare("SELECT * FROM plans WHERE user_id = ?").bind(userId).first<PlanRow>();
 }
 
+/** Unconditional upsert (legacy / no optimistic-concurrency token). Advances rev. */
 export async function upsertPlan(
   db: D1Database,
   userId: number,
   planJson: string,
   schemaVersion: number,
-): Promise<number> {
+): Promise<{ updated_at: number; rev: number }> {
   const now = nowSeconds();
-  await db
+  const row = await db
     .prepare(
-      `INSERT INTO plans (user_id, schema_version, plan_json, updated_at)
-       VALUES (?, ?, ?, ?)
+      `INSERT INTO plans (user_id, schema_version, plan_json, updated_at, rev)
+       VALUES (?, ?, ?, ?, 1)
        ON CONFLICT(user_id) DO UPDATE SET
          plan_json = excluded.plan_json,
          schema_version = excluded.schema_version,
-         updated_at = excluded.updated_at`,
+         updated_at = excluded.updated_at,
+         rev = plans.rev + 1
+       RETURNING updated_at, rev`,
     )
     .bind(userId, schemaVersion, planJson, now)
+    .first<{ updated_at: number; rev: number }>();
+  if (!row) throw new Error("upsertPlan: upsert returned no row");
+  return row;
+}
+
+/**
+ * Compare-and-set write. expectedRev <= 0 means "create only" (succeeds only when no
+ * plan exists yet); expectedRev >= 1 means "update only if the stored rev matches".
+ * On a stale token the write is rejected and the server's current row is returned so the
+ * caller can reconcile. Each conditional statement is atomic, so no transaction is needed.
+ */
+export async function upsertPlanCAS(
+  db: D1Database,
+  userId: number,
+  planJson: string,
+  schemaVersion: number,
+  expectedRev: number,
+): Promise<PlanWriteResult> {
+  const now = nowSeconds();
+  if (expectedRev <= 0) {
+    const res = await db
+      .prepare(
+        `INSERT INTO plans (user_id, schema_version, plan_json, updated_at, rev)
+         VALUES (?, ?, ?, ?, 1)
+         ON CONFLICT(user_id) DO NOTHING`,
+      )
+      .bind(userId, schemaVersion, planJson, now)
+      .run();
+    if (res.meta.changes === 1) return { ok: true, updated_at: now, rev: 1 };
+    return { ok: false, current: await getPlan(db, userId) };
+  }
+  const res = await db
+    .prepare(
+      `UPDATE plans SET plan_json = ?, schema_version = ?, updated_at = ?, rev = rev + 1
+       WHERE user_id = ? AND rev = ?`,
+    )
+    .bind(planJson, schemaVersion, now, userId, expectedRev)
     .run();
-  return now;
+  if (res.meta.changes === 1) return { ok: true, updated_at: now, rev: expectedRev + 1 };
+  return { ok: false, current: await getPlan(db, userId) };
 }

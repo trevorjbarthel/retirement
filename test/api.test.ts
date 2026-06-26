@@ -147,6 +147,64 @@ describe("plan", () => {
   });
 });
 
+describe("plan concurrency (optimistic rev)", () => {
+  it("GET returns rev 0 with no plan, then the stored rev after a write", async () => {
+    const { cookie } = await register("olive@example.com");
+    expect((await (await api("/api/plan", { cookie })).json<{ rev: number }>()).rev).toBe(0);
+    const put = await api("/api/plan", { method: "PUT", body: { plan: { a: 1 }, schema_version: 5, base_rev: 0 }, cookie });
+    expect(put.status).toBe(200);
+    expect((await put.json<{ rev: number }>()).rev).toBe(1);
+    expect((await (await api("/api/plan", { cookie })).json<{ rev: number }>()).rev).toBe(1);
+  });
+
+  it("create-only (base_rev 0) conflicts when a plan already exists", async () => {
+    const { cookie } = await register("peter@example.com");
+    await api("/api/plan", { method: "PUT", body: { plan: { a: 1 }, schema_version: 5, base_rev: 0 }, cookie });
+    const again = await api("/api/plan", { method: "PUT", body: { plan: { a: 2 }, schema_version: 5, base_rev: 0 }, cookie });
+    expect(again.status).toBe(409);
+    const body = await again.json<{ error: string; current: { plan: any; rev: number } }>();
+    expect(body.error).toBe("conflict");
+    expect(body.current.plan).toEqual({ a: 1 });
+    expect(body.current.rev).toBe(1);
+  });
+
+  it("update with the correct base_rev succeeds and increments rev", async () => {
+    const { cookie } = await register("quinn@example.com");
+    await api("/api/plan", { method: "PUT", body: { plan: { v: 1 }, schema_version: 5, base_rev: 0 }, cookie });
+    const up = await api("/api/plan", { method: "PUT", body: { plan: { v: 2 }, schema_version: 5, base_rev: 1 }, cookie });
+    expect(up.status).toBe(200);
+    expect((await up.json<{ rev: number }>()).rev).toBe(2);
+    expect((await (await api("/api/plan", { cookie })).json<{ plan: any }>()).plan).toEqual({ v: 2 });
+  });
+
+  it("a stale base_rev (second tab) is rejected with 409 and the server's current plan", async () => {
+    const { cookie } = await register("rosa@example.com");
+    await api("/api/plan", { method: "PUT", body: { plan: { v: 1 }, schema_version: 5, base_rev: 0 }, cookie }); // rev 1
+    await api("/api/plan", { method: "PUT", body: { plan: { v: "A" }, schema_version: 5, base_rev: 1 }, cookie }); // rev 2 (tab A)
+    const tabB = await api("/api/plan", { method: "PUT", body: { plan: { v: "B" }, schema_version: 5, base_rev: 1 }, cookie });
+    expect(tabB.status).toBe(409);
+    const body = await tabB.json<{ current: { plan: any; rev: number } }>();
+    expect(body.current.plan).toEqual({ v: "A" });
+    expect(body.current.rev).toBe(2);
+    // Reconcile: retry at the server's rev → succeeds → rev 3.
+    const retry = await api("/api/plan", { method: "PUT", body: { plan: { v: "B" }, schema_version: 5, base_rev: 2 }, cookie });
+    expect(retry.status).toBe(200);
+    expect((await retry.json<{ rev: number }>()).rev).toBe(3);
+  });
+
+  it("rejects a negative base_rev with 400", async () => {
+    const { cookie } = await register("sam@example.com");
+    const res = await api("/api/plan", { method: "PUT", body: { plan: { a: 1 }, schema_version: 5, base_rev: -1 }, cookie });
+    expect(res.status).toBe(400);
+  });
+
+  it("legacy PUT without base_rev upserts unconditionally and still advances rev", async () => {
+    const { cookie } = await register("tina@example.com");
+    expect((await (await api("/api/plan", { method: "PUT", body: { plan: { v: 1 }, schema_version: 5 }, cookie })).json<{ rev: number }>()).rev).toBe(1);
+    expect((await (await api("/api/plan", { method: "PUT", body: { plan: { v: 2 }, schema_version: 5 }, cookie })).json<{ rev: number }>()).rev).toBe(2);
+  });
+});
+
 describe("csrf", () => {
   it("blocks state-changing requests without the X-Requested-With header (403)", async () => {
     const { cookie } = await register("kyle@example.com");
