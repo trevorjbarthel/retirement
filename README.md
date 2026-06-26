@@ -86,11 +86,27 @@ npx wrangler deploy
 State‑changing requests require `X-Requested-With: fetch` (CSRF guard) and
 `application/json`.
 
+## Pay tables (auto‑refresh)
+
+There is no official military‑pay API, so the basic‑pay table is **generated from
+the official DFAS pages**. The committed data lives in `public/data/pay-tables.json`
+(canonical) and `public/js/pay-tables.generated.js` (imported by `calc.js`).
+
+- Regenerate locally: `npm run update-pay-tables -- --year 2026 --write`
+  (parses DFAS, validates, rewrites both files). Use `--fixture` to run against
+  the test fixtures (always a dry run).
+- `.github/workflows/update-pay-tables.yml` runs the generator on demand
+  (`workflow_dispatch`) and each January, then opens a **PR** with the new numbers
+  for review — nothing auto‑deploys.
+- The parser (`scripts/parse-pay-tables.mjs`) is pure and unit‑tested against
+  `test/fixtures/dfas-*.html` via `npm run test:scripts`. Key convention:
+  "2 or less" → key `2`, "Over N" → key `N+1`, flats collapsed.
+- Generating from real DFAS fills the previously‑missing O‑8/O‑9/O‑10 rows. Until
+  the first live run, those grades show a tailored manual‑entry prompt. The first
+  live fetch must run where outbound internet is available (the Action runner).
+
 ## Notes & follow‑ups
 
-- `BASE_PAY_2026` omits exact O‑8/O‑9/O‑10 rows (statutorily capped at Executive
-  Schedule Level II); those grades get a tailored manual‑entry prompt. Drop the
-  official figures into `public/js/calc.js` to enable auto‑populate.
 - Tailwind/Lucide load from CDNs; for production consider self‑hosting/building
   CSS and adding security headers (CSP) — static assets are served edge‑direct,
   so header injection would need a Worker pass.

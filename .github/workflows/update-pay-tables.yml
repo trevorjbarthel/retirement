@@ -1,0 +1,45 @@
+name: Update pay tables
+
+# Regenerates the committed DFAS pay tables and opens a PR for review.
+# Runs on demand, and in January when the new year's tables are published.
+on:
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "Pay year to fetch (defaults to current year)"
+        required: false
+        default: ""
+  schedule:
+    - cron: "0 12 5 1 *"   # Jan 5
+    - cron: "0 12 20 1 *"  # Jan 20 (catch late publication)
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - name: Regenerate pay tables from DFAS
+        run: node scripts/update-pay-tables.mjs --year "${{ github.event.inputs.year }}" --write --strict
+      - name: Run tests
+        run: npm test
+      - name: Open PR with refreshed tables
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore: refresh DFAS basic-pay tables"
+          branch: bot/pay-tables-refresh
+          title: "Refresh DFAS basic-pay tables"
+          body: |
+            Automated regeneration of the basic-pay tables from the official DFAS pages.
+
+            **Review the numbers in `public/data/pay-tables.json` before merging.**
+          add-paths: |
+            public/js/pay-tables.generated.js
+            public/data/pay-tables.json
