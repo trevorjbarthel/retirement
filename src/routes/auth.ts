@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import type { Context } from "hono";
 import type { AppContext } from "../env";
 import { jsonError } from "../lib/json";
 import { isValidEmail, normalizeEmail, passwordIssue } from "../lib/validate";
@@ -20,6 +21,27 @@ function iterations(env: AppContext["Bindings"]): number {
   return Number.isFinite(n) && n > 0 ? n : 210000;
 }
 
+/**
+ * Best-effort throttle for a credential endpoint, keyed by client IP (+ account).
+ * No-op when the AUTH_LIMITER binding isn't configured (local dev / tests / an
+ * un-provisioned deploy), and never blocks on a limiter failure. Returns true when
+ * the caller should be rejected with 429.
+ */
+async function throttled(c: Context<AppContext>, scope: string): Promise<boolean> {
+  const limiter = c.env.AUTH_LIMITER;
+  if (!limiter) return false;
+  const ip = c.req.header("cf-connecting-ip") ?? "ip-unknown";
+  try {
+    const { success } = await limiter.limit({ key: `${scope}:${ip}` });
+    return !success;
+  } catch {
+    return false;
+  }
+}
+
+const RATE_LIMITED = (c: Context<AppContext>) =>
+  jsonError(c, "rate_limited", 429, "Too many attempts. Please wait a moment and try again.");
+
 auth.post("/register", async (c) => {
   let body: any;
   try {
@@ -32,11 +54,26 @@ auth.post("/register", async (c) => {
   if (!isValidEmail(email)) return jsonError(c, "invalid_input", 400, "Enter a valid email address.");
   const pwIssue = passwordIssue(password);
   if (pwIssue) return jsonError(c, "invalid_input", 400, pwIssue);
+  if (await throttled(c, "register")) return RATE_LIMITED(c);
+
+  // Always do the PBKDF2 work, even for an already-registered email, so registration
+  // timing doesn't reveal whether an account exists (mirrors the /login hardening).
+  const cost = iterations(c.env);
+  const { hash, salt } = await hashPassword(password, cost);
 
   if (await getUserByEmail(c.env.DB, email)) return jsonError(c, "email_taken", 409, "That email is already registered.");
 
-  const { hash, salt } = await hashPassword(password, iterations(c.env));
-  const user = await createUser(c.env.DB, { email, hash, salt, iterations: iterations(c.env) });
+  // The UNIQUE(email) constraint is the source of truth: concurrent double-submits can
+  // both pass the check above, so map a unique-violation to the same 409 (not a 500).
+  let user;
+  try {
+    user = await createUser(c.env.DB, { email, hash, salt, iterations: cost });
+  } catch (e) {
+    if (/UNIQUE constraint failed/i.test(String((e as Error)?.message ?? ""))) {
+      return jsonError(c, "email_taken", 409, "That email is already registered.");
+    }
+    throw e;
+  }
   await issueSession(c, user);
   return c.json({ user: { id: user.id, email: user.email } }, 201);
 });
@@ -51,6 +88,7 @@ auth.post("/login", async (c) => {
   const email = normalizeEmail(String(body?.email ?? ""));
   const password = String(body?.password ?? "");
   if (!email || !password) return jsonError(c, "invalid_input", 400);
+  if (await throttled(c, "login")) return RATE_LIMITED(c);
 
   const user = await getUserByEmail(c.env.DB, email);
   if (!user) {
@@ -80,6 +118,7 @@ auth.post("/logout", async (c) => {
 
 auth.post("/change-password", requireAuth, async (c) => {
   const userId = c.get("userId")!;
+  if (await throttled(c, "change-password")) return RATE_LIMITED(c);
   let body: any;
   try {
     body = await c.req.json();

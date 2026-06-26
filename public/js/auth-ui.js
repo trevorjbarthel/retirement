@@ -8,6 +8,7 @@ import * as store from "./store.js";
 let opts = { getCurrentState: () => null, onPlanLoaded: () => {} };
 let modal = null;
 let authMode = "login"; // "login" | "register"
+let lastFocused = null; // element to restore focus to when the modal closes
 
 function el(tag, attrs = {}, html) {
   const e = document.createElement(tag);
@@ -50,7 +51,11 @@ function renderAccountArea(status) {
       { class: "no-print text-sm font-medium text-navy-500 hover:text-navy-700 px-2 py-1 rounded-lg hover:bg-navy-50", type: "button" },
       '<i data-lucide="log-out" class="w-4 h-4 inline"></i> Log out',
     );
-    logout.addEventListener("click", () => store.logout());
+    logout.addEventListener("click", async () => {
+      await store.logout();
+      // Reboot in guest mode so the displayed plan/results are fully cleared, not just the header.
+      location.reload();
+    });
     const del = el(
       "button",
       { class: "no-print text-xs text-danger-700 hover:underline px-1", type: "button", title: "Delete account" },
@@ -112,6 +117,18 @@ function buildModal() {
   overlay.querySelector("#authToggle").addEventListener("click", () => setAuthMode(authMode === "login" ? "register" : "login"));
   overlay.querySelector("#authForm").addEventListener("submit", onSubmit);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !overlay.classList.contains("hidden")) closeModal(); });
+  // Trap Tab/Shift+Tab within the dialog while it's open (aria-modal alone doesn't do this).
+  overlay.addEventListener("keydown", (e) => {
+    if (e.key !== "Tab" || overlay.classList.contains("hidden")) return;
+    const focusable = Array.from(
+      overlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'),
+    ).filter((n) => !n.disabled && n.offsetParent !== null);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
   return overlay;
 }
 
@@ -143,6 +160,7 @@ function setAuthMode(m) {
 
 function openModal(m) {
   if (!modal) modal = buildModal();
+  lastFocused = document.activeElement; // restore focus here on close
   setAuthMode(m || "login");
   modal.classList.remove("hidden");
   modal.classList.add("flex");
@@ -155,6 +173,8 @@ function closeModal() {
   modal.classList.remove("flex");
   showError("");
   modal.querySelector("#authForm").reset();
+  if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus();
+  lastFocused = null;
 }
 function showError(msg) {
   const e = modal && modal.querySelector("#authError");

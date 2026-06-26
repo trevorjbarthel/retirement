@@ -850,6 +850,11 @@ function fmtDate(d) { return d.toLocaleDateString('en-US', { year:'numeric', mon
 function fmtDateShort(d) { return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'2-digit' }); }
 function fmtCurrency(val) { return val.toLocaleString('en-US', { style:'currency', currency:'USD' }); }
 function fmtCurrencyWhole(val) { return val.toLocaleString('en-US', { style:'currency', currency:'USD', maximumFractionDigits:0 }); }
+// Escape untrusted/plan-derived strings before they enter an innerHTML template.
+// Plans can arrive from a shared #state= link or an imported backup, so any free-text
+// field (e.g. postLocation) must be escaped at the sink to prevent DOM XSS.
+const ESC_MAP = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (ch) => ESC_MAP[ch]); }
 
 function showToast(msg) {
   const t = $('toast');
@@ -1027,10 +1032,10 @@ function initToggle(id, key) {
 }
 
 // ===== RADIO GROUP =====
-function initRadioGroup(containerId, cb) {
+function initRadioGroup(containerId, cb, cardSelector = '.radio-card') {
   const container = $(containerId);
   container.setAttribute('role', 'radiogroup');
-  const cards = container.querySelectorAll('.radio-card');
+  const cards = container.querySelectorAll(cardSelector);
   cards.forEach(card => {
     card.setAttribute('role', 'radio');
     card.setAttribute('tabindex', '0');
@@ -1193,7 +1198,7 @@ function renderTimeline(milestones, today, sep) {
 
 function renderResults() {
   const s = state;
-  const bm = BRANCH_META[s.branch];
+  const bm = BRANCH_META[s.branch] || { color:'#1a2744', emoji:'🎖️', terms:{ spec:'Specialty', member:'Member', nco:'NCO' } };
   const today = new Date(s.todayDate + 'T00:00:00');
   const sep = new Date(s.sepDate + 'T00:00:00');
   const isRet = s.transType === 'Retirement';
@@ -1341,7 +1346,9 @@ function renderResults() {
 }
 
 // ===== PAY ESTIMATOR RENDERING =====
-function renderPayEstimator(isRet) {
+// persist=false on the initial display render so we don't write back data we just loaded;
+// user-driven recalcs (input handlers) call recalcPayEstimator() directly and do persist.
+function renderPayEstimator(isRet, persist = false) {
   const s = state;
   const rg = getRankGrade(s.rank);
 
@@ -1398,7 +1405,7 @@ function renderPayEstimator(isRet) {
 
   payRetSystem = s.payRetSystem || 'high3';
   const retCards = $('payRetSystemGroup').querySelectorAll('.radio-card');
-  retCards.forEach(c => c.classList.toggle('selected', c.dataset.value === payRetSystem));
+  retCards.forEach(c => { const on = c.dataset.value === payRetSystem; c.classList.toggle('selected', on); c.setAttribute('aria-checked', String(on)); });
 
   selectedVARating = s.selectedVARating || 0;
   hasDependents = s.hasDependents || false;
@@ -1433,7 +1440,7 @@ function renderPayEstimator(isRet) {
   // TSP contribution mode
   tspContribMode = s.tspContribMode || 'fixed';
   const cmCards = $('tspContribModeGroup').querySelectorAll('.radio-card');
-  cmCards.forEach(c => c.classList.toggle('selected', c.dataset.value === tspContribMode));
+  cmCards.forEach(c => { const on = c.dataset.value === tspContribMode; c.classList.toggle('selected', on); c.setAttribute('aria-checked', String(on)); });
   $('tspContribFixedField').classList.toggle('hidden', tspContribMode !== 'fixed');
   $('tspContribPctField').classList.toggle('hidden', tspContribMode !== 'pct');
 
@@ -1441,13 +1448,13 @@ function renderPayEstimator(isRet) {
 
   // Set withdrawal method radio
   const wCards = $('tspWithdrawalGroup').querySelectorAll('.tsp-withdrawal-card');
-  wCards.forEach(c => c.classList.toggle('selected', c.dataset.value === tspWithdrawalMethod));
+  wCards.forEach(c => { const on = c.dataset.value === tspWithdrawalMethod; c.classList.toggle('selected', on); c.setAttribute('aria-checked', String(on)); });
   $('tspFixedFields').style.display = tspWithdrawalMethod === 'fixed' ? '' : 'none';
 
-  recalcPayEstimator();
+  recalcPayEstimator(persist);
 }
 
-function recalcPayEstimator() {
+function recalcPayEstimator(persist = true) {
   const s = state;
   const isRet = s.transType === 'Retirement';
   const bp = parseFloat($('payBasePay').value) || 0;
@@ -1498,7 +1505,7 @@ function recalcPayEstimator() {
   state.tspRetAge = parseInt($('tspRetAge').value) || 45;
   state.tspWithdrawalMethod = tspWithdrawalMethod;
   state.tspFixedAmount = parseFloat($('tspFixedAmount').value) || 500;
-  saveState(state);
+  if (persist) saveState(state);
 
   if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') lucide.createIcons();
 }
@@ -1775,16 +1782,20 @@ function renderStateTaxPanel(monthlyRet, isRet) {
   // Estimated state tax on retirement pay
   let retTaxAnnual = 0;
   let retTaxNote = '';
+  // topRate is the state's TOP marginal rate. A military pension sits well below the top
+  // bracket in graduated states, so the full top rate badly overstates the real liability.
+  // Damp it toward an effective rate (~0.55x) and label every figure as an upper bound.
+  const EFFECTIVE_FACTOR = 0.55;
   if (td.militaryRetirementTax === 'exempt') {
     retTaxAnnual = 0;
     retTaxNote = 'Fully exempt';
   } else if (td.militaryRetirementTax === 'taxed') {
-    retTaxAnnual = isRet ? annualRet * (td.topRate / 100) : 0;
-    retTaxNote = `Est. ~${fmtCurrencyWhole(retTaxAnnual)}/yr at ${td.topRate}% top rate`;
+    retTaxAnnual = isRet ? annualRet * (td.topRate / 100) * EFFECTIVE_FACTOR : 0;
+    retTaxNote = `Approx. ~${fmtCurrencyWhole(retTaxAnnual)}/yr (effective estimate; ${td.topRate}% top marginal rate — your actual rate is lower in graduated brackets)`;
   } else {
-    // partial — rough estimate at half effective rate
-    retTaxAnnual = isRet ? annualRet * (td.topRate / 100) * 0.5 : 0;
-    retTaxNote = `Partial exemption — est. ~${fmtCurrencyWhole(retTaxAnnual)}/yr (varies by age/income)`;
+    // partial — effective-rate estimate, further halved for the partial exemption
+    retTaxAnnual = isRet ? annualRet * (td.topRate / 100) * EFFECTIVE_FACTOR * 0.5 : 0;
+    retTaxNote = `Partial exemption — approx. ~${fmtCurrencyWhole(retTaxAnnual)}/yr (varies by age/income)`;
   }
 
   const afterTaxMonthly = isRet ? ((annualRet - retTaxAnnual) / 12) : 0;
@@ -1840,7 +1851,7 @@ function renderPhases(today, sep, termStart, ptdyStart, ptdyEnd, sbStart, sbEnd,
     { id:'p2', name:'Phase 2: TAP & Benefits', range:`${fmtDateShort(tapMinus6)} — ${fmtDateShort(tapDeadline)}`,
       tasks:['Register for Transition Assistance Program (TAP)','Complete 5-day TAP core curriculum','Complete Individual Transition Plan (ITP)','Choose TAP track: Employment / Education / Entrepreneurship','Complete Capstone requirements',s.vaClaim ? 'File VA disability claim (BDD program if 90-180 days out)' : 'Research VA disability claim process','Research TRICARE options for post-transition healthcare','Identify target career fields and required certifications','Attend veteran hiring events and career fairs','Request copies of training records and evaluations'] },
     s.sb ? { id:'p3', name:'Phase 3: SkillBridge Prep', range:`${fmtDateShort(sbPrepStart)} — ${fmtDateShort(subDays(sbStart, 1))}`,
-      tasks:['Research SkillBridge employers at skillbridge.defense.gov','Identify top 3 SkillBridge program choices','Submit commander approval package (60+ days before start)','Get SkillBridge approval memo signed','Finalize and tailor civilian resume','Optimize LinkedIn — headline, summary, keywords','Schedule C&P exams for VA disability (if applicable)',s.giBill ? 'Research GI Bill benefits and eligible programs' : 'Research education benefits options','Research professional certifications in target field','Network with SkillBridge alumni in your career field'] }
+      tasks:['Research SkillBridge employers at skillbridge.osd.mil','Identify top 3 SkillBridge program choices','Submit commander approval package (60+ days before start)','Get SkillBridge approval memo signed','Finalize and tailor civilian resume','Optimize LinkedIn — headline, summary, keywords','Schedule C&P exams for VA disability (if applicable)',s.giBill ? 'Research GI Bill benefits and eligible programs' : 'Research education benefits options','Research professional certifications in target field','Network with SkillBridge alumni in your career field'] }
     : { id:'p3', name:'Phase 3: Job Search & Networking', range:`${fmtDateShort(sbPrepStart)} — ${fmtDateShort(subDays(s.ptdy ? ptdyStart : termStart, 1))}`,
       tasks:['Finalize and tailor civilian resume for target roles','Optimize LinkedIn profile for civilian job search','Begin submitting job applications','Conduct informational interviews in target industry','Attend veteran-specific job fairs and networking events','Research professional certifications in target field',s.giBill ? 'Research GI Bill benefits and school options' : 'Research continuing education options','Schedule C&P exams for VA disability (if applicable)','Build professional network in target location','Practice interviewing — use ACP or Hire Heroes USA mock interviews'] },
     { id:'p4', name: s.sb ? 'Phase 4: SkillBridge & Active Prep' : 'Phase 4: Final Active Duty Prep',
@@ -1880,7 +1891,7 @@ function renderPhases(today, sep, termStart, ptdyStart, ptdyEnd, sbStart, sbEnd,
             ${phase.tasks.map((task, ti) => `
               <label class="check-item">
                 <input type="checkbox" data-phase="${phase.id}" data-task="${ti}" ${taskChecks[ti] ? 'checked' : ''} />
-                <span class="text-sm text-navy-600" style="${taskChecks[ti] ? 'text-decoration:line-through; opacity:0.5;' : ''}">${task}</span>
+                <span class="text-sm text-navy-600" style="${taskChecks[ti] ? 'text-decoration:line-through; opacity:0.5;' : ''}">${escapeHtml(task)}</span>
               </label>
             `).join('')}
           </div>
@@ -1926,7 +1937,7 @@ function renderResources() {
   const s = state;
   const resources = [
     { title:'TAP / Transition', links:[['militaryonesource.mil','https://www.militaryonesource.mil'],['tapevents.mil','https://www.tapevents.mil']], icon:'book-open' },
-    { title:'SkillBridge', links:[['skillbridge.defense.gov','https://skillbridge.osd.mil']], icon:'briefcase' },
+    { title:'SkillBridge', links:[['skillbridge.osd.mil','https://skillbridge.osd.mil']], icon:'briefcase' },
     { title:'VA Benefits', links:[['va.gov','https://www.va.gov'],['benefits.va.gov','https://benefits.va.gov']], icon:'shield' },
     { title:'Resume Help', links:[['hireheroesusa.org','https://www.hireheroesusa.org'],['acp-usa.org','https://www.acp-usa.org']], icon:'file-text' },
     { title:'Federal Jobs', links:[['usajobs.gov — Veterans Preference','https://www.usajobs.gov']], icon:'building-2' },
@@ -1949,6 +1960,16 @@ function renderResources() {
 function applyLoadedPlan(plan) {
   if (!plan || !plan.firstName || !plan.sepDate) return;
   state = plan;
+  // The countdown is relative to the viewer's actual "now", not a date frozen into a
+  // plan saved on a prior day (or shared by someone else). Refresh it on every load;
+  // also repairs a missing/malformed todayDate that would otherwise render NaN.
+  state.todayDate = new Date().toISOString().split('T')[0];
+  // Defense-in-depth: coerce day fields to safe integers so a malformed loaded plan
+  // can never reach an innerHTML sink as a string (see escapeHtml + isValidState).
+  const toInt = (v, dflt, lo, hi) => { const n = Math.trunc(Number(v)); return Number.isFinite(n) ? clamp(n, lo, hi) : dflt; };
+  state.sbDays = toInt(state.sbDays, 0, 0, 180);
+  state.ptdyDays = toInt(state.ptdyDays, 0, 0, 20);
+  state.leaveDays = toInt(state.leaveDays, 60, 0, 120);
   toggles.ptdy = state.ptdy;
   toggles.sb = state.sb;
   toggles.giBill = state.giBill || false;
@@ -2007,7 +2028,8 @@ async function init() {
       document.querySelectorAll('#transTypeGroup .radio-card').forEach(c => c.classList.toggle('selected', c.dataset.value === transType));
     }
     if (state.sepDate) $('sepDate').value = state.sepDate;
-    if (state.todayDate) $('todayDate').value = state.todayDate;
+    // "Today's Date" is auto-set to the real current date; don't restore a stale saved value.
+    $('todayDate').value = new Date().toISOString().split('T')[0];
     if (state.leaveDays !== undefined) $('leaveDays').value = state.leaveDays;
     toggles.ptdy = state.ptdy;
     $('ptdyToggle').classList.toggle('active', toggles.ptdy);
@@ -2141,28 +2163,20 @@ async function init() {
   $('tspRetAge').addEventListener('input', () => { recalcPayEstimator(); });
   $('tspFixedAmount').addEventListener('input', () => { recalcPayEstimator(); });
 
-  // TSP contribution mode radio
-  $('tspContribModeGroup').querySelectorAll('.radio-card').forEach(card => {
-    card.addEventListener('click', () => {
-      $('tspContribModeGroup').querySelectorAll('.radio-card').forEach(c => c.classList.remove('selected'));
-      card.classList.add('selected');
-      tspContribMode = card.dataset.value;
-      $('tspContribFixedField').classList.toggle('hidden', tspContribMode !== 'fixed');
-      $('tspContribPctField').classList.toggle('hidden', tspContribMode !== 'pct');
-      recalcPayEstimator();
-    });
+  // TSP contribution mode radio (keyboard-accessible via initRadioGroup)
+  initRadioGroup('tspContribModeGroup', (val) => {
+    tspContribMode = val;
+    $('tspContribFixedField').classList.toggle('hidden', tspContribMode !== 'fixed');
+    $('tspContribPctField').classList.toggle('hidden', tspContribMode !== 'pct');
+    recalcPayEstimator();
   });
 
-  // TSP withdrawal method radio
-  $('tspWithdrawalGroup').querySelectorAll('.tsp-withdrawal-card').forEach(card => {
-    card.addEventListener('click', () => {
-      $('tspWithdrawalGroup').querySelectorAll('.tsp-withdrawal-card').forEach(c => c.classList.remove('selected'));
-      card.classList.add('selected');
-      tspWithdrawalMethod = card.dataset.value;
-      $('tspFixedFields').style.display = tspWithdrawalMethod === 'fixed' ? '' : 'none';
-      recalcPayEstimator();
-    });
-  });
+  // TSP withdrawal method radio (uses .tsp-withdrawal-card, also keyboard-accessible)
+  initRadioGroup('tspWithdrawalGroup', (val) => {
+    tspWithdrawalMethod = val;
+    $('tspFixedFields').style.display = tspWithdrawalMethod === 'fixed' ? '' : 'none';
+    recalcPayEstimator();
+  }, '.tsp-withdrawal-card');
 
   // Date of Rank live update
   $('dateOfRank').addEventListener('change', () => {
@@ -2202,8 +2216,12 @@ async function init() {
   await store.bootAuth();
   initAuthUI({ getCurrentState: () => state, onPlanLoaded: applyLoadedPlan });
   if (hashPlan) {
-    saveState(hashPlan);
+    // A shared link is "view this plan", not "replace my saved plan". For a signed-in
+    // user, only display it (never PUT it over their account); guests may cache locally.
+    if (!store.isAuthed()) saveState(hashPlan);
     applyLoadedPlan(hashPlan);
+    // Clear the hash so a reload doesn't re-apply (and, for guests, re-save) the link.
+    history.replaceState(null, '', location.pathname + location.search);
   } else {
     const saved = await loadState();
     if (saved && saved.firstName && saved.sepDate) applyLoadedPlan(saved);

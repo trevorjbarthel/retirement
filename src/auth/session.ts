@@ -85,7 +85,9 @@ export async function issueSession(
   );
   setCookie(c, SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: c.env.APP_ENV === "production",
+    // Fail safe: Secure unless this is explicitly local development. A misspelled or
+    // unset APP_ENV must NOT silently downgrade the auth cookie to non-Secure.
+    secure: c.env.APP_ENV !== "development",
     sameSite: "Lax",
     path: "/",
     maxAge: ttl,

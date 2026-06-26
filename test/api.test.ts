@@ -71,6 +71,11 @@ describe("session", () => {
     expect((await me.json<{ user: any }>()).user).toBeNull();
   });
 
+  it("rejects a structurally malformed cookie (no signature delimiter)", async () => {
+    const me = await api("/api/me", { cookie: "session=not-a-valid-token" });
+    expect((await me.json<{ user: any }>()).user).toBeNull();
+  });
+
   it("invalidates existing cookies when token_version is bumped (password change)", async () => {
     const { cookie } = await register("frank@example.com", "correct-horse-battery");
     const change = await api("/api/auth/change-password", {
@@ -120,6 +125,14 @@ describe("plan", () => {
     const { cookie } = await register("jane@example.com");
     const huge = { blob: "x".repeat(70 * 1024) };
     const res = await api("/api/plan", { method: "PUT", body: { plan: huge, schema_version: 5 }, cookie });
+    expect(res.status).toBe(413);
+  });
+
+  it("measures the size limit in UTF-8 bytes, not UTF-16 code units", async () => {
+    const { cookie } = await register("mia@example.com");
+    // ~24k 3-byte chars ≈ 72 KiB UTF-8 but only ~24k code units — would pass a .length check.
+    const multibyte = { blob: "界".repeat(24 * 1024) };
+    const res = await api("/api/plan", { method: "PUT", body: { plan: multibyte, schema_version: 5 }, cookie });
     expect(res.status).toBe(413);
   });
 });

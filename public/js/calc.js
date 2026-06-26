@@ -17,7 +17,9 @@ export const SKILLBRIDGE_LIMITS = {
 };
 
 
-export const VA_RATES_2025 = { 0:0, 10:175.51, 20:346.95, 30:508.05, 40:731.86, 50:1041.82, 60:1319.65, 70:1663.06, 80:1933.15, 90:2172.39, 100:3737.85 };
+// Veteran-alone (no dependents) monthly rates, effective Dec 1, 2024 COLA (the "2025" rates).
+// Verified against VA published figures — keep the whole table on one vintage.
+export const VA_RATES_2025 = { 0:0, 10:175.51, 20:346.95, 30:537.42, 40:774.16, 50:1102.04, 60:1395.93, 70:1759.19, 80:2044.89, 90:2297.96, 100:3831.30 };
 
 export const STATE_TAX_DATA = {
   'AL': { name:'Alabama', militaryRetirementTax:'exempt', topRate:5.0, note:'Military retirement pay is fully exempt from Alabama income tax.' },
@@ -266,14 +268,24 @@ export function decodeState(str) {
   }
 }
 
-// Allow-list validation for untrusted plans (imported files / shared links).
+export const VALID_BRANCHES = ['Army', 'Navy', 'Air Force', 'Marine Corps', 'Space Force', 'Coast Guard'];
+
+// Allow-list validation for untrusted plans (imported files / shared links). This is
+// defense-in-depth alongside output-escaping: it rejects wrong-typed or oversized
+// values for the free-text / numeric fields that later flow into the DOM, and pins
+// branch to a known key (an unknown branch would also crash rendering at BRANCH_META).
 export function isValidState(obj) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
-  if (typeof obj.firstName !== 'string' || obj.firstName.trim() === '') return false;
+  if (typeof obj.firstName !== 'string' || obj.firstName.trim() === '' || obj.firstName.length > 100) return false;
   if (!['E', 'W', 'O'].includes(obj.rankCat)) return false;
   if (typeof obj.yos !== 'number' || !isFinite(obj.yos) || obj.yos < 1 || obj.yos > 40) return false;
   if (!['Retirement', 'Separation'].includes(obj.transType)) return false;
   if (typeof obj.sepDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(obj.sepDate)) return false;
-  if (typeof obj.branch !== 'string' || obj.branch.trim() === '') return false;
+  if (!VALID_BRANCHES.includes(obj.branch)) return false;
+  // Optional fields, when present, must be the right (safe) type and within range.
+  const okNum = (v, lo, hi) => v === undefined || (typeof v === 'number' && isFinite(v) && v >= lo && v <= hi);
+  if (!okNum(obj.sbDays, 0, 180) || !okNum(obj.ptdyDays, 0, 20) || !okNum(obj.leaveDays, 0, 120)) return false;
+  const okStr = (v, max) => v === undefined || (typeof v === 'string' && v.length <= max);
+  if (!okStr(obj.rank, 100) || !okStr(obj.postLocation, 100) || !okStr(obj.careerInterest, 100) || !okStr(obj.dateOfRank, 10)) return false;
   return true;
 }

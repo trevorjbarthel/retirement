@@ -28,7 +28,7 @@ devices. Guests still work fully offline (data stays in `localStorage`).
 
 ## Prerequisites
 
-- Node 18+ and npm
+- Node 22+ and npm (the pinned `wrangler` requires Node ≥ 22)
 - A Cloudflare account + `npx wrangler login` (only for remote D1 / deploy)
 
 ## Setup
@@ -56,7 +56,7 @@ npm run dev        # wrangler dev — serves public/ + the API at http://127.0.0
 
 ```bash
 npm test           # vitest: pure-function tests (calc.js) + Worker/D1 integration (Miniflare)
-npm run typecheck  # tsc --noEmit
+npm run typecheck  # tsc on src/ + test/, then tsc -p tsconfig.calc.json on the shared calc.js
 ```
 
 Tests use `@cloudflare/vitest-pool-workers` against a local Miniflare D1 — no
@@ -110,3 +110,22 @@ the official DFAS pages**. The committed data lives in `public/data/pay-tables.j
 - Tailwind/Lucide load from CDNs; for production consider self‑hosting/building
   CSS and adding security headers (CSP) — static assets are served edge‑direct,
   so header injection would need a Worker pass.
+- **Auth rate limiting** is wired but inactive by default. `src/routes/auth.ts`
+  calls an optional `AUTH_LIMITER` binding on `/login`, `/register`, and
+  `/change-password`; when the binding is absent (local dev, tests, an
+  un‑provisioned deploy) it's a no‑op. To activate, add a Cloudflare
+  [Rate Limiting binding](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/)
+  to `wrangler.jsonc`, e.g.:
+  ```jsonc
+  "unsafe": { "bindings": [
+    { "name": "AUTH_LIMITER", "type": "ratelimit", "namespace_id": "1001",
+      "simple": { "limit": 20, "period": 60 } }
+  ] }
+  ```
+- **VA disability rates** in `calc.js` (`VA_RATES_2025`) are the veteran‑alone
+  (no‑dependents) amounts on the Dec 1 2024 COLA vintage. Refresh them as a set
+  (not per‑bracket) when a new COLA lands, and update `DATA_VINTAGE.vaRates` in
+  the same change so the label and data never drift apart.
+- **State tax** figures are damped‑effective‑rate *upper‑bound* estimates from a
+  single top‑marginal rate per state, not bracket‑accurate; the UI labels them as
+  approximate. For real accuracy, store a per‑state bracket schedule.

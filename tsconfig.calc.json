@@ -1,0 +1,28 @@
+{
+  // Typechecks the shared pure logic. calc.js is the single source of truth for all
+  // pay/TSP/VA/date/encode/validation logic and is imported by both the browser and the
+  // vitest suite. The main tsconfig excludes public/, so without this the most important
+  // file ships un-typechecked. Run via `npm run typecheck`.
+  //
+  // checkJs is on so body-level mistakes (e.g. calling a string method on a number) are
+  // caught. noImplicitAny is relaxed because the file predates JSDoc annotations; add
+  // @param/@returns over time to tighten coverage without a big-bang rewrite. The browser
+  // glue (store.js/auth-ui.js) is intentionally excluded until it carries JSDoc, since
+  // checkJs flags CDN globals (window.lucide) and inferred-callback arity there.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": false,
+    "noImplicitAny": false,
+    "allowJs": true,
+    "checkJs": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": [
+    "public/js/calc.js",
+    "public/js/pay-tables.generated.js"
+  ]
+}

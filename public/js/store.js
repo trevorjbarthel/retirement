@@ -75,6 +75,9 @@ export async function login(email, password) {
 }
 export async function logout() {
   await apiFetch("/api/auth/logout", { method: "POST" });
+  // Clear the local cache too (mirrors deleteAccount): the cached plan belongs to the
+  // account we're leaving, and must not leak to the next person on a shared browser.
+  lsClear();
   currentUser = null; mode = "guest"; lastSavedAt = null; emit();
 }
 export async function changePassword(current, next) {

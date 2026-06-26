@@ -19,4 +19,8 @@ app.all("/api/*", (c) => c.json({ error: "not_found" }, 404));
 // /api/*, most asset requests never reach the Worker; this is a safety net.
 app.all("*", (c) => c.env.ASSETS.fetch(c.req.raw));
 
+// Last-resort handler so an unexpected throw (e.g. a DB error) returns a clean JSON
+// envelope instead of leaking a stack trace in Hono's default 500.
+app.onError((_err, c) => c.json({ error: "server_error" }, 500));
+
 export default app;

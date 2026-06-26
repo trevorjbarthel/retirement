@@ -8,6 +8,7 @@ import { deleteUser, getPlan, getUserById, upsertPlan } from "../db/queries";
 const api = new Hono<AppContext>();
 
 const MAX_PLAN_BYTES = 64 * 1024;
+const enc = new TextEncoder();
 
 // Who am I? Drives logged-in vs guest UI on boot.
 api.get("/me", optionalAuth, async (c) => {
@@ -43,7 +44,9 @@ api.put("/plan", requireAuth, async (c) => {
     return jsonError(c, "invalid_input", 400, "plan must be an object.");
   }
   const planJson = JSON.stringify(plan);
-  if (planJson.length > MAX_PLAN_BYTES) return jsonError(c, "too_large", 413, "Plan is too large.");
+  // Measure UTF-8 bytes (what D1 stores), not UTF-16 code units, so multi-byte
+  // content (CJK, emoji) can't slip ~3x past the intended byte budget.
+  if (enc.encode(planJson).byteLength > MAX_PLAN_BYTES) return jsonError(c, "too_large", 413, "Plan is too large.");
   const schemaVersion = Number.isFinite(Number(body?.schema_version)) ? Number(body.schema_version) : 1;
   const updated_at = await upsertPlan(c.env.DB, userId, planJson, schemaVersion);
   return c.json({ updated_at });

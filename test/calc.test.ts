@@ -23,15 +23,27 @@ describe("computeRetirementPay", () => {
 });
 
 describe("data tables", () => {
-  it("VA 100% rate is current", () => {
-    expect(calc.VA_RATES_2025[100]).toBe(3737.85);
+  it("VA rates are on the 2025 (Dec 1 2024 COLA) vintage", () => {
+    expect(calc.VA_RATES_2025[100]).toBe(3831.30);
+    expect(calc.VA_RATES_2025[30]).toBe(537.42); // pins a mid-bracket so vintage drift is caught
+    expect(calc.VA_RATES_2025[10]).toBe(175.51);
   });
   it("SkillBridge cap lookup", () => {
     expect(calc.getSkillbridgeAuthorizedMax("Army", "E-5")).toBe(120);
     expect(calc.getSkillbridgeAuthorizedMax("Army", "Z-1")).toBeNull();
   });
-  it("annuity factor interpolates between table points", () => {
+  it("annuity factor interpolates between table points and clamps at the bounds", () => {
     expect(calc.interpolateAnnuityFactor(47)).toBeCloseTo(5.01, 2);
+    expect(calc.interpolateAnnuityFactor(50)).toBe(5.35); // exact table hit
+    expect(calc.interpolateAnnuityFactor(30)).toBe(4.20); // below table → clamps to age 38
+    expect(calc.interpolateAnnuityFactor(80)).toBe(9.35); // above table → clamps to age 70
+  });
+  it("life-expectancy distribution period: exact, interpolated, and clamped", () => {
+    expect(calc.getLifeExpDistributionPeriod(50)).toBe(42.5);
+    expect(calc.getLifeExpDistributionPeriod(65)).toBe(27.5);
+    expect(calc.getLifeExpDistributionPeriod(52)).toBeCloseTo(40.5, 2);
+    expect(calc.getLifeExpDistributionPeriod(40)).toBe(47.5); // below table → clamps
+    expect(calc.getLifeExpDistributionPeriod(75)).toBe(22.5); // above table → clamps
   });
 });
 
@@ -111,5 +123,17 @@ describe("isValidState", () => {
     expect(calc.isValidState({ ...good, yos: 99 })).toBe(false);
     expect(calc.isValidState({ ...good, rankCat: "Z" })).toBe(false);
     expect(calc.isValidState({ ...good, sepDate: "06/01/2027" })).toBe(false);
+  });
+  it("rejects unknown branches and unsafe free-text / numeric fields (defense-in-depth)", () => {
+    expect(calc.isValidState({ ...good, branch: "Rebel Alliance" })).toBe(false);
+    // postLocation as an HTML payload is a string but over the length cap → rejected.
+    expect(calc.isValidState({ ...good, postLocation: "x".repeat(101) })).toBe(false);
+    // numeric fields must be in-range numbers, not strings carrying markup.
+    expect(calc.isValidState({ ...good, sbDays: "<img src=x onerror=alert(1)>" })).toBe(false);
+    expect(calc.isValidState({ ...good, leaveDays: 999 })).toBe(false);
+    expect(calc.isValidState({ ...good, rank: 12345 })).toBe(false);
+  });
+  it("accepts a plan with valid optional fields present", () => {
+    expect(calc.isValidState({ ...good, postLocation: "San Antonio, TX", sbDays: 90, ptdyDays: 20, leaveDays: 60, rank: "O-4 Major" })).toBe(true);
   });
 });
