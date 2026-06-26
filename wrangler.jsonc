@@ -1,0 +1,37 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "military-transition-calc",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-06-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Serve the front-end (public/) via Workers Static Assets.
+  // run_worker_first ensures /api/* always invokes the Worker before asset matching;
+  // every other path is served edge-direct from public/ (fast, no Worker cost).
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "mtc-db",
+      // Replace after running:  npx wrangler d1 create mtc-db
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  "vars": {
+    "APP_ENV": "production",
+    // PBKDF2 work factor — surfaced as a var so it can be raised without a code change.
+    "PBKDF2_ITERATIONS": "210000",
+    // Session lifetime: 14 days.
+    "SESSION_TTL_SECONDS": "1209600"
+  }
+  // SESSION_SECRET is NOT stored here. Set it with:  npx wrangler secret put SESSION_SECRET
+  // For local dev, put it in .dev.vars (gitignored).
+}

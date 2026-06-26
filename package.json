@@ -1,0 +1,29 @@
+{
+  "name": "military-transition-calc",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run && npm run test:scripts",
+    "test:scripts": "node --test test/parse-pay-tables.nodetest.mjs",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "update-pay-tables": "node scripts/update-pay-tables.mjs",
+    "cf-typegen": "wrangler types",
+    "db:migrate:local": "wrangler d1 migrations apply mtc-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply mtc-db --remote"
+  },
+  "dependencies": {
+    "hono": "^4.12.27"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.8.71",
+    "@cloudflare/workers-types": "^4.20260625.1",
+    "node-html-parser": "^8.0.3",
+    "typescript": "^6.0.3",
+    "vitest": "^3.2.6",
+    "wrangler": "^4.105.0"
+  }
+}
