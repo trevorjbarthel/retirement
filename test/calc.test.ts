@@ -54,6 +54,17 @@ describe("parseStateFromLocation", () => {
   it("maps a full state name", () => {
     expect(calc.parseStateFromLocation("somewhere in Florida")).toBe("FL");
   });
+  it("disambiguates West Virginia from Virginia (longest name wins)", () => {
+    expect(calc.parseStateFromLocation("West Virginia")).toBe("WV");
+    expect(calc.parseStateFromLocation("Charleston, West Virginia")).toBe("WV");
+    expect(calc.parseStateFromLocation("Virginia Beach")).toBe("VA");
+  });
+  it("maps Washington D.C. variants to DC, not Washington state", () => {
+    expect(calc.parseStateFromLocation("Washington DC")).toBe("DC");
+    expect(calc.parseStateFromLocation("Washington, D.C.")).toBe("DC");
+    expect(calc.parseStateFromLocation("Washington")).toBe("WA");
+    expect(calc.parseStateFromLocation("Seattle, WA")).toBe("WA");
+  });
   it("returns null when nothing matches", () => {
     expect(calc.parseStateFromLocation("Atlantis")).toBeNull();
   });
@@ -135,5 +146,16 @@ describe("isValidState", () => {
   });
   it("accepts a plan with valid optional fields present", () => {
     expect(calc.isValidState({ ...good, postLocation: "San Antonio, TX", sbDays: 90, ptdyDays: 20, leaveDays: 60, rank: "O-4 Major" })).toBe(true);
+  });
+  it("validates dateOfRank as empty or strict YYYY-MM-DD", () => {
+    expect(calc.isValidState({ ...good, dateOfRank: "2020-05-01" })).toBe(true);
+    expect(calc.isValidState({ ...good, dateOfRank: "" })).toBe(true);
+    expect(calc.isValidState({ ...good, dateOfRank: "05/01/2020" })).toBe(false);
+    expect(calc.isValidState({ ...good, dateOfRank: "garbage" })).toBe(false);
+  });
+  it("rejects out-of-range TSP numeric fields", () => {
+    expect(calc.isValidState({ ...good, tspRetAge: 200 })).toBe(false);
+    expect(calc.isValidState({ ...good, tspBalance: "1e9" })).toBe(false);
+    expect(calc.isValidState({ ...good, tspRetAge: 50, tspBalance: 85000 })).toBe(true);
   });
 });

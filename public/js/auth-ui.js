@@ -219,8 +219,9 @@ async function runMigration() {
   const candidate = (opts.getCurrentState && opts.getCurrentState()) || store.getLocalPlan();
   if (candidate && candidate.firstName && candidate.sepDate) {
     if (confirm("Upload the plan from this browser to your account?")) {
-      await store.pushPlan(candidate);
+      const ok = await store.pushPlan(candidate);
       opts.onPlanLoaded(candidate);
+      if (!ok) opts.onSyncFailed(); // upload failed (network / too_large) — tell the user
       return;
     }
   }
@@ -228,7 +229,7 @@ async function runMigration() {
 }
 
 export function initAuthUI(options = {}) {
-  opts = { getCurrentState: () => null, onPlanLoaded: () => {}, ...options };
+  opts = { getCurrentState: () => null, onPlanLoaded: () => {}, onSyncFailed: () => {}, ...options };
   store.onChange(renderAccountArea);
   renderAccountArea(store.getStatus());
 }

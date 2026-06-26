@@ -4,6 +4,7 @@
 // index.html only ever calls saveState/loadState — which now route through here.
 
 const LS_KEY = "military-transition-calc-v5"; // unchanged: preserves existing guest data
+const LS_UID_KEY = "military-transition-calc-owner"; // which account the cache belongs to
 const SCHEMA_VERSION = 5;
 
 let mode = "guest"; // "guest" | "auth"
@@ -11,6 +12,12 @@ let currentUser = null;
 let lastSavedAt = null;
 let saveTimer = null;
 const listeners = new Set();
+
+// Cancel any queued debounced PUT. MUST run before an identity/state transition (and
+// before any await) so a stale write can't fire during the request or after a cache clear.
+function cancelPendingSave() {
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+}
 
 function emit() {
   const s = getStatus();
@@ -64,16 +71,19 @@ export async function bootAuth() {
 }
 
 export async function register(email, password) {
+  cancelPendingSave();
   const r = await apiFetch("/api/auth/register", { body: { email, password } });
   if (r.ok && r.data) { currentUser = r.data.user; mode = "auth"; emit(); }
   return r;
 }
 export async function login(email, password) {
+  cancelPendingSave();
   const r = await apiFetch("/api/auth/login", { body: { email, password } });
   if (r.ok && r.data) { currentUser = r.data.user; mode = "auth"; emit(); }
   return r;
 }
 export async function logout() {
+  cancelPendingSave();
   await apiFetch("/api/auth/logout", { method: "POST" });
   // Clear the local cache too (mirrors deleteAccount): the cached plan belongs to the
   // account we're leaving, and must not leak to the next person on a shared browser.
@@ -84,6 +94,7 @@ export async function changePassword(current, next) {
   return apiFetch("/api/auth/change-password", { body: { current, next } });
 }
 export async function deleteAccount() {
+  cancelPendingSave();
   const r = await apiFetch("/api/account", { method: "DELETE" });
   if (r.ok) { currentUser = null; mode = "guest"; lastSavedAt = null; lsClear(); emit(); }
   return r;
@@ -94,10 +105,19 @@ function lsLoad() {
   try { return JSON.parse(localStorage.getItem(LS_KEY)); } catch { return null; }
 }
 function lsSave(state) {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch { /* quota */ }
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(state));
+    // Tag the cache with its owning account so a transient API failure can't surface
+    // it to a different signed-in user; guests leave it untagged.
+    if (mode === "auth" && currentUser) localStorage.setItem(LS_UID_KEY, String(currentUser.id));
+    else localStorage.removeItem(LS_UID_KEY);
+  } catch { /* quota */ }
+}
+function cacheOwner() {
+  try { return localStorage.getItem(LS_UID_KEY); } catch { return null; }
 }
 export function lsClear() {
-  try { localStorage.removeItem(LS_KEY); } catch { /* ignore */ }
+  try { localStorage.removeItem(LS_KEY); localStorage.removeItem(LS_UID_KEY); } catch { /* ignore */ }
 }
 export function getLocalPlan() {
   return lsLoad();
@@ -110,9 +130,23 @@ export function hasLocalPlan() {
 // ----- unified load/save -----
 export async function loadPlan() {
   if (mode === "auth") {
-    const { ok, data } = await apiFetch("/api/plan");
-    if (ok && data) return data.plan; // plan object or null (signed in, nothing saved yet)
-    // fall through to local cache on error
+    const { ok, status, data } = await apiFetch("/api/plan");
+    if (ok && data) {
+      if (data.schema_version != null && data.schema_version < SCHEMA_VERSION) {
+        // No client-side migration ladder exists yet; make the gap observable rather than
+        // letting the next autosave silently re-stamp it to the current version.
+        console.warn(`Loaded plan schema_version ${data.schema_version} < ${SCHEMA_VERSION}; no migration ran.`);
+      }
+      return data.plan; // plan object or null (signed in, nothing saved yet)
+    }
+    if (status === 401) { // session expired/invalid → drop to guest, don't surface stale cache
+      lsClear(); currentUser = null; mode = "guest"; lastSavedAt = null; emit();
+      return null;
+    }
+    // Transient network/5xx: only use the cache if it belongs to THIS account, never
+    // another user's or untagged guest data.
+    if (currentUser && cacheOwner() === String(currentUser.id)) return lsLoad();
+    return null;
   }
   return lsLoad();
 }

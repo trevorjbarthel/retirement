@@ -135,6 +135,10 @@ auth.post("/change-password", requireAuth, async (c) => {
   const ok = await verifyPassword(current, user.password_hash, user.password_salt, user.iterations);
   if (!ok) return jsonError(c, "invalid_credentials", 401, "Current password is incorrect.");
 
+  // Reject a no-op change (after proving knowledge of the current password) so we don't
+  // needlessly bump token_version and sign the user out of their other sessions.
+  if (next === current) return jsonError(c, "invalid_input", 400, "New password must be different from your current password.");
+
   const { hash, salt } = await hashPassword(next, iterations(c.env));
   await updateUserPasswordAndRevoke(c.env.DB, user.id, hash, salt, iterations(c.env));
   // Re-issue this device's cookie against the new token_version so the user stays signed in here.

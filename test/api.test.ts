@@ -76,6 +76,16 @@ describe("session", () => {
     expect((await me.json<{ user: any }>()).user).toBeNull();
   });
 
+  it("rejects a password change to the same password (400)", async () => {
+    const { cookie } = await register("noah@example.com", "correct-horse-battery");
+    const res = await api("/api/auth/change-password", {
+      body: { current: "correct-horse-battery", next: "correct-horse-battery" },
+      cookie,
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json<{ error: string }>()).error).toBe("invalid_input");
+  });
+
   it("invalidates existing cookies when token_version is bumped (password change)", async () => {
     const { cookie } = await register("frank@example.com", "correct-horse-battery");
     const change = await api("/api/auth/change-password", {

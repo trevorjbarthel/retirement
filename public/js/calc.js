@@ -99,11 +99,15 @@ export function parseStateFromLocation(locationStr) {
   const upper = locationStr.trim().toUpperCase();
   // Direct 2-letter state code
   if (STATE_TAX_DATA[upper]) return upper;
+  // District of Columbia — must precede the "WASHINGTON" full-name match (which would
+  // otherwise grab "Washington DC" as Washington STATE).
+  if (/\bD\.?C\.?\b/.test(upper) || upper.includes('DISTRICT OF COLUMBIA')) return 'DC';
   // Check for state abbreviation after comma: "San Antonio, TX"
   const commaMatch = upper.match(/,\s*([A-Z]{2})\s*$/);
   if (commaMatch && STATE_TAX_DATA[commaMatch[1]]) return commaMatch[1];
-  // Full state name search
-  for (const [code, data] of Object.entries(STATE_TAX_DATA)) {
+  // Full state name search — longest names first so "West Virginia" wins over "Virginia".
+  const byNameLen = Object.entries(STATE_TAX_DATA).sort((a, b) => b[1].name.length - a[1].name.length);
+  for (const [code, data] of byNameLen) {
     if (upper.includes(data.name.toUpperCase())) return code;
   }
   return null;
@@ -285,7 +289,12 @@ export function isValidState(obj) {
   // Optional fields, when present, must be the right (safe) type and within range.
   const okNum = (v, lo, hi) => v === undefined || (typeof v === 'number' && isFinite(v) && v >= lo && v <= hi);
   if (!okNum(obj.sbDays, 0, 180) || !okNum(obj.ptdyDays, 0, 20) || !okNum(obj.leaveDays, 0, 120)) return false;
+  // TSP numeric fields, when present, must be in the range the pay/withdrawal UI assumes.
+  if (!okNum(obj.tspRetAge, 38, 70) || !okNum(obj.tspBalance, 0, 1e9) || !okNum(obj.tspFixedAmount, 0, 1e7) || !okNum(obj.tspRate, 0, 20)) return false;
   const okStr = (v, max) => v === undefined || (typeof v === 'string' && v.length <= max);
-  if (!okStr(obj.rank, 100) || !okStr(obj.postLocation, 100) || !okStr(obj.careerInterest, 100) || !okStr(obj.dateOfRank, 10)) return false;
+  if (!okStr(obj.rank, 100) || !okStr(obj.postLocation, 100) || !okStr(obj.careerInterest, 100)) return false;
+  // dateOfRank, when present, must be empty or a strict YYYY-MM-DD (mirrors sepDate); a
+  // length-only check would let "garbage" through and render "NaN years"/"Invalid Date".
+  if (!(obj.dateOfRank === undefined || obj.dateOfRank === '' || (typeof obj.dateOfRank === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(obj.dateOfRank)))) return false;
   return true;
 }

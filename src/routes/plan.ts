@@ -33,6 +33,11 @@ api.get("/plan", requireAuth, async (c) => {
 
 api.put("/plan", requireAuth, async (c) => {
   const userId = c.get("userId")!;
+  // Cheap early reject before buffering/parsing the body. Content-Length is the whole
+  // envelope (larger than the inner plan), so allow generous headroom; the post-stringify
+  // byte check below is authoritative. Content-Length may be absent or spoofed.
+  const len = Number(c.req.header("content-length"));
+  if (Number.isFinite(len) && len > MAX_PLAN_BYTES * 2) return jsonError(c, "too_large", 413, "Plan is too large.");
   let body: any;
   try {
     body = await c.req.json();
@@ -47,7 +52,9 @@ api.put("/plan", requireAuth, async (c) => {
   // Measure UTF-8 bytes (what D1 stores), not UTF-16 code units, so multi-byte
   // content (CJK, emoji) can't slip ~3x past the intended byte budget.
   if (enc.encode(planJson).byteLength > MAX_PLAN_BYTES) return jsonError(c, "too_large", 413, "Plan is too large.");
-  const schemaVersion = Number.isFinite(Number(body?.schema_version)) ? Number(body.schema_version) : 1;
+  // Store a positive, bounded integer schema_version; anything else normalizes to 1.
+  const rawVersion = Math.trunc(Number(body?.schema_version));
+  const schemaVersion = Number.isInteger(rawVersion) && rawVersion >= 1 && rawVersion <= 1000 ? rawVersion : 1;
   const updated_at = await upsertPlan(c.env.DB, userId, planJson, schemaVersion);
   return c.json({ updated_at });
 });

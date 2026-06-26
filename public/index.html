@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="Free planning tool for U.S. service members leaving active duty: transition timeline, milestone checklist, and pay/TSP/VA/state-tax estimators." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%231a2744'/%3E%3Cpolygon points='8,2 9.6,6.2 14,6.2 10.4,8.9 11.8,13 8,10.4 4.2,13 5.6,8.9 2,6.2 6.4,6.2' fill='%23c9a227'/%3E%3C/svg%3E" />
 <title>Military Transition & Retirement Calculator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -84,8 +86,9 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 .radio-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #ced4da; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .radio-card.selected .radio-dot { border-color: #c9a227; }
 .radio-card.selected .radio-dot::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #c9a227; }
-.helper-text { font-size: 12px; color: #67779e; margin-top: 4px; line-height: 1.4; }
-.error-msg { font-size: 12px; color: #ef4444; margin-top: 4px; display: none; }
+.helper-text { font-size: 12px; color: #415586; margin-top: 4px; line-height: 1.4; }
+.error-msg { font-size: 12px; color: #b91c1c; margin-top: 4px; display: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .error-msg.show { display: block; }
 .input-field.error { border-color: #ef4444; }
 .section-card { background: white; border-radius: 16px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(26,39,68,0.06); }
@@ -110,9 +113,11 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 .sb-policy-note { margin-top: 6px; font-size: 13px; line-height: 1.5; padding: 8px 12px; border-radius: 10px; }
 .sb-edit-feedback { margin-top: 6px; font-size: 13px; line-height: 1.5; padding: 8px 12px; border-radius: 10px; display: none; }
 .sb-edit-feedback.show { display: block; }
-.va-rating-btn { min-width: 52px; padding: 8px 6px; border: 2px solid #e9ecef; border-radius: 10px; background: white; cursor: pointer; text-align: center; font-size: 13px; font-weight: 600; color: #67779e; transition: all 0.2s; }
-.va-rating-btn:hover { border-color: #c9a227; color: #c9a227; }
-.va-rating-btn.active { border-color: #c9a227; background: #fdf9ed; color: #c9a227; }
+.va-rating-btn { min-width: 52px; padding: 8px 6px; border: 2px solid #e9ecef; border-radius: 10px; background: white; cursor: pointer; text-align: center; font-size: 13px; font-weight: 600; color: #415586; transition: all 0.2s; }
+.va-rating-btn:hover { border-color: #c9a227; color: #a6841e; }
+.va-rating-btn.active { border-color: #c9a227; background: #fdf9ed; color: #a6841e; }
+/* Non-color cue for the selected rating (WCAG 1.4.1) — a checkmark in addition to color. */
+.va-rating-btn.active::after { content: ' \2713'; }
 .income-table-row { transition: background 0.15s; }
 .income-table-row.highlighted { background: #fdf9ed !important; font-weight: 600; }
 .income-table-row.crdp-eligible { background: rgba(16,185,129,0.04); }
@@ -142,7 +147,8 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 .tl-marker .tl-box.tl-above { bottom: 90px; }
 .tl-marker .tl-box.tl-below { top: 96px; }
 .tl-label { font-size: 10px; font-weight: 600; line-height: 1.2; color: #1a2744; }
-.tl-date { font-size: 10px; color: #67779e; }
+.tl-date { font-size: 10px; color: #415586; }
+.tl-status { font-size: 9px; font-weight: 600; line-height: 1.3; color: #415586; }
 .tl-dot.status-green { background:#10b981; } .tl-dot.status-gold { background:#f59e0b; } .tl-dot.status-red { background:#ef4444; }
 /* Keyboard focus visibility for custom (div-based) controls */
 .toggle-track:focus-visible, .radio-card:focus-visible, .tsp-withdrawal-card:focus-visible, .va-rating-btn:focus-visible { outline: 2px solid #c9a227; outline-offset: 2px; }
@@ -164,15 +170,16 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 </style>
 </head>
 <body data-id="0" class="min-h-screen flex flex-col">
-<app-icon data-id="1" hidden data-icon="shield" data-palette="Blue"></app-icon>
-<app-disclaimer data-id="2" intent="financial"></app-disclaimer>
+<a href="#appMain" class="sr-only">Skip to main content</a>
+<noscript><div style="max-width:640px;margin:2rem auto;padding:1rem 1.25rem;border:1px solid #c9a227;border-radius:12px;background:#fff;color:#1a2744;font-family:sans-serif;text-align:center;">This calculator requires JavaScript. Please enable JavaScript in your browser to use the Military Transition &amp; Retirement Calculator.</div></noscript>
 
 <!-- TOAST -->
-<div data-id="3" id="toast" class="toast">Link copied!</div>
+<div data-id="3" id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true">Link copied!</div>
 
-<!-- Disclaimer banner (visible on all screens; the <app-disclaimer> custom element renders nothing outside the builder runtime) -->
+<!-- Disclaimer banner (visible on all screens) -->
 <div class="app-disclaimer-bar">Estimates only — not financial, tax, or legal advice. Verify all figures with DFAS, the VA, and a qualified professional.</div>
 
+<main id="appMain" class="flex-1 flex flex-col">
 <!-- ===== SETUP SCREEN ===== -->
 <div data-id="4" id="setup-screen" class="flex-1 flex items-start justify-center py-8 px-4 md:px-6">
 <div data-id="5" class="w-full max-w-2xl">
@@ -203,12 +210,12 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
   <div data-id="21" class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <div data-id="22">
       <label data-id="23" class="block text-sm font-medium text-navy-600 mb-1">First Name <span data-id="24" class="text-danger-500">*</span></label>
-      <input data-id="25" type="text" id="firstName" class="input-field" placeholder="e.g., Alex" required />
+      <input data-id="25" type="text" id="firstName" class="input-field" placeholder="e.g., Alex" required aria-describedby="err-firstName" />
       <div data-id="26" class="error-msg" id="err-firstName">Please enter your first name.</div>
     </div>
     <div data-id="27">
       <label data-id="28" class="block text-sm font-medium text-navy-600 mb-1">Branch of Service <span data-id="29" class="text-danger-500">*</span></label>
-      <select data-id="30" id="branch" class="input-field" required>
+      <select data-id="30" id="branch" class="input-field" required aria-describedby="err-branch">
         <option data-id="31" value="">Select branch…</option>
         <option data-id="32" value="Army">Army</option>
         <option data-id="33" value="Navy">Navy</option>
@@ -222,25 +229,25 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
   </div>
   <div data-id="39" class="mt-4">
     <label data-id="40" class="block text-sm font-medium text-navy-600 mb-2">Rank Category <span data-id="41" class="text-danger-500">*</span></label>
-    <div data-id="42" class="grid grid-cols-1 sm:grid-cols-3 gap-3" id="rankCatGroup">
+    <div data-id="42" class="grid grid-cols-1 sm:grid-cols-3 gap-3" id="rankCatGroup" aria-label="Rank category" aria-describedby="err-rankCat">
       <div data-id="43" class="radio-card" data-value="E"><div data-id="44" class="radio-dot"></div><span data-id="45" class="text-sm font-medium">Enlisted (E)</span></div>
       <div data-id="46" class="radio-card" data-value="W"><div data-id="47" class="radio-dot"></div><span data-id="48" class="text-sm font-medium">Warrant Officer (W)</span></div>
       <div data-id="49" class="radio-card" data-value="O"><div data-id="50" class="radio-dot"></div><span data-id="51" class="text-sm font-medium">Officer (O)</span></div>
     </div>
     <div data-id="52" class="error-msg" id="err-rankCat">Please select a rank category.</div>
-    <div data-id="53" id="warrant-note" class="helper-text mt-2 hidden" style="color:#ef4444;">Warrant Officer ranks are not applicable for Air Force or Space Force.</div>
+    <div data-id="53" id="warrant-note" class="helper-text mt-2 hidden" style="color:#b91c1c;">Warrant Officer ranks are not applicable for Air Force or Space Force.</div>
   </div>
   <div data-id="54" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
     <div data-id="55">
       <label data-id="56" class="block text-sm font-medium text-navy-600 mb-1">Rank <span data-id="57" class="text-danger-500">*</span></label>
-      <select data-id="58" id="rank" class="input-field" required>
+      <select data-id="58" id="rank" class="input-field" required aria-describedby="err-rank">
         <option data-id="59" value="">Select rank category first…</option>
       </select>
       <div data-id="60" class="error-msg" id="err-rank">Please select your rank.</div>
     </div>
     <div data-id="61">
       <label data-id="62" class="block text-sm font-medium text-navy-600 mb-1">Years of Service <span data-id="63" class="text-danger-500">*</span></label>
-      <input data-id="64" type="number" id="yos" class="input-field" min="1" max="40" placeholder="e.g., 20" required />
+      <input data-id="64" type="number" id="yos" class="input-field" min="1" max="40" placeholder="e.g., 20" required aria-describedby="err-yos" />
       <div data-id="65" class="error-msg" id="err-yos">Enter years between 1 and 40.</div>
     </div>
   </div>
@@ -252,7 +259,7 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
           <span class="tooltip-box" style="width:280px;">Your Date of Rank (DOR) is the date you were promoted to your current grade. This is used to calculate your time in grade and refine your retirement pay estimate. Find it on your ERB/ORB or official record.</span>
         </span>
       </label>
-      <input type="date" id="dateOfRank" class="input-field" />
+      <input type="date" id="dateOfRank" class="input-field" aria-describedby="err-dateOfRank" />
       <div class="error-msg" id="err-dateOfRank">Date of rank can't be in the future or after your separation date.</div>
       <p class="helper-text">Used to calculate time in current grade for pay accuracy.</p>
     </div>
@@ -266,7 +273,7 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
   </div>
   <div data-id="66" class="mt-4">
     <label data-id="67" class="block text-sm font-medium text-navy-600 mb-2">Type of Transition <span data-id="68" class="text-danger-500">*</span></label>
-    <div data-id="69" class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="transTypeGroup">
+    <div data-id="69" class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="transTypeGroup" aria-label="Type of transition" aria-describedby="err-transType">
       <div data-id="70" class="radio-card" data-value="Retirement"><div data-id="71" class="radio-dot"></div><div data-id="72"><span data-id="73" class="text-sm font-medium">Retirement</span><span data-id="74" class="text-xs text-navy-400 block">20+ years of service</span></div></div>
       <div data-id="75" class="radio-card" data-value="Separation"><div data-id="76" class="radio-dot"></div><div data-id="77"><span data-id="78" class="text-sm font-medium">Separation</span><span data-id="79" class="text-xs text-navy-400 block">Under 20 years</span></div></div>
     </div>
@@ -280,7 +287,7 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
   <div data-id="84" class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <div data-id="85">
       <label data-id="86" class="block text-sm font-medium text-navy-600 mb-1">Estimated Retirement / Separation Date <span data-id="87" class="text-danger-500">*</span></label>
-      <input data-id="88" type="date" id="sepDate" class="input-field" required />
+      <input data-id="88" type="date" id="sepDate" class="input-field" required aria-describedby="err-sepDate" />
       <div data-id="89" class="error-msg" id="err-sepDate">Date must be in the future.</div>
     </div>
     <div data-id="90">
@@ -367,6 +374,7 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 </div>
 
 <!-- Submit -->
+<div id="form-status" aria-live="assertive" class="sr-only"></div>
 <button data-id="157" type="submit" id="submitBtn" class="w-full py-3.5 rounded-xl font-semibold text-white text-base transition-all hover:shadow-lg active:scale-[0.98]" style="background: linear-gradient(135deg, #c9a227 0%, #a6841e 100%);">
   Build My Transition Plan →
 </button>
@@ -532,7 +540,7 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
             <i data-id="253" data-lucide="shield-check" class="w-4 h-4 text-gold-500"></i> VA Disability Compensation
           </h3>
           <label data-id="254" class="block text-sm font-medium text-navy-600 mb-3">Select Your VA Disability Rating</label>
-          <div data-id="255" id="vaRatingBtns" class="flex flex-wrap gap-2 mb-4"></div>
+          <div data-id="255" id="vaRatingBtns" role="group" aria-label="VA disability rating" class="flex flex-wrap gap-2 mb-4"></div>
           <div data-id="256" id="vaCompResult" class="bg-navy-50 rounded-xl p-5 mb-3 hidden">
             <div data-id="257" class="text-center">
               <p data-id="258" class="text-xs font-medium uppercase tracking-wide text-navy-400 mb-1">Monthly VA Compensation (<span data-id="259" id="vaRatingLabel">0%</span>)</p>
@@ -788,6 +796,7 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
   <p data-id="431" class="text-xs text-navy-400 mt-1">Made by Copilot</p>
 </footer>
 </div>
+</main>
 
 <script type="module">
 import {
@@ -846,6 +855,12 @@ const RANKS = {
 
 // ===== UTILITIES =====
 function $(id) { return document.getElementById(id); }
+// LOCAL calendar date as YYYY-MM-DD. toISOString() is UTC, which rolls a US evening to
+// "tomorrow" — every date here is parsed as local midnight, so produce a local string.
+function todayLocalStr() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+}
 function fmtDate(d) { return d.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }); }
 function fmtDateShort(d) { return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'2-digit' }); }
 function fmtCurrency(val) { return val.toLocaleString('en-US', { style:'currency', currency:'USD' }); }
@@ -1012,10 +1027,11 @@ let tspContribMode = 'fixed';
 let toggles = { ptdy: true, sb: true, giBill: false, vaClaim: false };
 
 // ===== TOGGLE LOGIC =====
-function initToggle(id, key) {
+function initToggle(id, key, label) {
   const el = $(id);
   el.setAttribute('role', 'switch');
   el.setAttribute('tabindex', '0');
+  if (label) el.setAttribute('aria-label', label);
   el.setAttribute('aria-checked', String(!!toggles[key]));
   const fire = () => {
     toggles[key] = !toggles[key];
@@ -1078,7 +1094,13 @@ function populateRanks() {
 }
 
 // ===== VALIDATION =====
-function showErr(id, show) { const el = $(id); if (el) el.classList.toggle('show', show); }
+function showErr(id, show) {
+  const el = $(id);
+  if (el) el.classList.toggle('show', show);
+  // Mirror the visual error onto the associated control so AT announces invalid state.
+  const ctrl = document.querySelector('[aria-describedby="' + id + '"]');
+  if (ctrl) ctrl.setAttribute('aria-invalid', String(show));
+}
 
 function validate() {
   let ok = true;
@@ -1092,7 +1114,7 @@ function validate() {
   if (!transType) { showErr('err-transType', true); ok = false; } else { showErr('err-transType', false); }
   if (transType === 'Retirement' && yos < 20) { showErr('err-yos', true); $('yos').classList.add('error'); ok = false; }
   const sd = $('sepDate').value;
-  let today = new Date(($('todayDate').value || new Date().toISOString().split('T')[0]) + 'T00:00:00');
+  let today = new Date(($('todayDate').value || todayLocalStr()) + 'T00:00:00');
   if (isNaN(today)) today = new Date();
   if (!sd || new Date(sd + 'T00:00:00') <= today) { showErr('err-sepDate', true); $('sepDate').classList.add('error'); ok = false; } else { showErr('err-sepDate', false); $('sepDate').classList.remove('error'); }
   // Date of Rank sanity: not in the future, not after separation.
@@ -1126,7 +1148,9 @@ function buildState() {
   s.ptdy = toggles.ptdy;
   s.ptdyDays = toggles.ptdy ? clamp(parseInt($('ptdyDays').value) || 20, 1, 20) : 0;
   s.sb = toggles.sb;
-  s.sbDays = toggles.sb ? clamp(parseInt($('sbDays').value) || 90, 1, 180) : 0;
+  // Preserve a deliberate 0 (e.g. E-1 "not eligible"); only default to 90 on a blank/NaN field.
+  const sbN = parseInt($('sbDays').value, 10);
+  s.sbDays = toggles.sb ? clamp(Number.isFinite(sbN) ? sbN : 90, 0, 180) : 0;
   s.postLocation = $('postLocation').value.trim();
   s.careerInterest = $('careerInterest').value;
   s.giBill = toggles.giBill;
@@ -1187,10 +1211,12 @@ function renderTimeline(milestones, today, sep) {
     const pct = clamp(((m.date.getTime() - axisStart) / span) * 100, 0, 100);
     const st = milestoneStatus(daysBetween(today, m.date));
     const dotClass = st === 'past' ? 'status-red' : (st === 'future' ? 'status-green' : 'status-gold');
+    const statusText = st === 'past' ? 'Past' : (st === 'today' ? 'Today' : (st === 'soon' ? 'Due soon' : 'Upcoming'));
     const pos = (i % 2 === 0) ? 'tl-above' : 'tl-below';
+    const safeLabel = escapeHtml(m.label);
     html += '<div class="tl-marker" style="left:' + pct + '%;">'
-      + '<span class="tl-dot ' + dotClass + '"></span>'
-      + '<div class="tl-box ' + pos + '"><div class="tl-label">' + m.label + '</div><div class="tl-date">' + fmtDateShort(m.date) + '</div></div>'
+      + '<span class="tl-dot ' + dotClass + '" role="img" aria-label="' + safeLabel + ' — ' + statusText + '"></span>'
+      + '<div class="tl-box ' + pos + '"><div class="tl-label">' + safeLabel + '</div><div class="tl-date">' + fmtDateShort(m.date) + '</div><div class="tl-status">' + statusText + '</div></div>'
       + '</div>';
   });
   track.innerHTML = html;
@@ -1210,14 +1236,16 @@ function renderResults() {
   $('rankBadge').classList.remove('hidden');
 
   const daysLeft = daysBetween(today, sep);
-  $('countdownNumber').textContent = daysLeft;
-  $('countdownLabel').textContent = `Days Until ${s.transType}`;
+  const past = daysLeft < 0; // a saved/shared plan can have a sepDate that has since passed
+  $('countdownNumber').textContent = past ? Math.abs(daysLeft) : daysLeft;
+  $('countdownLabel').textContent = past ? `Days Since ${s.transType}` : `Days Until ${s.transType}`;
   $('countdownSub').textContent = `${fmtDate(sep)} · ${s.transType}`;
 
   const twoYearStart = subDays(sep, 730);
   let pct = 0;
   if (today >= twoYearStart) pct = clamp(Math.round((daysBetween(twoYearStart, today) / 730) * 100), 0, 100);
-  $('progressPct').textContent = today < twoYearStart ? `2-Year Window Opens: ${fmtDateShort(twoYearStart)}` : `${pct}% through 2-year window`;
+  $('progressPct').textContent = past ? '2-Year Window Closed'
+    : (today < twoYearStart ? `2-Year Window Opens: ${fmtDateShort(twoYearStart)}` : `${pct}% through 2-year window`);
   setTimeout(() => { $('progressBar').style.width = pct + '%'; }, 200);
 
   const termStart = subDays(sep, s.leaveDays);
@@ -1231,9 +1259,12 @@ function renderResults() {
   const tricareDeadline = subDays(sep, 90);
   const vaClaimBy = subDays(sep, 365);
 
+  // Relative-day label that reads sanely when the date is today or already past
+  // (a near-term sepDate pushes SkillBridge/terminal-leave starts before "today").
+  const relDays = (d) => { const n = daysBetween(today, d); return n < 0 ? `Started ${Math.abs(n)} days ago` : (n === 0 ? 'Today' : `${n} days`); };
   const subs = [];
-  if (s.sb) subs.push({ label: 'SkillBridge Starts', val: `${daysBetween(today, sbStart)} days`, icon: 'briefcase' });
-  subs.push({ label: 'Terminal Leave', val: `${daysBetween(today, termStart)} days`, icon: 'palm-tree' });
+  if (s.sb) subs.push({ label: 'SkillBridge Starts', val: relDays(sbStart), icon: 'briefcase' });
+  subs.push({ label: 'Terminal Leave', val: relDays(termStart), icon: 'palm-tree' });
   subs.push({ label: 'Freedom Day', val: fmtDateShort(sep), icon: 'flag' });
 
   $('subCounters').innerHTML = subs.map(c => `
@@ -1261,8 +1292,10 @@ function renderResults() {
   milestones.push({ label: `${s.transType} Date`, date: sep, icon: 'flag' });
   if (firstRetPay) milestones.push({ label: 'First Retirement Pay', date: firstRetPay, icon: 'dollar-sign' });
 
-  // Government Paid Move: 3 years from sep (retirement) or 6 months from sep (separation)
-  const govMoveDeadline = isRet ? addDays(sep, 3 * 365) : addDays(sep, 182);
+  // Government Paid Move (JTR): 3 calendar years from retirement, or 180 days from separation.
+  const govMoveDeadline = isRet
+    ? new Date(sep.getFullYear() + 3, sep.getMonth(), sep.getDate())
+    : addDays(sep, 180);
   milestones.push({
     label: isRet ? 'Gov\'t Paid Move Deadline (3 yrs)' : 'Gov\'t Paid Move Deadline (6 mo)',
     date: govMoveDeadline,
@@ -1329,10 +1362,14 @@ function renderResults() {
   if (s.ptdy) segments.push({ days: s.ptdyDays, color: '#c9a227', label: 'PTDY' });
   segments.push({ days: s.leaveDays, color: '#2d6a4f', label: 'Terminal Leave' });
 
-  $('preBar').innerHTML = segments.map(seg => {
-    const w = Math.max((seg.days / totalPre) * 100, 2);
-    return `<div style="width:${w}%; background:${seg.color};" class="flex items-center justify-center text-white text-xs font-medium">${seg.days}d</div>`;
-  }).join('');
+  if (totalPre === 0) {
+    $('preBar').innerHTML = '<div style="width:100%; background:#e2e8f0; color:#475569;" class="flex items-center justify-center text-xs font-medium py-1">No pre-transition leave planned</div>';
+  } else {
+    $('preBar').innerHTML = segments.map(seg => {
+      const w = Math.max((seg.days / totalPre) * 100, 2);
+      return `<div style="width:${w}%; background:${seg.color};" class="flex items-center justify-center text-white text-xs font-medium">${seg.days}d</div>`;
+    }).join('');
+  }
 
   $('preBarLegend').innerHTML = segments.map(seg =>
     `<span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm inline-block" style="background:${seg.color};"></span>${seg.label}</span>`
@@ -1362,9 +1399,10 @@ function renderPayEstimator(isRet, persist = false) {
     $('crdpNotice').style.display = '';
   }
 
-  // DOR: calculate time in grade
-  if (s.dateOfRank) {
-    const dorDate = new Date(s.dateOfRank + 'T00:00:00');
+  // DOR: calculate time in grade (guard a malformed dateOfRank → Invalid Date → NaN)
+  const dorDate0 = s.dateOfRank ? new Date(s.dateOfRank + 'T00:00:00') : null;
+  if (dorDate0 && !isNaN(dorDate0.getTime())) {
+    const dorDate = dorDate0;
     const today = new Date(s.todayDate + 'T00:00:00');
     const sep = new Date(s.sepDate + 'T00:00:00');
     const tigDays = daysBetween(dorDate, sep);
@@ -1383,6 +1421,8 @@ function renderPayEstimator(isRet, persist = false) {
       $('payBasePay').value = basePay2026.toFixed(2);
       $('payBasePayHint').textContent = `2026 DFAS table: ${rg} at ${s.yos} YOS = ${fmtCurrency(basePay2026)}/mo · DOR: ${fmtDate(dorDate)} (${tigYearsToday} yrs in grade)`;
     } else {
+      // No table value (e.g. flag officers O-8..O-10) — restore the user's saved manual entry.
+      $('payBasePay').value = s.payBasePay ? Number(s.payBasePay).toFixed(2) : '';
       $('payBasePayHint').textContent = FLAG_OFFICER_GRADES.includes(rg)
         ? `General/flag officer pay (${rg}) is capped at the Executive Schedule limit — enter your exact monthly base pay from your LES.`
         : 'Could not auto-populate — enter your monthly base pay from your LES.';
@@ -1395,6 +1435,8 @@ function renderPayEstimator(isRet, persist = false) {
       $('payBasePay').value = basePay2026.toFixed(2);
       $('payBasePayHint').textContent = `2026 DFAS table: ${rg} at ${s.yos} YOS = ${fmtCurrency(basePay2026)}/mo`;
     } else {
+      // No table value (e.g. flag officers O-8..O-10) — restore the user's saved manual entry.
+      $('payBasePay').value = s.payBasePay ? Number(s.payBasePay).toFixed(2) : '';
       $('payBasePayHint').textContent = FLAG_OFFICER_GRADES.includes(rg)
         ? `General/flag officer pay (${rg}) is capped at the Executive Schedule limit — enter your exact monthly base pay from your LES.`
         : 'Could not auto-populate — enter your monthly base pay from your LES.';
@@ -1420,6 +1462,7 @@ function renderPayEstimator(isRet, persist = false) {
     btn.className = `va-rating-btn${r === selectedVARating ? ' active' : ''}`;
     btn.textContent = r + '%';
     btn.dataset.rating = r;
+    btn.setAttribute('aria-pressed', String(r === selectedVARating));
     ratingBtns.appendChild(btn);
   });
 
@@ -1505,6 +1548,8 @@ function recalcPayEstimator(persist = true) {
   state.tspRetAge = parseInt($('tspRetAge').value) || 45;
   state.tspWithdrawalMethod = tspWithdrawalMethod;
   state.tspFixedAmount = parseFloat($('tspFixedAmount').value) || 500;
+  // Persist the (possibly manually-entered) base pay so flag-officer entries survive reloads.
+  state.payBasePay = parseFloat($('payBasePay').value) || 0;
   if (persist) saveState(state);
 
   if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') lucide.createIcons();
@@ -1570,12 +1615,18 @@ function recalcTSP(monthlyRet, isRet, basePay) {
           const years = Math.floor(totalMonths / 12);
           const remMonths = totalMonths % 12;
           const depletionAge = retAge + years + (remMonths / 12);
+          const LIFE_EXP_AGE = 90; // longevity target for the depletion check
 
           let warningHtml = '';
-          if (depletionAge < 85) {
+          if (totalMonths === 0) {
             warningHtml = `<div class="mt-3 rounded-lg p-3 flex items-start gap-2 text-xs" style="background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5;">
               <i data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
-              <span>At this withdrawal rate, your TSP may be depleted by age ${Math.round(depletionAge)}. Consider a lower withdrawal or annuity option.</span>
+              <span>This withdrawal exceeds your projected balance — it wouldn't cover a single month. Choose a smaller monthly amount.</span>
+            </div>`;
+          } else if (depletionAge < LIFE_EXP_AGE) {
+            warningHtml = `<div class="mt-3 rounded-lg p-3 flex items-start gap-2 text-xs" style="background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5;">
+              <i data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+              <span>At this withdrawal rate, your TSP may be depleted by age ${Math.round(depletionAge)} (before age ${LIFE_EXP_AGE}). Consider a lower withdrawal or annuity option.</span>
             </div>`;
           }
 
@@ -1963,13 +2014,14 @@ function applyLoadedPlan(plan) {
   // The countdown is relative to the viewer's actual "now", not a date frozen into a
   // plan saved on a prior day (or shared by someone else). Refresh it on every load;
   // also repairs a missing/malformed todayDate that would otherwise render NaN.
-  state.todayDate = new Date().toISOString().split('T')[0];
+  state.todayDate = todayLocalStr();
   // Defense-in-depth: coerce day fields to safe integers so a malformed loaded plan
   // can never reach an innerHTML sink as a string (see escapeHtml + isValidState).
   const toInt = (v, dflt, lo, hi) => { const n = Math.trunc(Number(v)); return Number.isFinite(n) ? clamp(n, lo, hi) : dflt; };
   state.sbDays = toInt(state.sbDays, 0, 0, 180);
   state.ptdyDays = toInt(state.ptdyDays, 0, 0, 20);
   state.leaveDays = toInt(state.leaveDays, 60, 0, 120);
+  state.payBasePay = Number.isFinite(+state.payBasePay) ? Math.max(0, +state.payBasePay) : 0;
   toggles.ptdy = state.ptdy;
   toggles.sb = state.sb;
   toggles.giBill = state.giBill || false;
@@ -1985,14 +2037,13 @@ function applyLoadedPlan(plan) {
 }
 
 async function init() {
-  const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  const todayStr = todayLocalStr();
   $('todayDate').value = todayStr;
 
-  initToggle('ptdyToggle', 'ptdy');
-  initToggle('sbToggle', 'sb');
-  initToggle('giBillToggle', 'giBill');
-  initToggle('vaClaimToggle', 'vaClaim');
+  initToggle('ptdyToggle', 'ptdy', 'Taking Permissive TDY?');
+  initToggle('sbToggle', 'sb', 'Taking SkillBridge?');
+  initToggle('giBillToggle', 'giBill', 'Planning to use GI Bill?');
+  initToggle('vaClaimToggle', 'vaClaim', 'Planning to file VA disability?');
 
   initRadioGroup('rankCatGroup', val => { rankCat = val; populateRanks(); });
   initRadioGroup('transTypeGroup', val => { transType = val; });
@@ -2003,7 +2054,15 @@ async function init() {
 
   $('setup-form').addEventListener('submit', e => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!validate()) {
+      const invalid = document.querySelectorAll('[aria-invalid="true"]');
+      const fs = $('form-status');
+      if (fs) fs.textContent = `${invalid.length} field${invalid.length === 1 ? '' : 's'} need attention — please review the highlighted fields.`;
+      const first = invalid[0];
+      if (first && typeof first.focus === 'function') first.focus();
+      return;
+    }
+    if ($('form-status')) $('form-status').textContent = '';
     const prevChecks = (state && state.checks) || {};
     state = buildState();
     state.checks = prevChecks; // keep checklist progress across edits
@@ -2017,34 +2076,45 @@ async function init() {
     if (state.branch) $('branch').value = state.branch;
     if (state.rankCat) {
       rankCat = state.rankCat;
-      document.querySelectorAll('#rankCatGroup .radio-card').forEach(c => c.classList.toggle('selected', c.dataset.value === rankCat));
+      document.querySelectorAll('#rankCatGroup .radio-card').forEach(c => { const on = c.dataset.value === rankCat; c.classList.toggle('selected', on); c.setAttribute('aria-checked', String(on)); });
       populateRanks();
-      if (state.rank) setTimeout(() => { $('rank').value = state.rank; updateSkillbridgeLimit(); }, 50);
+      if (state.rank) setTimeout(() => {
+        $('rank').value = state.rank;
+        updateSkillbridgeLimit(); // resets sbDays to the rank's auto-max…
+        // …so restore the user's saved value AFTER it, or the custom value is clobbered.
+        if (state.sb && state.sbDays !== undefined) { $('sbDays').value = state.sbDays; updateSbEditFeedback(); }
+      }, 50);
     }
     if (state.yos) $('yos').value = state.yos;
     if (state.dateOfRank) $('dateOfRank').value = state.dateOfRank;
     if (state.transType) {
       transType = state.transType;
-      document.querySelectorAll('#transTypeGroup .radio-card').forEach(c => c.classList.toggle('selected', c.dataset.value === transType));
+      document.querySelectorAll('#transTypeGroup .radio-card').forEach(c => { const on = c.dataset.value === transType; c.classList.toggle('selected', on); c.setAttribute('aria-checked', String(on)); });
     }
     if (state.sepDate) $('sepDate').value = state.sepDate;
     // "Today's Date" is auto-set to the real current date; don't restore a stale saved value.
-    $('todayDate').value = new Date().toISOString().split('T')[0];
+    $('todayDate').value = todayLocalStr();
     if (state.leaveDays !== undefined) $('leaveDays').value = state.leaveDays;
-    toggles.ptdy = state.ptdy;
+    toggles.ptdy = !!state.ptdy;
     $('ptdyToggle').classList.toggle('active', toggles.ptdy);
+    $('ptdyToggle').setAttribute('aria-checked', String(toggles.ptdy));
     $('ptdyFields').classList.toggle('hidden', !toggles.ptdy);
     if (state.ptdyDays) $('ptdyDays').value = state.ptdyDays;
-    toggles.sb = state.sb;
+    toggles.sb = !!state.sb;
     $('sbToggle').classList.toggle('active', toggles.sb);
+    $('sbToggle').setAttribute('aria-checked', String(toggles.sb));
     $('sbFields').classList.toggle('hidden', !toggles.sb);
-    if (state.sbDays) $('sbDays').value = state.sbDays;
+    // Restore for the no-deferred path (no rank); when rank is set the deferred callback
+    // above re-restores after updateSkillbridgeLimit(). Both guard on state.sb.
+    if (state.sb && state.sbDays !== undefined) $('sbDays').value = state.sbDays;
     if (state.postLocation) $('postLocation').value = state.postLocation;
     if (state.careerInterest) $('careerInterest').value = state.careerInterest;
-    toggles.giBill = state.giBill;
+    toggles.giBill = !!state.giBill;
     $('giBillToggle').classList.toggle('active', toggles.giBill);
-    toggles.vaClaim = state.vaClaim;
+    $('giBillToggle').setAttribute('aria-checked', String(toggles.giBill));
+    toggles.vaClaim = !!state.vaClaim;
     $('vaClaimToggle').classList.toggle('active', toggles.vaClaim);
+    $('vaClaimToggle').setAttribute('aria-checked', String(toggles.vaClaim));
   });
 
   $('printBtn').addEventListener('click', () => {
@@ -2131,7 +2201,7 @@ async function init() {
     const btn = e.target.closest('.va-rating-btn');
     if (!btn) return;
     selectedVARating = parseInt(btn.dataset.rating);
-    $('vaRatingBtns').querySelectorAll('.va-rating-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.rating) === selectedVARating));
+    $('vaRatingBtns').querySelectorAll('.va-rating-btn').forEach(b => { const on = parseInt(b.dataset.rating) === selectedVARating; b.classList.toggle('active', on); b.setAttribute('aria-pressed', String(on)); });
     recalcPayEstimator();
   });
 
@@ -2139,6 +2209,7 @@ async function init() {
     const dep = $('depToggle');
     dep.setAttribute('role', 'switch');
     dep.setAttribute('tabindex', '0');
+    dep.setAttribute('aria-label', 'I have dependents');
     dep.setAttribute('aria-checked', String(hasDependents));
     const fire = () => {
       hasDependents = !hasDependents;
@@ -2214,7 +2285,11 @@ async function init() {
     if (decoded && isValidState(decoded)) hashPlan = decoded;
   }
   await store.bootAuth();
-  initAuthUI({ getCurrentState: () => state, onPlanLoaded: applyLoadedPlan });
+  initAuthUI({
+    getCurrentState: () => state,
+    onPlanLoaded: applyLoadedPlan,
+    onSyncFailed: () => showToast('Saved on this device — could not sync to your account'),
+  });
   if (hashPlan) {
     // A shared link is "view this plan", not "replace my saved plan". For a signed-in
     // user, only display it (never PUT it over their account); guests may cache locally.
