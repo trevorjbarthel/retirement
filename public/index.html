@@ -131,7 +131,27 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 .range-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #c9a227; cursor: pointer; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
 .range-slider::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: #c9a227; cursor: pointer; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
 
+/* Horizontal transition timeline */
+.timeline-scroll { overflow-x: auto; padding: 4px 0 10px; }
+.timeline-track { position: relative; min-width: 640px; height: 160px; }
+.timeline-axis { position: absolute; left: 8px; right: 8px; top: 78px; height: 4px; border-radius: 2px; background: #e9ecef; }
+.timeline-fill { position: absolute; left: 8px; top: 78px; height: 4px; border-radius: 2px; background: linear-gradient(90deg,#1a2744,#c9a227); }
+.tl-marker { position: absolute; top: 0; height: 160px; width: 84px; transform: translateX(-50%); }
+.tl-marker .tl-dot { position: absolute; top: 71px; left: 50%; transform: translateX(-50%); width: 14px; height: 14px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.25); }
+.tl-marker .tl-box { position: absolute; left: 50%; transform: translateX(-50%); width: 84px; text-align: center; }
+.tl-marker .tl-box.tl-above { bottom: 90px; }
+.tl-marker .tl-box.tl-below { top: 96px; }
+.tl-label { font-size: 10px; font-weight: 600; line-height: 1.2; color: #1a2744; }
+.tl-date { font-size: 10px; color: #67779e; }
+.tl-dot.status-green { background:#10b981; } .tl-dot.status-gold { background:#f59e0b; } .tl-dot.status-red { background:#ef4444; }
+/* Keyboard focus visibility for custom (div-based) controls */
+.toggle-track:focus-visible, .radio-card:focus-visible, .tsp-withdrawal-card:focus-visible, .va-rating-btn:focus-visible { outline: 2px solid #c9a227; outline-offset: 2px; }
+/* Disclaimer banner */
+.app-disclaimer-bar { background:#faf0cc; color:#5f490e; font-size:12px; line-height:1.4; padding:8px 16px; text-align:center; }
+
 @media print {
+  .timeline-scroll { overflow: visible !important; }
+  .timeline-track { min-width: 0 !important; }
   body { background: white !important; color: black !important; font-size: 11px; }
   .no-print { display: none !important; }
   .phase-content { max-height: none !important; overflow: visible !important; }
@@ -149,6 +169,9 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 
 <!-- TOAST -->
 <div data-id="3" id="toast" class="toast">Link copied!</div>
+
+<!-- Disclaimer banner (visible on all screens; the <app-disclaimer> custom element renders nothing outside the builder runtime) -->
+<div class="app-disclaimer-bar">Estimates only — not financial, tax, or legal advice. Verify all figures with DFAS, the VA, and a qualified professional.</div>
 
 <!-- ===== SETUP SCREEN ===== -->
 <div data-id="4" id="setup-screen" class="flex-1 flex items-start justify-center py-8 px-4 md:px-6">
@@ -230,6 +253,7 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
         </span>
       </label>
       <input type="date" id="dateOfRank" class="input-field" />
+      <div class="error-msg" id="err-dateOfRank">Date of rank can't be in the future or after your separation date.</div>
       <p class="helper-text">Used to calculate time in current grade for pay accuracy.</p>
     </div>
     <div id="dorResultBox" class="hidden flex items-center">
@@ -346,7 +370,7 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 <button data-id="157" type="submit" id="submitBtn" class="w-full py-3.5 rounded-xl font-semibold text-white text-base transition-all hover:shadow-lg active:scale-[0.98]" style="background: linear-gradient(135deg, #c9a227 0%, #a6841e 100%);">
   Build My Transition Plan →
 </button>
-<p data-id="158" class="text-center text-xs text-navy-400 mt-3 mb-6"><i data-id="159" data-lucide="lock" class="w-3 h-3 inline-block mr-1 align-[-2px]"></i> All data stays in your browser. Nothing is sent to any server.</p>
+<p data-id="158" class="text-center text-xs text-navy-400 mt-3 mb-6"><i data-id="159" data-lucide="lock" class="w-3 h-3 inline-block mr-1 align-[-2px]"></i> Your data is private. As a guest it stays in this browser; create a free account to securely sync your plan.</p>
 </form>
 </div>
 </div>
@@ -366,12 +390,23 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
       <span data-id="168" id="rankBadge" class="text-xs font-medium text-navy-400 hidden md:inline"></span>
     </div>
     <div data-id="169" class="flex items-center gap-2 flex-wrap">
+      <div id="accountArea" class="flex items-center gap-2 flex-wrap"></div>
       <button data-id="170" id="jumpToPayBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-gold-600 hover:text-gold-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-gold-50">
         <i data-id="171" data-lucide="bar-chart-3" class="w-4 h-4"></i> Pay Estimator
       </button>
       <button data-id="172" id="printBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-navy-50">
         <i data-id="173" data-lucide="printer" class="w-4 h-4"></i> Print Plan
       </button>
+      <button id="icsBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-navy-50" title="Download your milestones as a calendar (.ics) file">
+        <i data-lucide="calendar-plus" class="w-4 h-4"></i> Calendar
+      </button>
+      <button id="backupBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-navy-50" title="Download a JSON backup of your plan">
+        <i data-lucide="download" class="w-4 h-4"></i> Backup
+      </button>
+      <button id="importBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-navy-50" title="Restore a plan from a JSON backup">
+        <i data-lucide="upload" class="w-4 h-4"></i> Import
+      </button>
+      <input id="importInput" type="file" accept="application/json,.json" class="hidden" />
     </div>
   </div>
 </div>
@@ -401,6 +436,13 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 <div data-id="187" class="fade-in-up stagger-2">
   <h2 data-id="188" class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-id="189" data-lucide="flag" class="w-5 h-5 text-gold-500"></i> Key Milestone Dates</h2>
   <div data-id="190" id="milestoneGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+</div>
+
+<!-- B2. HORIZONTAL TIMELINE -->
+<div class="section-card fade-in-up stagger-2">
+  <h2 class="text-lg font-semibold text-navy-700 mb-1 flex items-center gap-2"><i data-lucide="git-commit-horizontal" class="w-5 h-5 text-gold-500"></i> Transition Timeline</h2>
+  <p class="text-xs text-navy-400 mb-1">From today to your freedom day — scroll horizontally to see every milestone in order.</p>
+  <div class="timeline-scroll"><div id="timelineTrack" class="timeline-track"></div></div>
 </div>
 
 <!-- C. PRE-TRANSITION SUMMARY -->
@@ -721,32 +763,6 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
   </div>
 </div>
 
-<!-- D. RETIREMENT PAY (original — now hidden) -->
-<div data-id="395" id="retPaySection" class="section-card fade-in-up stagger-4 hidden" style="display:none !important;">
-  <h2 data-id="396" class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-id="397" data-lucide="dollar-sign" class="w-5 h-5 text-gold-500"></i> Estimated Retirement Pay</h2>
-  <div data-id="398" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-    <div data-id="399">
-      <label data-id="400" class="block text-sm font-medium text-navy-600 mb-1">Monthly Base Pay ($)</label>
-      <input data-id="401" type="number" id="basePay" class="input-field" placeholder="Enter or use estimate" />
-      <p data-id="402" class="helper-text mt-1" id="basePayHint"></p>
-    </div>
-    <div data-id="403">
-      <label data-id="404" class="block text-sm font-medium text-navy-600 mb-2">Retirement System</label>
-      <div data-id="405" class="flex gap-3" id="retSystemGroup">
-        <div data-id="406" class="radio-card selected" data-value="high3" style="flex:1;"><div data-id="407" class="radio-dot"></div><span data-id="408" class="text-sm font-medium">High-3 / Legacy</span></div>
-        <div data-id="409" class="radio-card" data-value="brs" style="flex:1;"><div data-id="410" class="radio-dot"></div><span data-id="411" class="text-sm font-medium">BRS</span></div>
-      </div>
-    </div>
-  </div>
-  <div data-id="412" id="retPayResult" class="bg-navy-50 rounded-xl p-5 text-center hidden">
-    <p data-id="413" class="text-xs font-medium uppercase tracking-wide text-navy-400 mb-1">Estimated Monthly Gross Retirement Pay</p>
-    <p data-id="414" id="retPayAmount" class="text-3xl font-bold text-navy-700 tabular-nums"></p>
-    <p data-id="415" id="retPayFormula" class="text-xs text-navy-400 mt-2"></p>
-    <p data-id="416" id="brsNote" class="text-xs text-gold-600 mt-2 hidden">With BRS, you also receive up to 5% TSP matching from DoD during service.</p>
-  </div>
-  <p data-id="417" class="text-xs text-navy-400 mt-3 italic">This is a gross estimate. Contact DFAS for your official calculation.</p>
-</div>
-
 <!-- E. PHASE CHECKLIST -->
 <div data-id="418" class="fade-in-up stagger-5">
   <h2 data-id="419" class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-id="420" data-lucide="list-checks" class="w-5 h-5 text-gold-500"></i> Personalized Phase Checklist</h2>
@@ -768,11 +784,21 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
   <button data-id="429" id="copyLinkBtn" class="no-print mt-3 inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl transition-all hover:shadow" style="background: #1a2744; color: #c9a227;">
     <i data-id="430" data-lucide="link" class="w-4 h-4"></i> Copy Shareable Link
   </button>
-  <p data-id="431" class="text-xs text-navy-400 mt-4">Made by Copilot</p>
+  <p id="dataVintage" class="text-xs text-navy-400 mt-4"></p>
+  <p data-id="431" class="text-xs text-navy-400 mt-1">Made by Copilot</p>
 </footer>
 </div>
 
-<script>
+<script type="module">
+import {
+  SKILLBRIDGE_LIMITS, BASE_PAY_2026, getBasePay2026, VA_RATES_2025, STATE_TAX_DATA,
+  parseStateFromLocation, ANNUITY_FACTORS, interpolateAnnuityFactor, getLifeExpDistributionPeriod,
+  subDays, addDays, daysBetween, firstOfNextMonth, clamp, getRankGrade, getSkillbridgeAuthorizedMax,
+  computeRetirementPay, milestoneStatus, buildICS, encodeState, decodeState, isValidState,
+  DATA_VINTAGE, FLAG_OFFICER_GRADES
+} from './js/calc.js';
+import * as store from './js/store.js';
+import { initAuthUI } from './js/auth-ui.js';
 // ===== DATA =====
 const STORAGE_KEY = 'military-transition-calc-v5';
 
@@ -808,179 +834,20 @@ const RANKS = {
   }
 };
 
-const BASE_PAY_EST = {
-  'E-5':{ 20:3200 },'E-6':{ 20:3700 },'E-7':{ 20:4200 },'E-8':{ 20:4800 },'E-9':{ 20:5500 },
-  'O-1':{ 20:5200 },'O-2':{ 20:5800 },'O-3':{ 20:6500 },'O-4':{ 20:7200 },'O-5':{ 20:8300 },'O-6':{ 20:9900 },'O-7':{ 20:11000 },'O-8':{ 20:12500 },'O-9':{ 20:14000 },'O-10':{ 20:16500 },
-  'W-1':{ 20:4800 },'W-2':{ 20:5300 },'W-3':{ 20:5800 },'W-4':{ 20:6600 },'W-5':{ 20:7400 },
-};
 
-const SKILLBRIDGE_LIMITS = {
-  'Army': { 'E-2': 120, 'E-3': 120, 'E-4': 120, 'E-5': 120, 'E-6': 90, 'E-7': 90, 'E-8': 60, 'E-9': 60, 'W-1': 90, 'W-2': 90, 'W-3': 90, 'W-4': 60, 'W-5': 60, 'O-1': 120, 'O-2': 120, 'O-3': 120, 'O-4': 90, 'O-5': 60 },
-  'Air Force': { 'E-2': 120, 'E-3': 120, 'E-4': 120, 'E-5': 120, 'E-6': 90, 'E-7': 90, 'E-8': 60, 'E-9': 60, 'O-1': 120, 'O-2': 120, 'O-3': 120, 'O-4': 90, 'O-5': 60 },
-  'Navy': { 'E-2': 180, 'E-3': 180, 'E-4': 180, 'E-5': 180, 'E-6': 120, 'E-7': 120, 'E-8': 120, 'E-9': 120, 'W-1': 120, 'W-2': 120, 'W-3': 120, 'W-4': 120, 'W-5': 120, 'O-1': 120, 'O-2': 120, 'O-3': 120, 'O-4': 120, 'O-5': 90 },
-  'Space Force': { 'E-2': 120, 'E-3': 120, 'E-4': 120, 'E-5': 120, 'E-6': 120, 'E-7': 120, 'E-8': 120, 'E-9': 90, 'O-1': 120, 'O-2': 120, 'O-3': 120, 'O-4': 120, 'O-5': 90 },
-  'Marine Corps': { 'E-2': 120, 'E-3': 120, 'E-4': 120, 'E-5': 120, 'E-6': 90, 'E-7': 90, 'E-8': 90, 'E-9': 90, 'W-1': 90, 'W-2': 90, 'W-3': 90, 'W-4': 90, 'W-5': 90, 'O-1': 90, 'O-2': 90, 'O-3': 90, 'O-4': 90, 'O-5': 90, 'O-6': 90, 'O-7': 90 },
-  'Coast Guard': {}
-};
 
-const BASE_PAY_2026 = {
-  'E-1': { 2: 2407.20 },
-  'E-2': { 2: 2697.90 },
-  'E-3': { 2: 2836.80, 3: 3015.00, 4: 3198.00 },
-  'E-4': { 2: 3142.20, 3: 3303.00, 4: 3482.40, 6: 3658.50, 8: 3815.40 },
-  'E-5': { 2: 3342.90, 3: 3598.20, 4: 3775.80, 6: 3946.80, 8: 4110.00, 10: 4299.90, 12: 4395.30, 14: 4421.70 },
-  'E-6': { 2: 3401.10, 3: 3743.10, 4: 3908.10, 6: 4068.90, 8: 4235.70, 10: 4612.80, 12: 4759.50, 14: 5043.30, 16: 5130.30, 18: 5193.60, 20: 5267.70 },
-  'E-7': { 2: 3932.10, 3: 4291.50, 4: 4456.20, 6: 4673.10, 8: 4843.80, 10: 5135.70, 12: 5300.40, 14: 5591.70, 16: 5835.00, 18: 6000.90, 20: 6177.30, 22: 6245.70, 24: 6475.20, 26: 6598.20, 28: 7067.40 },
-  'E-8': { 8: 5656.50, 10: 5907.00, 12: 6061.80, 14: 6247.20, 16: 6448.20, 18: 6811.20, 20: 6995.40, 22: 7308.30, 24: 7481.70, 26: 7908.90, 30: 8067.30 },
-  'E-9': { 10: 6910.20, 12: 7066.50, 14: 7263.60, 16: 7496.10, 18: 7730.70, 20: 8105.10, 22: 8423.10, 24: 8756.70, 26: 9267.90, 30: 9730.20, 34: 10217.40, 38: 10729.20 },
-  'W-1': { 2: 4056.60, 3: 4493.70, 4: 4611.00, 6: 4859.10, 8: 5152.20, 10: 5584.20, 12: 5786.10, 14: 6069.30, 16: 6346.50, 18: 6564.90, 20: 6766.20, 22: 7010.10 },
-  'W-2': { 2: 4621.80, 3: 5058.90, 4: 5193.30, 6: 5286.00, 8: 5585.40, 10: 6051.00, 12: 6282.60, 14: 6509.40, 16: 6787.50, 18: 7005.00, 20: 7201.50, 22: 7437.00, 24: 7591.50, 26: 7714.20 },
-  'W-3': { 2: 5223.30, 3: 5440.50, 4: 5664.30, 6: 5736.90, 8: 5970.90, 10: 6431.10, 12: 6910.50, 14: 7136.40, 16: 7397.70, 18: 7665.90, 20: 8150.40, 22: 8476.50, 24: 8671.80, 26: 8879.70, 28: 9162.60 },
-  'W-4': { 2: 5719.80, 3: 6152.10, 4: 6328.50, 6: 6502.20, 8: 6801.90, 10: 7098.00, 12: 7398.00, 14: 7848.30, 16: 8243.70, 18: 8619.90, 20: 8928.60, 22: 9228.90, 24: 9669.60, 26: 10032.00, 28: 10445.40, 30: 10653.60 },
-  'W-5': { 20: 10169.70, 22: 10685.70, 24: 11070.30, 26: 11495.10, 30: 12070.80, 34: 12673.50, 38: 13308.30 },
-  'O-1': { 2: 4150.20, 3: 4320.00, 4: 5222.40, 6: 5222.40, 8: 5222.40, 10: 5222.40, 12: 5222.40, 14: 5222.40, 16: 5222.40, 20: 5222.40 },
-  'O-2': { 2: 4782.00, 3: 5446.20, 4: 6272.40, 6: 6484.50, 8: 6617.70, 10: 6617.70, 12: 6617.70, 14: 6617.70, 16: 6617.70, 20: 6617.70 },
-  'O-3': { 2: 5534.10, 3: 6273.90, 4: 6770.40, 6: 7382.70, 8: 7737.00, 10: 8125.50, 12: 8375.70, 14: 8788.20, 16: 9004.20, 20: 9004.20 },
-  'O-4': { 2: 6294.60, 3: 7286.40, 4: 7773.60, 6: 7881.00, 8: 8332.20, 10: 8816.40, 12: 9420.00, 14: 9888.30, 16: 10214.40, 18: 10401.60, 20: 10509.90 },
-  'O-5': { 2: 7295.40, 3: 8218.20, 4: 8787.00, 6: 8894.10, 8: 9249.60, 10: 9461.40, 12: 9928.50, 14: 10271.70, 16: 10715.10, 18: 11391.30, 20: 12032.70, 22: 12394.80 },
-  'O-6': { 2: 8751.30, 3: 9613.80, 4: 10245.00, 6: 10284.30, 8: 10725.00, 10: 10783.50, 12: 10783.50, 14: 11396.40, 16: 12479.70, 20: 13751.10, 22: 14112.90, 24: 14479.20, 26: 15188.70, 30: 15408.30 },
-  'O-7': { 2: 11540.10, 3: 12076.20, 4: 12324.30, 6: 12522.00, 8: 12878.70, 10: 13231.80, 12: 13639.20, 14: 14045.70, 16: 14454.30, 18: 15735.30, 20: 16817.70, 26: 16904.40, 30: 17242.20 },
-};
 
-function getBasePay2026(rank, yearsOfService) {
-  const rankData = BASE_PAY_2026[rank];
-  if (!rankData) return null;
-  const brackets = Object.keys(rankData).map(Number).sort((a, b) => a - b);
-  let selected = brackets[0];
-  for (const b of brackets) {
-    if (yearsOfService >= b) selected = b;
-    else break;
-  }
-  return rankData[selected];
-}
 
-const VA_RATES_2025 = { 0:0, 10:175.51, 20:346.95, 30:508.05, 40:731.86, 50:1041.82, 60:1319.65, 70:1663.06, 80:1933.15, 90:2172.39, 100:3737.85 };
 
-// ===== STATE TAX DATA =====
-// militaryRetirementTax: 'exempt' | 'partial' | 'taxed'
-// vaCompTax: always federal-exempt; some states tax it — 'exempt' is universal here
-// Notes: based on 2025 enacted law. Rates shown are top marginal state income tax %.
-const STATE_TAX_DATA = {
-  'AL': { name:'Alabama', militaryRetirementTax:'exempt', topRate:5.0, note:'Military retirement pay is fully exempt from Alabama income tax.' },
-  'AK': { name:'Alaska', militaryRetirementTax:'exempt', topRate:0, note:'Alaska has no state income tax.' },
-  'AZ': { name:'Arizona', militaryRetirementTax:'exempt', topRate:2.5, note:'Military retirement pay is fully exempt from Arizona income tax (as of 2021).' },
-  'AR': { name:'Arkansas', militaryRetirementTax:'partial', topRate:3.9, note:'Military retirement pay is partially exempt (first $6,000 exempt for under age 59½; fully exempt at 59½+).' },
-  'CA': { name:'California', militaryRetirementTax:'taxed', topRate:13.3, note:'California taxes military retirement pay as regular income. CA has the highest top marginal rate in the US.' },
-  'CO': { name:'Colorado', militaryRetirementTax:'partial', topRate:4.4, note:'Up to $24,000 of military retirement pay exempt for those 65+; $20,000 for ages 55–64.' },
-  'CT': { name:'Connecticut', militaryRetirementTax:'partial', topRate:6.99, note:'50% of military retirement pay exempt if federal AGI is under $75,000 (single) or $100,000 (joint).' },
-  'DE': { name:'Delaware', militaryRetirementTax:'partial', topRate:6.6, note:'Up to $12,500 of military retirement pay is exempt.' },
-  'FL': { name:'Florida', militaryRetirementTax:'exempt', topRate:0, note:'Florida has no state income tax — very favorable for retirees.' },
-  'GA': { name:'Georgia', militaryRetirementTax:'exempt', topRate:5.49, note:'Military retirement pay is fully exempt from Georgia income tax (as of 2022).' },
-  'HI': { name:'Hawaii', militaryRetirementTax:'exempt', topRate:11.0, note:'Military retirement pay is fully exempt from Hawaii income tax.' },
-  'ID': { name:'Idaho', militaryRetirementTax:'taxed', topRate:5.8, note:'Idaho taxes military retirement pay as regular income.' },
-  'IL': { name:'Illinois', militaryRetirementTax:'exempt', topRate:4.95, note:'Military retirement pay is fully exempt from Illinois income tax.' },
-  'IN': { name:'Indiana', militaryRetirementTax:'exempt', topRate:3.05, note:'Military retirement pay is fully exempt from Indiana income tax.' },
-  'IA': { name:'Iowa', militaryRetirementTax:'exempt', topRate:5.7, note:'Military retirement pay is fully exempt from Iowa income tax (as of 2024).' },
-  'KS': { name:'Kansas', militaryRetirementTax:'exempt', topRate:5.7, note:'Military retirement pay is fully exempt from Kansas income tax.' },
-  'KY': { name:'Kentucky', militaryRetirementTax:'exempt', topRate:4.0, note:'Military retirement pay is fully exempt from Kentucky income tax.' },
-  'LA': { name:'Louisiana', militaryRetirementTax:'exempt', topRate:3.0, note:'Military retirement pay is fully exempt from Louisiana income tax.' },
-  'ME': { name:'Maine', militaryRetirementTax:'partial', topRate:7.15, note:'Up to $10,000 of military retirement pay is exempt.' },
-  'MD': { name:'Maryland', militaryRetirementTax:'partial', topRate:5.75, note:'Up to $5,000 exempt under age 55; up to $15,000 exempt at 55+. Local taxes also apply.' },
-  'MA': { name:'Massachusetts', militaryRetirementTax:'exempt', topRate:5.0, note:'Military retirement pay is fully exempt from Massachusetts income tax.' },
-  'MI': { name:'Michigan', militaryRetirementTax:'partial', topRate:4.25, note:'Up to $54,404 (single) / $108,808 (joint) exempt for those born after 1952 if retired before 2013.' },
-  'MN': { name:'Minnesota', militaryRetirementTax:'taxed', topRate:9.85, note:'Minnesota taxes military retirement pay as regular income (limited exemption for some Combat-Related Special Compensation).' },
-  'MS': { name:'Mississippi', militaryRetirementTax:'exempt', topRate:4.7, note:'Military retirement pay is fully exempt from Mississippi income tax.' },
-  'MO': { name:'Missouri', militaryRetirementTax:'exempt', topRate:4.8, note:'Military retirement pay is fully exempt from Missouri income tax (as of 2016).' },
-  'MT': { name:'Montana', militaryRetirementTax:'partial', topRate:6.75, note:'Up to $4,640 of military retirement pay may be deducted.' },
-  'NE': { name:'Nebraska', militaryRetirementTax:'exempt', topRate:3.84, note:'Military retirement pay is fully exempt from Nebraska income tax (as of 2022).' },
-  'NV': { name:'Nevada', militaryRetirementTax:'exempt', topRate:0, note:'Nevada has no state income tax.' },
-  'NH': { name:'New Hampshire', militaryRetirementTax:'exempt', topRate:0, note:'New Hampshire has no income tax on wages/retirement (only taxes interest/dividends, phasing out by 2025).' },
-  'NJ': { name:'New Jersey', militaryRetirementTax:'exempt', topRate:10.75, note:'Military retirement pay is fully exempt from New Jersey income tax.' },
-  'NM': { name:'New Mexico', militaryRetirementTax:'partial', topRate:5.9, note:'Up to $10,000 of military retirement pay is exempt.' },
-  'NY': { name:'New York', militaryRetirementTax:'exempt', topRate:10.9, note:'Military retirement pay from the US government is fully exempt from New York income tax.' },
-  'NC': { name:'North Carolina', militaryRetirementTax:'partial', topRate:4.5, note:'Military retirement pay exempt if member had 5+ years of creditable service before August 12, 1989; otherwise taxed.' },
-  'ND': { name:'North Dakota', militaryRetirementTax:'exempt', topRate:1.1, note:'Military retirement pay is fully exempt from North Dakota income tax.' },
-  'OH': { name:'Ohio', militaryRetirementTax:'exempt', topRate:3.5, note:'Military retirement pay is fully exempt from Ohio income tax.' },
-  'OK': { name:'Oklahoma', militaryRetirementTax:'partial', topRate:4.75, note:'Up to $10,000 of military retirement pay is exempt from Oklahoma income tax.' },
-  'OR': { name:'Oregon', militaryRetirementTax:'partial', topRate:9.9, note:'Federal pension subtraction may apply up to certain limits; Oregon has one of the highest tax rates.' },
-  'PA': { name:'Pennsylvania', militaryRetirementTax:'exempt', topRate:3.07, note:'Military retirement pay is fully exempt from Pennsylvania income tax.' },
-  'RI': { name:'Rhode Island', militaryRetirementTax:'partial', topRate:5.99, note:'Military retirement pay may be partially exempt for those over 59½ up to $20,000.' },
-  'SC': { name:'South Carolina', militaryRetirementTax:'exempt', topRate:6.2, note:'Military retirement pay is fully exempt from South Carolina income tax (as of 2022).' },
-  'SD': { name:'South Dakota', militaryRetirementTax:'exempt', topRate:0, note:'South Dakota has no state income tax.' },
-  'TN': { name:'Tennessee', militaryRetirementTax:'exempt', topRate:0, note:'Tennessee has no state income tax on wages or retirement income.' },
-  'TX': { name:'Texas', militaryRetirementTax:'exempt', topRate:0, note:'Texas has no state income tax — very favorable for military retirees.' },
-  'UT': { name:'Utah', militaryRetirementTax:'partial', topRate:4.65, note:'Up to $7,500 (single) / $15,000 (joint) credit against retirement income tax for ages 65+; phase-out applies.' },
-  'VT': { name:'Vermont', militaryRetirementTax:'taxed', topRate:8.75, note:'Vermont taxes military retirement pay as regular income.' },
-  'VA': { name:'Virginia', militaryRetirementTax:'partial', topRate:5.75, note:'Up to $20,000 exempt for ages 55–64; up to $30,000 exempt at 65+ (2024 amounts, increasing through 2025).' },
-  'WA': { name:'Washington', militaryRetirementTax:'exempt', topRate:0, note:'Washington has no state income tax.' },
-  'WV': { name:'West Virginia', militaryRetirementTax:'exempt', topRate:5.12, note:'Military retirement pay is fully exempt from West Virginia income tax.' },
-  'WI': { name:'Wisconsin', militaryRetirementTax:'taxed', topRate:7.65, note:'Wisconsin taxes military retirement pay as regular income.' },
-  'WY': { name:'Wyoming', militaryRetirementTax:'exempt', topRate:0, note:'Wyoming has no state income tax.' },
-  'DC': { name:'District of Columbia', militaryRetirementTax:'taxed', topRate:10.75, note:'DC taxes military retirement pay as regular income.' },
-};
 
-function parseStateFromLocation(locationStr) {
-  if (!locationStr) return null;
-  const upper = locationStr.trim().toUpperCase();
-  // Direct 2-letter state code
-  if (STATE_TAX_DATA[upper]) return upper;
-  // Check for state abbreviation after comma: "San Antonio, TX"
-  const commaMatch = upper.match(/,\s*([A-Z]{2})\s*$/);
-  if (commaMatch && STATE_TAX_DATA[commaMatch[1]]) return commaMatch[1];
-  // Full state name search
-  for (const [code, data] of Object.entries(STATE_TAX_DATA)) {
-    if (upper.includes(data.name.toUpperCase())) return code;
-  }
-  return null;
-}
 
-// ===== TSP ANNUITY FACTORS =====
-const ANNUITY_FACTORS = {
-  38: 4.20, 40: 4.35, 42: 4.52, 44: 4.70, 45: 4.80, 46: 4.90,
-  48: 5.12, 50: 5.35, 52: 5.60, 54: 5.87, 55: 6.02, 56: 6.17,
-  58: 6.50, 60: 6.86, 62: 7.25, 64: 7.68, 65: 7.91, 67: 8.42,
-  70: 9.35
-};
 
-function interpolateAnnuityFactor(age) {
-  age = Math.max(38, Math.min(70, age));
-  const ages = Object.keys(ANNUITY_FACTORS).map(Number).sort((a, b) => a - b);
-  if (ANNUITY_FACTORS[age] !== undefined) return ANNUITY_FACTORS[age];
-  let lower = ages[0], upper = ages[ages.length - 1];
-  for (let i = 0; i < ages.length - 1; i++) {
-    if (ages[i] <= age && ages[i + 1] >= age) {
-      lower = ages[i]; upper = ages[i + 1]; break;
-    }
-  }
-  const ratio = (age - lower) / (upper - lower);
-  return ANNUITY_FACTORS[lower] + ratio * (ANNUITY_FACTORS[upper] - ANNUITY_FACTORS[lower]);
-}
 
-function getLifeExpDistributionPeriod(age) {
-  // Simplified IRS Uniform Lifetime Table approximation
-  const table = { 45: 47.5, 50: 42.5, 55: 37.5, 60: 32.5, 65: 27.5, 70: 22.5 };
-  const ages = Object.keys(table).map(Number).sort((a, b) => a - b);
-  age = Math.max(ages[0], Math.min(ages[ages.length - 1], age));
-  if (table[age] !== undefined) return table[age];
-  let lower = ages[0], upper = ages[ages.length - 1];
-  for (let i = 0; i < ages.length - 1; i++) {
-    if (ages[i] <= age && ages[i + 1] >= age) {
-      lower = ages[i]; upper = ages[i + 1]; break;
-    }
-  }
-  const ratio = (age - lower) / (upper - lower);
-  return table[lower] + ratio * (table[upper] - table[lower]);
-}
 
 // ===== UTILITIES =====
 function $(id) { return document.getElementById(id); }
-function subDays(d, n) { const r = new Date(d); r.setDate(r.getDate() - n); return r; }
-function addDays(d, n) { return subDays(d, -n); }
 function fmtDate(d) { return d.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }); }
 function fmtDateShort(d) { return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'2-digit' }); }
-function daysBetween(a, b) { return Math.round((b - a) / 86400000); }
-function firstOfNextMonth(d) { const r = new Date(d.getFullYear(), d.getMonth() + 1, 1); return r; }
-function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 function fmtCurrency(val) { return val.toLocaleString('en-US', { style:'currency', currency:'USD' }); }
 function fmtCurrencyWhole(val) { return val.toLocaleString('en-US', { style:'currency', currency:'USD', maximumFractionDigits:0 }); }
 
@@ -991,11 +858,6 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-function getRankGrade(rankStr) {
-  if (!rankStr) return '';
-  const match = rankStr.match(/^([EWO]-\d+)/);
-  return match ? match[1] : '';
-}
 
 let sbAutoMax = null;
 
@@ -1135,43 +997,52 @@ function updateSbEditFeedback() {
   }
 }
 
-function getSkillbridgeAuthorizedMax(branch, rankGrade) {
-  if (!branch || !rankGrade) return null;
-  const branchLimits = SKILLBRIDGE_LIMITS[branch] || {};
-  return branchLimits[rankGrade] !== undefined ? branchLimits[rankGrade] : null;
-}
 
 // ===== STATE =====
 let state = {};
 let rankCat = '';
 let transType = '';
-let retSystem = 'high3';
+let lastMilestones = [];
 let tspContribMode = 'fixed';
 let toggles = { ptdy: true, sb: true, giBill: false, vaClaim: false };
 
 // ===== TOGGLE LOGIC =====
 function initToggle(id, key) {
   const el = $(id);
-  el.addEventListener('click', () => {
+  el.setAttribute('role', 'switch');
+  el.setAttribute('tabindex', '0');
+  el.setAttribute('aria-checked', String(!!toggles[key]));
+  const fire = () => {
     toggles[key] = !toggles[key];
     el.classList.toggle('active', toggles[key]);
+    el.setAttribute('aria-checked', String(toggles[key]));
     if (key === 'ptdy') $('ptdyFields').classList.toggle('hidden', !toggles[key]);
     if (key === 'sb') {
       $('sbFields').classList.toggle('hidden', !toggles[key]);
       if (toggles[key]) updateSkillbridgeLimit();
     }
-  });
+  };
+  el.addEventListener('click', fire);
+  el.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); fire(); } });
 }
 
 // ===== RADIO GROUP =====
 function initRadioGroup(containerId, cb) {
-  const cards = $(containerId).querySelectorAll('.radio-card');
+  const container = $(containerId);
+  container.setAttribute('role', 'radiogroup');
+  const cards = container.querySelectorAll('.radio-card');
   cards.forEach(card => {
-    card.addEventListener('click', () => {
-      cards.forEach(c => c.classList.remove('selected'));
+    card.setAttribute('role', 'radio');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-checked', card.classList.contains('selected') ? 'true' : 'false');
+    const select = () => {
+      cards.forEach(c => { c.classList.remove('selected'); c.setAttribute('aria-checked', 'false'); });
       card.classList.add('selected');
+      card.setAttribute('aria-checked', 'true');
       cb(card.dataset.value);
-    });
+    };
+    card.addEventListener('click', select);
+    card.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); select(); } });
   });
 }
 
@@ -1216,8 +1087,17 @@ function validate() {
   if (!transType) { showErr('err-transType', true); ok = false; } else { showErr('err-transType', false); }
   if (transType === 'Retirement' && yos < 20) { showErr('err-yos', true); $('yos').classList.add('error'); ok = false; }
   const sd = $('sepDate').value;
-  const today = new Date($('todayDate').value || new Date().toISOString().split('T')[0]);
+  let today = new Date(($('todayDate').value || new Date().toISOString().split('T')[0]) + 'T00:00:00');
+  if (isNaN(today)) today = new Date();
   if (!sd || new Date(sd + 'T00:00:00') <= today) { showErr('err-sepDate', true); $('sepDate').classList.add('error'); ok = false; } else { showErr('err-sepDate', false); $('sepDate').classList.remove('error'); }
+  // Date of Rank sanity: not in the future, not after separation.
+  const dor = $('dateOfRank').value;
+  if (dor) {
+    const dorDate = new Date(dor + 'T00:00:00');
+    if (dorDate > today || (sd && dorDate > new Date(sd + 'T00:00:00'))) {
+      showErr('err-dateOfRank', true); $('dateOfRank').classList.add('error'); ok = false;
+    } else { showErr('err-dateOfRank', false); $('dateOfRank').classList.remove('error'); }
+  } else { showErr('err-dateOfRank', false); $('dateOfRank').classList.remove('error'); }
   if (toggles.sb && sbAutoMax !== null) {
     const sbVal = parseInt($('sbDays').value);
     if (!isNaN(sbVal) && sbVal > sbAutoMax) { ok = false; updateSbEditFeedback(); }
@@ -1263,13 +1143,14 @@ function buildState() {
 }
 
 // ===== SAVE / LOAD =====
-function saveState(s) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
-function loadState() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch(e) { return null; } }
-function clearState() { localStorage.removeItem(STORAGE_KEY); }
+// Persistence routes through store.js: D1-backed API when signed in, localStorage for guests.
+function saveState(s) { store.savePlan(s); }
+async function loadState() { return await store.loadPlan(); }
+function clearState() { store.lsClear(); }
 
-function getCheckKey() { return `mtc-checks-${state.firstName}-${state.sepDate}`; }
-function saveChecks(checks) { localStorage.setItem(getCheckKey(), JSON.stringify(checks)); }
-function loadChecks() { try { return JSON.parse(localStorage.getItem(getCheckKey())) || {}; } catch(e) { return {}; } }
+// Checklist state now travels inside the plan (state.checks), persisted via saveState.
+function loadChecks() { return (state && state.checks) || {}; }
+function saveChecks(checks) { if (state) { state.checks = checks; saveState(state); } }
 
 // ===== SHOW RESULTS =====
 function showResults() {
@@ -1286,6 +1167,30 @@ function showSetup() {
 }
 
 // ===== RENDER =====
+// Horizontal timeline: proportional markers from today → freedom day. Status
+// colors come from the same milestoneStatus() the card grid uses.
+function renderTimeline(milestones, today, sep) {
+  const track = $('timelineTrack');
+  if (!track || !milestones.length) return;
+  const times = milestones.map(m => m.date.getTime());
+  const axisStart = Math.min(today.getTime(), ...times);
+  const axisEnd = Math.max(sep.getTime(), ...times);
+  const span = Math.max(1, axisEnd - axisStart);
+  const todayPct = clamp(((today.getTime() - axisStart) / span) * 100, 0, 100);
+  let html = '<div class="timeline-axis"></div><div class="timeline-fill" style="width:' + todayPct + '%;"></div>';
+  milestones.forEach((m, i) => {
+    const pct = clamp(((m.date.getTime() - axisStart) / span) * 100, 0, 100);
+    const st = milestoneStatus(daysBetween(today, m.date));
+    const dotClass = st === 'past' ? 'status-red' : (st === 'future' ? 'status-green' : 'status-gold');
+    const pos = (i % 2 === 0) ? 'tl-above' : 'tl-below';
+    html += '<div class="tl-marker" style="left:' + pct + '%;">'
+      + '<span class="tl-dot ' + dotClass + '"></span>'
+      + '<div class="tl-box ' + pos + '"><div class="tl-label">' + m.label + '</div><div class="tl-date">' + fmtDateShort(m.date) + '</div></div>'
+      + '</div>';
+  });
+  track.innerHTML = html;
+}
+
 function renderResults() {
   const s = state;
   const bm = BRANCH_META[s.branch];
@@ -1380,6 +1285,9 @@ function renderResults() {
       </div>`;
   }).join('');
 
+  lastMilestones = milestones;
+  renderTimeline(milestones, today, sep);
+
   const totalPre = s.sbDays + s.ptdyDays + s.leaveDays;
   const parts = [];
   if (s.sb) parts.push(`${s.sbDays} days SkillBridge`);
@@ -1467,6 +1375,10 @@ function renderPayEstimator(isRet) {
     if (basePay2026 !== null) {
       $('payBasePay').value = basePay2026.toFixed(2);
       $('payBasePayHint').textContent = `2026 DFAS table: ${rg} at ${s.yos} YOS = ${fmtCurrency(basePay2026)}/mo · DOR: ${fmtDate(dorDate)} (${tigYearsToday} yrs in grade)`;
+    } else {
+      $('payBasePayHint').textContent = FLAG_OFFICER_GRADES.includes(rg)
+        ? `General/flag officer pay (${rg}) is capped at the Executive Schedule limit — enter your exact monthly base pay from your LES.`
+        : 'Could not auto-populate — enter your monthly base pay from your LES.';
     }
   } else {
     const dorBox = $('dorResultBox');
@@ -1476,7 +1388,9 @@ function renderPayEstimator(isRet) {
       $('payBasePay').value = basePay2026.toFixed(2);
       $('payBasePayHint').textContent = `2026 DFAS table: ${rg} at ${s.yos} YOS = ${fmtCurrency(basePay2026)}/mo`;
     } else {
-      $('payBasePayHint').textContent = 'Could not auto-populate — enter your monthly base pay from your LES.';
+      $('payBasePayHint').textContent = FLAG_OFFICER_GRADES.includes(rg)
+        ? `General/flag officer pay (${rg}) is capped at the Executive Schedule limit — enter your exact monthly base pay from your LES.`
+        : 'Could not auto-populate — enter your monthly base pay from your LES.';
     }
   }
 
@@ -1912,19 +1826,6 @@ function renderStateTaxPanel(monthlyRet, isRet) {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-function calcRetPay() {
-  const bp = parseFloat($('basePay').value);
-  if (!bp || bp <= 0) { $('retPayResult').classList.add('hidden'); return; }
-  $('retPayResult').classList.remove('hidden');
-  const yos = state.yos;
-  const mult = retSystem === 'high3' ? 0.025 : 0.02;
-  const pct = yos * mult;
-  const monthly = Math.round(bp * pct);
-  $('retPayAmount').textContent = '$' + monthly.toLocaleString();
-  $('retPayFormula').textContent = `${yos} yrs × ${mult * 100}% × $${bp.toLocaleString()} = $${monthly.toLocaleString()}/mo (${Math.round(pct*100)}% of base pay)`;
-  $('brsNote').classList.toggle('hidden', retSystem !== 'brs');
-}
-
 // ===== PHASES =====
 function renderPhases(today, sep, termStart, ptdyStart, ptdyEnd, sbStart, sbEnd, tapDeadline, isRet) {
   const s = state;
@@ -2044,7 +1945,25 @@ function renderResources() {
 }
 
 // ===== INIT =====
-function init() {
+// Apply a loaded plan (from the account or localStorage) and show results.
+function applyLoadedPlan(plan) {
+  if (!plan || !plan.firstName || !plan.sepDate) return;
+  state = plan;
+  toggles.ptdy = state.ptdy;
+  toggles.sb = state.sb;
+  toggles.giBill = state.giBill || false;
+  toggles.vaClaim = state.vaClaim || false;
+  rankCat = state.rankCat;
+  transType = state.transType;
+  payRetSystem = state.payRetSystem || 'high3';
+  selectedVARating = state.selectedVARating || 0;
+  hasDependents = state.hasDependents || false;
+  tspWithdrawalMethod = state.tspWithdrawalMethod || 'fixed';
+  tspContribMode = state.tspContribMode || 'fixed';
+  showResults();
+}
+
+async function init() {
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];
   $('todayDate').value = todayStr;
@@ -2064,7 +1983,9 @@ function init() {
   $('setup-form').addEventListener('submit', e => {
     e.preventDefault();
     if (!validate()) return;
+    const prevChecks = (state && state.checks) || {};
     state = buildState();
+    state.checks = prevChecks; // keep checklist progress across edits
     saveState(state);
     showResults();
   });
@@ -2110,12 +2031,58 @@ function init() {
     setTimeout(() => window.print(), 200);
   });
 
+  // Data provenance line in the footer.
+  $('dataVintage').textContent = `Figures current as of ${DATA_VINTAGE.asOf}. ${DATA_VINTAGE.basePay}; ${DATA_VINTAGE.vaRates}; ${DATA_VINTAGE.stateTax}.`;
+
+  function downloadBlob(filename, text, mime) {
+    const blob = new Blob([text], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // Shareable link encodes the plan into the URL hash (client-only; no server round-trip).
   $('copyLinkBtn').addEventListener('click', () => {
-    navigator.clipboard.writeText(window.location.href).then(() => showToast('Link copied!')).catch(() => showToast('Could not copy link'));
+    try {
+      const url = location.origin + location.pathname + '#state=' + encodeState(state);
+      navigator.clipboard.writeText(url).then(() => showToast('Shareable link copied!')).catch(() => showToast('Could not copy link'));
+    } catch { showToast('Could not create link'); }
   });
 
-  initRadioGroup('retSystemGroup', val => { retSystem = val; calcRetPay(); });
-  $('basePay').addEventListener('input', calcRetPay);
+  // Calendar (.ics) export of every milestone.
+  $('icsBtn').addEventListener('click', () => {
+    if (!lastMilestones.length) { showToast('Build your plan first'); return; }
+    const ics = buildICS(lastMilestones, { calName: (state.firstName || 'My') + ' Transition Plan', now: new Date() });
+    downloadBlob('transition-plan.ics', ics, 'text/calendar');
+    showToast('Calendar file downloaded');
+  });
+
+  // JSON backup / restore.
+  $('backupBtn').addEventListener('click', () => {
+    if (!state.firstName) { showToast('Build your plan first'); return; }
+    downloadBlob('transition-plan.json', JSON.stringify(state, null, 2), 'application/json');
+    showToast('Backup downloaded');
+  });
+  $('importBtn').addEventListener('click', () => $('importInput').click());
+  $('importInput').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const obj = JSON.parse(reader.result);
+        if (!isValidState(obj)) { showToast('Invalid backup file'); return; }
+        saveState(obj);
+        applyLoadedPlan(obj);
+        showToast('Plan restored');
+      } catch { showToast('Could not read backup'); }
+      $('importInput').value = '';
+    };
+    reader.readAsText(file);
+  });
+
 
   // Pay estimator header toggle
   $('payEstimatorHeader').addEventListener('click', () => {
@@ -2146,12 +2113,21 @@ function init() {
     recalcPayEstimator();
   });
 
-  $('depToggle').addEventListener('click', () => {
-    hasDependents = !hasDependents;
-    $('depToggle').classList.toggle('active', hasDependents);
-    $('depNote').classList.toggle('hidden', !hasDependents);
-    if (state.firstName) { state.hasDependents = hasDependents; saveState(state); }
-  });
+  (() => {
+    const dep = $('depToggle');
+    dep.setAttribute('role', 'switch');
+    dep.setAttribute('tabindex', '0');
+    dep.setAttribute('aria-checked', String(hasDependents));
+    const fire = () => {
+      hasDependents = !hasDependents;
+      dep.classList.toggle('active', hasDependents);
+      dep.setAttribute('aria-checked', String(hasDependents));
+      $('depNote').classList.toggle('hidden', !hasDependents);
+      if (state.firstName) { state.hasDependents = hasDependents; saveState(state); }
+    };
+    dep.addEventListener('click', fire);
+    dep.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); fire(); } });
+  })();
 
   // ===== TSP EVENTS =====
   $('tspBalance').addEventListener('input', () => { recalcPayEstimator(); });
@@ -2216,22 +2192,21 @@ function init() {
     }
   });
 
-  // Check for saved state
-  const saved = loadState();
-  if (saved && saved.firstName && saved.sepDate) {
-    state = saved;
-    toggles.ptdy = state.ptdy;
-    toggles.sb = state.sb;
-    toggles.giBill = state.giBill || false;
-    toggles.vaClaim = state.vaClaim || false;
-    rankCat = state.rankCat;
-    transType = state.transType;
-    payRetSystem = state.payRetSystem || 'high3';
-    selectedVARating = state.selectedVARating || 0;
-    hasDependents = state.hasDependents || false;
-    tspWithdrawalMethod = state.tspWithdrawalMethod || 'fixed';
-    tspContribMode = state.tspContribMode || 'fixed';
-    showResults();
+  // Plan source priority: a shared link (#state=) wins, then the account (D1)
+  // when signed in, else localStorage.
+  let hashPlan = null;
+  if (location.hash.startsWith('#state=')) {
+    const decoded = decodeState(location.hash.slice(7));
+    if (decoded && isValidState(decoded)) hashPlan = decoded;
+  }
+  await store.bootAuth();
+  initAuthUI({ getCurrentState: () => state, onPlanLoaded: applyLoadedPlan });
+  if (hashPlan) {
+    saveState(hashPlan);
+    applyLoadedPlan(hashPlan);
+  } else {
+    const saved = await loadState();
+    if (saved && saved.firstName && saved.sepDate) applyLoadedPlan(saved);
   }
 
   updateSkillbridgeLimit();
