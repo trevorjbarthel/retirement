@@ -809,7 +809,7 @@ import {
   DATA_VINTAGE, FLAG_OFFICER_GRADES
 } from './js/calc.js';
 import * as store from './js/store.js';
-import { initAuthUI } from './js/auth-ui.js';
+import { initAuthUI, openResetFlow } from './js/auth-ui.js';
 // ===== DATA =====
 const STORAGE_KEY = 'military-transition-calc-v5';
 
@@ -2317,6 +2317,16 @@ async function init() {
   } else {
     const saved = await loadState();
     if (saved && saved.firstName && saved.sepDate) applyLoadedPlan(saved);
+  }
+
+  // Password-reset link (?reset=<token>): open the set-new-password form, then scrub the
+  // token from the URL so it isn't left in history / sent as a referrer.
+  const resetToken = new URLSearchParams(location.search).get('reset');
+  if (resetToken) {
+    const url = new URL(location.href);
+    url.searchParams.delete('reset');
+    history.replaceState(null, '', url.pathname + (url.search || '') + url.hash);
+    openResetFlow(resetToken);
   }
 
   updateSkillbridgeLimit();

@@ -99,6 +99,18 @@ export async function logout() {
 export async function changePassword(current, next) {
   return apiFetch("/api/auth/change-password", { body: { current, next } });
 }
+// Request a reset link. The response is always 204 (no account enumeration), so the UI
+// shows the same confirmation regardless.
+export async function forgotPassword(email) {
+  return apiFetch("/api/auth/forgot", { body: { email } });
+}
+// Consume a reset token + set a new password. On success the server signs us in.
+export async function resetPassword(token, password) {
+  cancelPendingSave(); knownRev = 0;
+  const r = await apiFetch("/api/auth/reset", { body: { token, password } });
+  if (r.ok && r.data && r.data.user) { currentUser = r.data.user; mode = "auth"; emit(); }
+  return r;
+}
 export async function deleteAccount() {
   cancelPendingSave(); knownRev = 0;
   const r = await apiFetch("/api/account", { method: "DELETE" });

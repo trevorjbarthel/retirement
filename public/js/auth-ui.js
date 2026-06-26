@@ -7,8 +7,9 @@ import * as store from "./store.js";
 
 let opts = { getCurrentState: () => null, onPlanLoaded: () => {} };
 let modal = null;
-let authMode = "login"; // "login" | "register"
+let authMode = "login"; // "login" | "register" | "forgot" | "reset"
 let lastFocused = null; // element to restore focus to when the modal closes
+let resetToken = null;  // token from a ?reset= link, consumed by the reset form
 
 function el(tag, attrs = {}, html) {
   const e = document.createElement(tag);
@@ -103,26 +104,34 @@ function buildModal() {
         <h2 id="authTitle" class="text-lg font-bold text-navy-700">Sign in</h2>
         <button type="button" id="authClose" aria-label="Close" class="text-navy-400 hover:text-navy-700 text-xl leading-none">&times;</button>
       </div>
+      <p id="authSubtitle" class="helper-text mb-3" style="display:none;"></p>
       <form id="authForm" novalidate>
-        <label class="block text-sm font-medium text-navy-600 mb-1" for="authEmail">Email</label>
-        <input id="authEmail" name="email" type="email" autocomplete="email" class="input-field mb-3" required />
-        <label class="block text-sm font-medium text-navy-600 mb-1" for="authPassword">Password</label>
-        <input id="authPassword" name="password" type="password" autocomplete="current-password" class="input-field mb-1" required />
-        <p id="authHint" class="helper-text mb-2">At least 12 characters.</p>
+        <div id="authEmailRow">
+          <label class="block text-sm font-medium text-navy-600 mb-1" for="authEmail">Email</label>
+          <input id="authEmail" name="email" type="email" autocomplete="email" class="input-field mb-3" />
+        </div>
+        <div id="authPasswordRow">
+          <label id="authPasswordLabel" class="block text-sm font-medium text-navy-600 mb-1" for="authPassword">Password</label>
+          <input id="authPassword" name="password" type="password" autocomplete="current-password" class="input-field mb-1" />
+          <p id="authHint" class="helper-text mb-2">At least 12 characters.</p>
+        </div>
         <p id="authError" class="error-msg mb-2" role="alert"></p>
         <button id="authSubmit" type="submit" class="w-full text-white font-semibold py-3 rounded-xl mt-1" style="background: linear-gradient(135deg,#1a2744 0%,#2e3f66 100%);">Sign in</button>
+        <p id="authForgotRow" class="text-xs text-center mt-3"><button type="button" id="authForgot" class="text-navy-400 hover:text-navy-600 hover:underline">Forgot password?</button></p>
       </form>
-      <p class="text-sm text-navy-500 mt-4 text-center">
+      <p id="authNotice" class="text-sm text-navy-600 mt-3 text-center" style="display:none;"></p>
+      <p id="authToggleRow" class="text-sm text-navy-500 mt-4 text-center">
         <span id="authTogglePrompt">New here?</span>
         <button type="button" id="authToggle" class="text-gold-600 font-medium hover:underline">Create an account</button>
       </p>
-      <p class="text-xs text-navy-400 mt-3 text-center">Your plan syncs securely to your account. Guest data stays in this browser.</p>
+      <p id="authPrivacy" class="text-xs text-navy-400 mt-3 text-center">Your plan syncs securely to your account. Guest data stays in this browser.</p>
     </div>`;
   document.body.appendChild(overlay);
 
   overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
   overlay.querySelector("#authClose").addEventListener("click", closeModal);
   overlay.querySelector("#authToggle").addEventListener("click", () => setAuthMode(authMode === "login" ? "register" : "login"));
+  overlay.querySelector("#authForgot").addEventListener("click", () => setAuthMode("forgot"));
   overlay.querySelector("#authForm").addEventListener("submit", onSubmit);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !overlay.classList.contains("hidden")) closeModal(); });
   // Trap Tab/Shift+Tab within the dialog while it's open (aria-modal alone doesn't do this).
@@ -140,29 +149,47 @@ function buildModal() {
   return overlay;
 }
 
+// Modes: "login" | "register" | "forgot" (request a reset link) | "reset" (set new password).
 function setAuthMode(m) {
   authMode = m;
-  const t = modal.querySelector("#authTitle");
-  const sub = modal.querySelector("#authSubmit");
-  const prompt = modal.querySelector("#authTogglePrompt");
-  const toggle = modal.querySelector("#authToggle");
-  const pw = modal.querySelector("#authPassword");
-  const hint = modal.querySelector("#authHint");
+  const $ = (id) => modal.querySelector(id);
+  const show = (id, on) => { const e = $(id); if (e) e.style.display = on ? "" : "none"; };
+  const t = $("#authTitle"), sub = $("#authSubmit"), prompt = $("#authTogglePrompt"), toggle = $("#authToggle");
+  const pw = $("#authPassword"), hint = $("#authHint"), subtitle = $("#authSubtitle"), pwLabel = $("#authPasswordLabel");
+
+  // Defaults, overridden per mode.
+  $("#authForm").style.display = "";
+  show("#authNotice", false);
+  show("#authToggleRow", true);
+  show("#authPrivacy", true);
+  show("#authForgotRow", false);
+  show("#authEmailRow", true);
+  show("#authPasswordRow", true);
+  subtitle.style.display = "none";
+  pwLabel.textContent = "Password";
+
   if (m === "register") {
-    t.textContent = "Create your account";
-    sub.textContent = "Create account";
-    prompt.textContent = "Already have an account?";
-    toggle.textContent = "Sign in";
-    pw.setAttribute("autocomplete", "new-password");
-    hint.style.display = "";
+    t.textContent = "Create your account"; sub.textContent = "Create account";
+    prompt.textContent = "Already have an account?"; toggle.textContent = "Sign in";
+    pw.setAttribute("autocomplete", "new-password"); hint.style.display = "";
+  } else if (m === "forgot") {
+    t.textContent = "Reset your password"; sub.textContent = "Send reset link";
+    subtitle.textContent = "Enter your email and we'll send you a link to set a new password.";
+    subtitle.style.display = "";
+    show("#authPasswordRow", false); show("#authPrivacy", false);
+    prompt.textContent = "Remembered it?"; toggle.textContent = "Back to sign in";
+  } else if (m === "reset") {
+    t.textContent = "Set a new password"; sub.textContent = "Update password";
+    subtitle.textContent = "Choose a new password for your account."; subtitle.style.display = "";
+    show("#authEmailRow", false); show("#authToggleRow", false); show("#authPrivacy", false);
+    pwLabel.textContent = "New password"; pw.setAttribute("autocomplete", "new-password"); hint.style.display = "";
   } else {
-    t.textContent = "Sign in";
-    sub.textContent = "Sign in";
-    prompt.textContent = "New here?";
-    toggle.textContent = "Create an account";
-    pw.setAttribute("autocomplete", "current-password");
-    hint.style.display = "none";
+    t.textContent = "Sign in"; sub.textContent = "Sign in";
+    prompt.textContent = "New here?"; toggle.textContent = "Create an account";
+    pw.setAttribute("autocomplete", "current-password"); hint.style.display = "none";
+    show("#authForgotRow", true);
   }
+  sub.disabled = false;
   showError("");
 }
 
@@ -172,8 +199,14 @@ function openModal(m) {
   setAuthMode(m || "login");
   modal.classList.remove("hidden");
   modal.classList.add("flex");
-  const email = modal.querySelector("#authEmail");
-  setTimeout(() => email && email.focus(), 30);
+  const focusId = m === "reset" ? "#authPassword" : "#authEmail";
+  setTimeout(() => { const f = modal.querySelector(focusId); if (f) f.focus(); }, 30);
+}
+
+// Opened from an email reset link (?reset=<token>).
+export function openResetFlow(token) {
+  resetToken = token;
+  openModal("reset");
 }
 function closeModal() {
   if (!modal) return;
@@ -195,6 +228,8 @@ const ERR_TEXT = {
   invalid_input: "Please check your email and password (12+ characters).",
   email_taken: "That email is already registered. Try signing in.",
   invalid_credentials: "Incorrect email or password.",
+  invalid_or_expired: "This reset link is invalid or has expired. Request a new one.",
+  rate_limited: "Too many attempts. Please wait a moment and try again.",
   csrf: "Security check failed. Please reload and try again.",
   too_large: "That plan is too large to save.",
 };
@@ -205,6 +240,35 @@ async function onSubmit(e) {
   const email = modal.querySelector("#authEmail").value.trim();
   const password = modal.querySelector("#authPassword").value;
   showError("");
+
+  if (authMode === "forgot") {
+    submit.disabled = true;
+    await store.forgotPassword(email); // always 204 — show the same confirmation either way
+    submit.disabled = false;
+    modal.querySelector("#authForm").style.display = "none";
+    const notice = modal.querySelector("#authNotice");
+    notice.textContent = "If an account exists for that email, a reset link is on its way. Check your inbox (and spam).";
+    notice.style.display = "";
+    modal.querySelector("#authTogglePrompt").textContent = "Done?";
+    modal.querySelector("#authToggle").textContent = "Back to sign in";
+    return;
+  }
+
+  if (authMode === "reset") {
+    submit.disabled = true;
+    const r = await store.resetPassword(resetToken, password);
+    submit.disabled = false;
+    if (!r.ok) {
+      const code = r.data && r.data.error;
+      showError((r.data && r.data.message) || ERR_TEXT[code] || "This reset link is invalid or has expired.");
+      return;
+    }
+    resetToken = null;
+    closeModal();
+    await runMigration(); // signed in against the new password → load the account's plan
+    return;
+  }
+
   submit.disabled = true;
   const r = authMode === "register" ? await store.register(email, password) : await store.login(email, password);
   submit.disabled = false;

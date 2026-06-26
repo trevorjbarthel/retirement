@@ -17,6 +17,11 @@ export interface Env {
   // Optional per-IP/account auth throttle. When the binding is absent (local dev,
   // tests, or an un-configured deploy) the throttle is a no-op — see src/routes/auth.ts.
   AUTH_LIMITER?: RateLimiter;
+  // Password-reset email (Resend). When RESEND_API_KEY is unset the reset link is logged
+  // instead of emailed (dev). RESET_EMAIL_FROM/APP_BASE_URL are optional overrides.
+  RESEND_API_KEY?: string;
+  RESET_EMAIL_FROM?: string;
+  APP_BASE_URL?: string;
 }
 
 export type AppContext = {

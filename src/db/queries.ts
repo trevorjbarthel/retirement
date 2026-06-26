@@ -92,6 +92,47 @@ export async function deleteUser(db: D1Database, id: number): Promise<void> {
   ]);
 }
 
+// ----- password resets -----
+export interface PasswordResetRow {
+  id: number;
+  user_id: number;
+  token_hash: string;
+  expires_at: number;
+  used_at: number | null;
+  created_at: number;
+}
+
+export async function createPasswordReset(
+  db: D1Database,
+  userId: number,
+  tokenHash: string,
+  expiresAt: number,
+): Promise<void> {
+  await db
+    .prepare("INSERT INTO password_resets (user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?)")
+    .bind(userId, tokenHash, expiresAt, nowSeconds())
+    .run();
+}
+
+/** Invalidate any outstanding (unused) reset tokens for a user — one live token at a time. */
+export async function invalidateUserResets(db: D1Database, userId: number): Promise<void> {
+  await db
+    .prepare("UPDATE password_resets SET used_at = ? WHERE user_id = ? AND used_at IS NULL")
+    .bind(nowSeconds(), userId)
+    .run();
+}
+
+export async function findValidReset(db: D1Database, tokenHash: string, now: number): Promise<PasswordResetRow | null> {
+  return db
+    .prepare("SELECT * FROM password_resets WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?")
+    .bind(tokenHash, now)
+    .first<PasswordResetRow>();
+}
+
+export async function markResetUsed(db: D1Database, id: number): Promise<void> {
+  await db.prepare("UPDATE password_resets SET used_at = ? WHERE id = ?").bind(nowSeconds(), id).run();
+}
+
 export async function getPlan(db: D1Database, userId: number): Promise<PlanRow | null> {
   return db.prepare("SELECT * FROM plans WHERE user_id = ?").bind(userId).first<PlanRow>();
 }

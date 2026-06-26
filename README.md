@@ -67,6 +67,7 @@ Cloudflare account or network needed.
 ```bash
 npx wrangler d1 migrations apply mtc-db --remote
 npx wrangler secret put SESSION_SECRET    # a long random value, e.g. `openssl rand -base64 48`
+npx wrangler secret put RESEND_API_KEY    # optional — enables password-reset emails (else the link is logged)
 npx wrangler deploy
 ```
 
@@ -78,6 +79,8 @@ npx wrangler deploy
 | POST | `/api/auth/login` | – | `{email,password}` | `200 {user}` + cookie |
 | POST | `/api/auth/logout` | – | – | `204` |
 | POST | `/api/auth/change-password` | ✓ | `{current,next}` | `204` |
+| POST | `/api/auth/forgot` | – | `{email}` | `204` (always; emails a link if the account exists) |
+| POST | `/api/auth/reset` | – | `{token,password}` | `200 {user}` + cookie, or `400` |
 | GET | `/api/me` | opt | – | `{user|null}` |
 | GET | `/api/plan` | ✓ | – | `{plan, schema_version, updated_at, rev}` |
 | PUT | `/api/plan` | ✓ | `{plan, schema_version, base_rev?}` | `{updated_at, rev}` or `409 {error:"conflict", current}` |
@@ -135,10 +138,13 @@ the official DFAS pages**. The committed data lives in `public/data/pay-tables.j
 - **State tax** figures are damped‑effective‑rate *upper‑bound* estimates from a
   single top‑marginal rate per state, not bracket‑accurate; the UI labels them as
   approximate. For real accuracy, store a per‑state bracket schedule.
-- **Password reset** is not implemented (no email infrastructure yet). A full design —
-  token model, endpoints, front‑end, and the email‑provider prerequisite — is in
-  [`docs/PASSWORD_RESET.md`](docs/PASSWORD_RESET.md). Today the only password change is
-  `change-password` while signed in.
+- **Password reset** is implemented (`/api/auth/forgot` + `/api/auth/reset`, single‑use
+  hashed tokens in `password_resets`, migration `0003`; design in
+  [`docs/PASSWORD_RESET.md`](docs/PASSWORD_RESET.md)). It needs a transactional email
+  sender: set the `RESEND_API_KEY` secret (and optionally `RESET_EMAIL_FROM` for a
+  verified domain). **Without that key the reset link is logged by the Worker instead of
+  emailed** — fine for local dev, not for production. The link host defaults to the request
+  origin; override with the `APP_BASE_URL` var if needed.
 - **Multi‑tab / concurrent edits** are guarded by optimistic concurrency on a monotonic
   `plans.rev` counter (migration `0002`). The client sends the last‑seen `rev` as
   `base_rev`; a stale write returns `409` with the server's current plan, and the front‑end

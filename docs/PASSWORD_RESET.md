@@ -1,8 +1,13 @@
-# Password reset — design sketch
+# Password reset — design & implementation notes
 
-Status: **proposed, not implemented.** This documents how to add a self-service
-"forgot password" flow to the self-contained email+password auth, and the one hard
-prerequisite (sending email) that the app does not have today.
+Status: **implemented.** The self-service "forgot password" flow described here is live:
+`POST /api/auth/forgot` + `POST /api/auth/reset` (`src/routes/auth.ts`), token helpers in
+`src/auth/tokens.ts`, the Resend sender in `src/auth/email.ts`, the `password_resets`
+table in migration `0003`, and the front-end forgot/reset modal modes in
+`public/js/auth-ui.js`. The one operational prerequisite is an email sender — set the
+`RESEND_API_KEY` secret; without it, the Worker logs the reset link instead of emailing it
+(usable for local dev, not production). This doc records the design and the security
+rationale.
 
 ## Why it's not already here
 

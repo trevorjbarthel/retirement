@@ -1,5 +1,26 @@
 import { describe, it, expect } from "vitest";
-import { api, register, login } from "./helpers";
+import { env } from "cloudflare:test";
+import { hashToken } from "../src/auth/tokens";
+import { api, register, login, firstCookie } from "./helpers";
+
+async function userIdByEmail(email: string): Promise<number> {
+  const row = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(email).first<{ id: number }>();
+  return row!.id;
+}
+async function liveResetCount(userId: number): Promise<number> {
+  const row = await env.DB
+    .prepare("SELECT COUNT(*) AS n FROM password_resets WHERE user_id = ? AND used_at IS NULL")
+    .bind(userId)
+    .first<{ n: number }>();
+  return row!.n;
+}
+async function seedReset(userId: number, raw: string, opts: { expiresAt?: number; used?: boolean } = {}): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB
+    .prepare("INSERT INTO password_resets (user_id, token_hash, expires_at, used_at, created_at) VALUES (?, ?, ?, ?, ?)")
+    .bind(userId, await hashToken(raw), opts.expiresAt ?? now + 3600, opts.used ? now : null, now)
+    .run();
+}
 
 describe("auth: register", () => {
   it("creates a user and sets an HttpOnly session cookie", async () => {
@@ -222,5 +243,74 @@ describe("account", () => {
     // Re-login should now fail (user gone).
     const relog = await login("liz@example.com");
     expect(relog.res.status).toBe(401);
+  });
+});
+
+describe("password reset: forgot", () => {
+  it("returns 204 and creates a token for an existing email", async () => {
+    await register("uma@example.com");
+    const id = await userIdByEmail("uma@example.com");
+    const res = await api("/api/auth/forgot", { body: { email: "uma@example.com" } });
+    expect(res.status).toBe(204);
+    expect(await liveResetCount(id)).toBe(1);
+  });
+
+  it("returns the same 204 for an unknown email (no enumeration)", async () => {
+    const res = await api("/api/auth/forgot", { body: { email: "ghost@example.com" } });
+    expect(res.status).toBe(204);
+  });
+
+  it("keeps only the newest token live when requested twice", async () => {
+    await register("vera@example.com");
+    const id = await userIdByEmail("vera@example.com");
+    await api("/api/auth/forgot", { body: { email: "vera@example.com" } });
+    await api("/api/auth/forgot", { body: { email: "vera@example.com" } });
+    expect(await liveResetCount(id)).toBe(1);
+  });
+});
+
+describe("password reset: reset", () => {
+  it("sets a new password, revokes old sessions, and signs in", async () => {
+    const { cookie } = await register("wes@example.com", "correct-horse-battery");
+    await seedReset(await userIdByEmail("wes@example.com"), "raw-token-abc");
+    const res = await api("/api/auth/reset", { body: { token: "raw-token-abc", password: "a-brand-new-password" } });
+    expect(res.status).toBe(200);
+    expect((await res.json<{ user: { email: string } }>()).user.email).toBe("wes@example.com");
+    expect(firstCookie(res)).toMatch(/session=/);
+    // The pre-reset session no longer authenticates (token_version bumped).
+    expect((await (await api("/api/me", { cookie })).json<{ user: any }>()).user).toBeNull();
+    // Old password fails, new password works.
+    expect((await login("wes@example.com", "correct-horse-battery")).res.status).toBe(401);
+    expect((await login("wes@example.com", "a-brand-new-password")).res.status).toBe(200);
+  });
+
+  it("rejects a used token (single-use)", async () => {
+    await register("xena@example.com");
+    await seedReset(await userIdByEmail("xena@example.com"), "tok-used", { used: true });
+    expect((await api("/api/auth/reset", { body: { token: "tok-used", password: "a-brand-new-password" } })).status).toBe(400);
+  });
+
+  it("rejects an expired token", async () => {
+    await register("yuki@example.com");
+    await seedReset(await userIdByEmail("yuki@example.com"), "tok-old", { expiresAt: Math.floor(Date.now() / 1000) - 10 });
+    expect((await api("/api/auth/reset", { body: { token: "tok-old", password: "a-brand-new-password" } })).status).toBe(400);
+  });
+
+  it("rejects a garbage token", async () => {
+    expect((await api("/api/auth/reset", { body: { token: "not-a-real-token", password: "a-brand-new-password" } })).status).toBe(400);
+  });
+
+  it("rejects a weak new password", async () => {
+    const res = await api("/api/auth/reset", { body: { token: "whatever", password: "short" } });
+    expect(res.status).toBe(400);
+    expect((await res.json<{ error: string }>()).error).toBe("invalid_input");
+  });
+
+  it("consuming a valid token invalidates it for reuse", async () => {
+    await register("zane@example.com");
+    await seedReset(await userIdByEmail("zane@example.com"), "tok-once");
+    expect((await api("/api/auth/reset", { body: { token: "tok-once", password: "a-brand-new-password" } })).status).toBe(200);
+    // Same token again → rejected.
+    expect((await api("/api/auth/reset", { body: { token: "tok-once", password: "another-new-password" } })).status).toBe(400);
   });
 });
