@@ -67,6 +67,17 @@ Cloudflare account or network needed.
 
 ## Deploy
 
+Pushes to `main` run `.github/workflows/deploy.yml`: the Action installs
+dependencies, runs tests, applies pending remote D1 migrations, then deploys the
+Worker. You can also run the same workflow manually from the GitHub Actions tab.
+
+Required repository secrets:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+Local/manual deploy:
+
 ```bash
 npx wrangler d1 migrations apply mtc-db --remote
 npx wrangler deploy
@@ -100,7 +111,8 @@ the official DFAS pages**. The committed data lives in `public/data/pay-tables.j
   the test fixtures (always a dry run).
 - `.github/workflows/update-pay-tables.yml` runs the generator on demand
   (`workflow_dispatch`) and each January, then opens a **PR** with the new numbers
-  for review — nothing auto‑deploys.
+  for review. The refresh workflow itself does not deploy; merging the PR to
+  `main` triggers the Cloudflare deploy workflow.
 - The parser (`scripts/parse-pay-tables.mjs`) is pure and unit‑tested against
   `test/fixtures/dfas-*.html` via `npm run test:scripts`. Key convention:
   "2 or less" → key `2`, "Over N" → key `N+1`, flats collapsed.
