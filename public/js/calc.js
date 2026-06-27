@@ -17,7 +17,9 @@ export const SKILLBRIDGE_LIMITS = {
 };
 
 
-export const VA_RATES_2025 = { 0:0, 10:175.51, 20:346.95, 30:508.05, 40:731.86, 50:1041.82, 60:1319.65, 70:1663.06, 80:1933.15, 90:2172.39, 100:3737.85 };
+// Veteran-alone (no dependents) monthly rates, effective Dec 1, 2024 COLA (the "2025" rates).
+// Verified against VA published figures — keep the whole table on one vintage.
+export const VA_RATES_2025 = { 0:0, 10:175.51, 20:346.95, 30:537.42, 40:774.16, 50:1102.04, 60:1395.93, 70:1759.19, 80:2044.89, 90:2297.96, 100:3831.30 };
 
 export const STATE_TAX_DATA = {
   'AL': { name:'Alabama', militaryRetirementTax:'exempt', topRate:5.0, note:'Military retirement pay is fully exempt from Alabama income tax.' },
@@ -97,11 +99,15 @@ export function parseStateFromLocation(locationStr) {
   const upper = locationStr.trim().toUpperCase();
   // Direct 2-letter state code
   if (STATE_TAX_DATA[upper]) return upper;
+  // District of Columbia — must precede the "WASHINGTON" full-name match (which would
+  // otherwise grab "Washington DC" as Washington STATE).
+  if (/\bD\.?C\.?\b/.test(upper) || upper.includes('DISTRICT OF COLUMBIA')) return 'DC';
   // Check for state abbreviation after comma: "San Antonio, TX"
   const commaMatch = upper.match(/,\s*([A-Z]{2})\s*$/);
   if (commaMatch && STATE_TAX_DATA[commaMatch[1]]) return commaMatch[1];
-  // Full state name search
-  for (const [code, data] of Object.entries(STATE_TAX_DATA)) {
+  // Full state name search — longest names first so "West Virginia" wins over "Virginia".
+  const byNameLen = Object.entries(STATE_TAX_DATA).sort((a, b) => b[1].name.length - a[1].name.length);
+  for (const [code, data] of byNameLen) {
     if (upper.includes(data.name.toUpperCase())) return code;
   }
   return null;
@@ -418,14 +424,29 @@ export function tspKeepVsRoll({ ageAtSeparation = 45, tradBalance = 0, rothBalan
   };
 }
 
-// Allow-list validation for untrusted plans (imported files / shared links).
+export const VALID_BRANCHES = ['Army', 'Navy', 'Air Force', 'Marine Corps', 'Space Force', 'Coast Guard'];
+
+// Allow-list validation for untrusted plans (imported files / shared links). This is
+// defense-in-depth alongside output-escaping: it rejects wrong-typed or oversized
+// values for the free-text / numeric fields that later flow into the DOM, and pins
+// branch to a known key (an unknown branch would also crash rendering at BRANCH_META).
 export function isValidState(obj) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
-  if (typeof obj.firstName !== 'string' || obj.firstName.trim() === '') return false;
+  if (typeof obj.firstName !== 'string' || obj.firstName.trim() === '' || obj.firstName.length > 100) return false;
   if (!['E', 'W', 'O'].includes(obj.rankCat)) return false;
   if (typeof obj.yos !== 'number' || !isFinite(obj.yos) || obj.yos < 1 || obj.yos > 40) return false;
   if (!['Retirement', 'Separation'].includes(obj.transType)) return false;
   if (typeof obj.sepDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(obj.sepDate)) return false;
-  if (typeof obj.branch !== 'string' || obj.branch.trim() === '') return false;
+  if (!VALID_BRANCHES.includes(obj.branch)) return false;
+  // Optional fields, when present, must be the right (safe) type and within range.
+  const okNum = (v, lo, hi) => v === undefined || (typeof v === 'number' && isFinite(v) && v >= lo && v <= hi);
+  if (!okNum(obj.sbDays, 0, 180) || !okNum(obj.ptdyDays, 0, 20) || !okNum(obj.leaveDays, 0, 120)) return false;
+  // TSP numeric fields, when present, must be in the range the pay/withdrawal UI assumes.
+  if (!okNum(obj.tspRetAge, 38, 70) || !okNum(obj.tspBalance, 0, 1e9) || !okNum(obj.tspFixedAmount, 0, 1e7) || !okNum(obj.tspRate, 0, 20)) return false;
+  const okStr = (v, max) => v === undefined || (typeof v === 'string' && v.length <= max);
+  if (!okStr(obj.rank, 100) || !okStr(obj.postLocation, 100) || !okStr(obj.careerInterest, 100)) return false;
+  // dateOfRank, when present, must be empty or a strict YYYY-MM-DD (mirrors sepDate); a
+  // length-only check would let "garbage" through and render "NaN years"/"Invalid Date".
+  if (!(obj.dateOfRank === undefined || obj.dateOfRank === '' || (typeof obj.dateOfRank === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(obj.dateOfRank)))) return false;
   return true;
 }

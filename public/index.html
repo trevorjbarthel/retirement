@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="Free planning tool for U.S. service members leaving active duty: transition timeline, milestone checklist, and pay/TSP/VA/state-tax estimators." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%231a2744'/%3E%3Cpolygon points='8,2 9.6,6.2 14,6.2 10.4,8.9 11.8,13 8,10.4 4.2,13 5.6,8.9 2,6.2 6.4,6.2' fill='%23c9a227'/%3E%3C/svg%3E" />
 <title>Military Transition & Retirement Calculator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -84,8 +86,9 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 .radio-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #ced4da; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .radio-card.selected .radio-dot { border-color: #c9a227; }
 .radio-card.selected .radio-dot::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #c9a227; }
-.helper-text { font-size: 12px; color: #67779e; margin-top: 4px; line-height: 1.4; }
-.error-msg { font-size: 12px; color: #ef4444; margin-top: 4px; display: none; }
+.helper-text { font-size: 12px; color: #415586; margin-top: 4px; line-height: 1.4; }
+.error-msg { font-size: 12px; color: #b91c1c; margin-top: 4px; display: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .error-msg.show { display: block; }
 .input-field.error { border-color: #ef4444; }
 .section-card { background: white; border-radius: 16px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(26,39,68,0.06); }
@@ -110,9 +113,11 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 .sb-policy-note { margin-top: 6px; font-size: 13px; line-height: 1.5; padding: 8px 12px; border-radius: 10px; }
 .sb-edit-feedback { margin-top: 6px; font-size: 13px; line-height: 1.5; padding: 8px 12px; border-radius: 10px; display: none; }
 .sb-edit-feedback.show { display: block; }
-.va-rating-btn { min-width: 52px; padding: 8px 6px; border: 2px solid #e9ecef; border-radius: 10px; background: white; cursor: pointer; text-align: center; font-size: 13px; font-weight: 600; color: #67779e; transition: all 0.2s; }
-.va-rating-btn:hover { border-color: #c9a227; color: #c9a227; }
-.va-rating-btn.active { border-color: #c9a227; background: #fdf9ed; color: #c9a227; }
+.va-rating-btn { min-width: 52px; padding: 8px 6px; border: 2px solid #e9ecef; border-radius: 10px; background: white; cursor: pointer; text-align: center; font-size: 13px; font-weight: 600; color: #415586; transition: all 0.2s; }
+.va-rating-btn:hover { border-color: #c9a227; color: #a6841e; }
+.va-rating-btn.active { border-color: #c9a227; background: #fdf9ed; color: #a6841e; }
+/* Non-color cue for the selected rating (WCAG 1.4.1) — a checkmark in addition to color. */
+.va-rating-btn.active::after { content: ' \2713'; }
 .income-table-row { transition: background 0.15s; }
 .income-table-row.highlighted { background: #fdf9ed !important; font-weight: 600; }
 .income-table-row.crdp-eligible { background: rgba(16,185,129,0.04); }
@@ -142,7 +147,8 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 .tl-marker .tl-box.tl-above { bottom: 90px; }
 .tl-marker .tl-box.tl-below { top: 96px; }
 .tl-label { font-size: 10px; font-weight: 600; line-height: 1.2; color: #1a2744; }
-.tl-date { font-size: 10px; color: #67779e; }
+.tl-date { font-size: 10px; color: #415586; }
+.tl-status { font-size: 9px; font-weight: 600; line-height: 1.3; color: #415586; }
 .tl-dot.status-green { background:#10b981; } .tl-dot.status-gold { background:#f59e0b; } .tl-dot.status-red { background:#ef4444; }
 /* Keyboard focus visibility for custom (div-based) controls */
 .toggle-track:focus-visible, .radio-card:focus-visible, .tsp-withdrawal-card:focus-visible, .va-rating-btn:focus-visible { outline: 2px solid #c9a227; outline-offset: 2px; }
@@ -163,85 +169,86 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 }
 </style>
 </head>
-<body data-id="0" class="min-h-screen flex flex-col">
-<app-icon data-id="1" hidden data-icon="shield" data-palette="Blue"></app-icon>
-<app-disclaimer data-id="2" intent="financial"></app-disclaimer>
+<body class="min-h-screen flex flex-col">
+<a href="#appMain" class="sr-only">Skip to main content</a>
+<noscript><div style="max-width:640px;margin:2rem auto;padding:1rem 1.25rem;border:1px solid #c9a227;border-radius:12px;background:#fff;color:#1a2744;font-family:sans-serif;text-align:center;">This calculator requires JavaScript. Please enable JavaScript in your browser to use the Military Transition &amp; Retirement Calculator.</div></noscript>
 
 <!-- TOAST -->
-<div data-id="3" id="toast" class="toast">Link copied!</div>
+<div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true">Link copied!</div>
 
-<!-- Disclaimer banner (visible on all screens; the <app-disclaimer> custom element renders nothing outside the builder runtime) -->
+<!-- Disclaimer banner (visible on all screens) -->
 <div class="app-disclaimer-bar">Estimates only — not financial, tax, or legal advice. Verify all figures with DFAS, the VA, and a qualified professional.</div>
 
+<main id="appMain" class="flex-1 flex flex-col">
 <!-- ===== SETUP SCREEN ===== -->
-<div data-id="4" id="setup-screen" class="flex-1 flex items-start justify-center py-8 px-4 md:px-6">
-<div data-id="5" class="w-full max-w-2xl">
+<div id="setup-screen" class="flex-1 flex items-start justify-center py-8 px-4 md:px-6">
+<div class="w-full max-w-2xl">
 <!-- Hero -->
-<div data-id="6" class="text-center mb-8 fade-in">
-  <div data-id="7" class="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4" style="background: linear-gradient(135deg, #1a2744 0%, #2e3f66 100%);">
-    <svg data-id="8" width="40" height="40" viewBox="0 0 40 40" fill="none">
-      <polygon data-id="9" points="20,4 24,15 36,15 26,22 30,34 20,26 10,34 14,22 4,15 16,15" fill="#c9a227" opacity="0.95"/>
-      <circle data-id="10" cx="20" cy="20" r="17" stroke="#c9a227" stroke-width="1.5" fill="none" opacity="0.4"/>
+<div class="text-center mb-8 fade-in">
+  <div class="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4" style="background: linear-gradient(135deg, #1a2744 0%, #2e3f66 100%);">
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+      <polygon points="20,4 24,15 36,15 26,22 30,34 20,26 10,34 14,22 4,15 16,15" fill="#c9a227" opacity="0.95"/>
+      <circle cx="20" cy="20" r="17" stroke="#c9a227" stroke-width="1.5" fill="none" opacity="0.4"/>
     </svg>
   </div>
-  <h1 data-id="11" class="text-2xl md:text-3xl font-bold text-navy-700 mb-2">Military Transition Calculator</h1>
-  <p data-id="12" class="text-navy-400 text-sm md:text-base max-w-md mx-auto">Your personalized transition plan — built around your dates.</p>
-  <div data-id="13" class="tooltip-container inline-flex mt-3">
-    <span data-id="14" class="inline-flex items-center gap-1 text-xs text-navy-400 cursor-help bg-navy-50 px-3 py-1.5 rounded-full">
-      <i data-id="15" data-lucide="info" class="w-3.5 h-3.5"></i> How to use this tool
+  <h1 class="text-2xl md:text-3xl font-bold text-navy-700 mb-2">Military Transition Calculator</h1>
+  <p class="text-navy-400 text-sm md:text-base max-w-md mx-auto">Your personalized transition plan — built around your dates.</p>
+  <div class="tooltip-container inline-flex mt-3">
+    <span class="inline-flex items-center gap-1 text-xs text-navy-400 cursor-help bg-navy-50 px-3 py-1.5 rounded-full">
+      <i data-lucide="info" class="w-3.5 h-3.5"></i> How to use this tool
     </span>
-    <div data-id="16" class="tooltip-box">Enter your service details and key dates below. We'll calculate every milestone, build a personalized checklist, and estimate your retirement pay — all stored privately in your browser. Nothing leaves your device.</div>
+    <div class="tooltip-box">Enter your service details and key dates below. We'll calculate every milestone, build a personalized checklist, and estimate your retirement pay — all stored privately in your browser. Nothing leaves your device.</div>
   </div>
 </div>
 
 <!-- Form -->
-<form data-id="17" id="setup-form" class="space-y-5 fade-in stagger-2" autocomplete="off">
+<form id="setup-form" class="space-y-5 fade-in stagger-2" autocomplete="off">
 
 <!-- Section 1: About You -->
-<div data-id="18" class="section-card">
-  <h2 data-id="19" class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-id="20" data-lucide="user" class="w-5 h-5 text-gold-500"></i> About You</h2>
-  <div data-id="21" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div data-id="22">
-      <label data-id="23" class="block text-sm font-medium text-navy-600 mb-1">First Name <span data-id="24" class="text-danger-500">*</span></label>
-      <input data-id="25" type="text" id="firstName" class="input-field" placeholder="e.g., Alex" required />
-      <div data-id="26" class="error-msg" id="err-firstName">Please enter your first name.</div>
+<div class="section-card">
+  <h2 class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-lucide="user" class="w-5 h-5 text-gold-500"></i> About You</h2>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <label class="block text-sm font-medium text-navy-600 mb-1">First Name <span class="text-danger-500">*</span></label>
+      <input type="text" id="firstName" class="input-field" placeholder="e.g., Alex" required aria-describedby="err-firstName" />
+      <div class="error-msg" id="err-firstName">Please enter your first name.</div>
     </div>
-    <div data-id="27">
-      <label data-id="28" class="block text-sm font-medium text-navy-600 mb-1">Branch of Service <span data-id="29" class="text-danger-500">*</span></label>
-      <select data-id="30" id="branch" class="input-field" required>
-        <option data-id="31" value="">Select branch…</option>
-        <option data-id="32" value="Army">Army</option>
-        <option data-id="33" value="Navy">Navy</option>
-        <option data-id="34" value="Air Force">Air Force</option>
-        <option data-id="35" value="Marine Corps">Marine Corps</option>
-        <option data-id="36" value="Space Force">Space Force</option>
-        <option data-id="37" value="Coast Guard">Coast Guard</option>
+    <div>
+      <label class="block text-sm font-medium text-navy-600 mb-1">Branch of Service <span class="text-danger-500">*</span></label>
+      <select id="branch" class="input-field" required aria-describedby="err-branch">
+        <option value="">Select branch…</option>
+        <option value="Army">Army</option>
+        <option value="Navy">Navy</option>
+        <option value="Air Force">Air Force</option>
+        <option value="Marine Corps">Marine Corps</option>
+        <option value="Space Force">Space Force</option>
+        <option value="Coast Guard">Coast Guard</option>
       </select>
-      <div data-id="38" class="error-msg" id="err-branch">Please select your branch.</div>
+      <div class="error-msg" id="err-branch">Please select your branch.</div>
     </div>
   </div>
-  <div data-id="39" class="mt-4">
-    <label data-id="40" class="block text-sm font-medium text-navy-600 mb-2">Rank Category <span data-id="41" class="text-danger-500">*</span></label>
-    <div data-id="42" class="grid grid-cols-1 sm:grid-cols-3 gap-3" id="rankCatGroup">
-      <div data-id="43" class="radio-card" data-value="E"><div data-id="44" class="radio-dot"></div><span data-id="45" class="text-sm font-medium">Enlisted (E)</span></div>
-      <div data-id="46" class="radio-card" data-value="W"><div data-id="47" class="radio-dot"></div><span data-id="48" class="text-sm font-medium">Warrant Officer (W)</span></div>
-      <div data-id="49" class="radio-card" data-value="O"><div data-id="50" class="radio-dot"></div><span data-id="51" class="text-sm font-medium">Officer (O)</span></div>
+  <div class="mt-4">
+    <label class="block text-sm font-medium text-navy-600 mb-2">Rank Category <span class="text-danger-500">*</span></label>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" id="rankCatGroup" aria-label="Rank category" aria-describedby="err-rankCat">
+      <div class="radio-card" data-value="E"><div class="radio-dot"></div><span class="text-sm font-medium">Enlisted (E)</span></div>
+      <div class="radio-card" data-value="W"><div class="radio-dot"></div><span class="text-sm font-medium">Warrant Officer (W)</span></div>
+      <div class="radio-card" data-value="O"><div class="radio-dot"></div><span class="text-sm font-medium">Officer (O)</span></div>
     </div>
-    <div data-id="52" class="error-msg" id="err-rankCat">Please select a rank category.</div>
-    <div data-id="53" id="warrant-note" class="helper-text mt-2 hidden" style="color:#ef4444;">Warrant Officer ranks are not applicable for Air Force or Space Force.</div>
+    <div class="error-msg" id="err-rankCat">Please select a rank category.</div>
+    <div id="warrant-note" class="helper-text mt-2 hidden" style="color:#b91c1c;">Warrant Officer ranks are not applicable for Air Force or Space Force.</div>
   </div>
-  <div data-id="54" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-    <div data-id="55">
-      <label data-id="56" class="block text-sm font-medium text-navy-600 mb-1">Rank <span data-id="57" class="text-danger-500">*</span></label>
-      <select data-id="58" id="rank" class="input-field" required>
-        <option data-id="59" value="">Select rank category first…</option>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+    <div>
+      <label class="block text-sm font-medium text-navy-600 mb-1">Rank <span class="text-danger-500">*</span></label>
+      <select id="rank" class="input-field" required aria-describedby="err-rank">
+        <option value="">Select rank category first…</option>
       </select>
-      <div data-id="60" class="error-msg" id="err-rank">Please select your rank.</div>
+      <div class="error-msg" id="err-rank">Please select your rank.</div>
     </div>
-    <div data-id="61">
-      <label data-id="62" class="block text-sm font-medium text-navy-600 mb-1">Years of Service <span data-id="63" class="text-danger-500">*</span></label>
-      <input data-id="64" type="number" id="yos" class="input-field" min="1" max="40" placeholder="e.g., 20" required />
-      <div data-id="65" class="error-msg" id="err-yos">Enter years between 1 and 40.</div>
+    <div>
+      <label class="block text-sm font-medium text-navy-600 mb-1">Years of Service <span class="text-danger-500">*</span></label>
+      <input type="number" id="yos" class="input-field" min="1" max="40" placeholder="e.g., 20" required aria-describedby="err-yos" />
+      <div class="error-msg" id="err-yos">Enter years between 1 and 40.</div>
     </div>
   </div>
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
@@ -252,7 +259,7 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
           <span class="tooltip-box" style="width:280px;">Your Date of Rank (DOR) is the date you were promoted to your current grade. This is used to calculate your time in grade and refine your retirement pay estimate. Find it on your ERB/ORB or official record.</span>
         </span>
       </label>
-      <input type="date" id="dateOfRank" class="input-field" />
+      <input type="date" id="dateOfRank" class="input-field" aria-describedby="err-dateOfRank" />
       <div class="error-msg" id="err-dateOfRank">Date of rank can't be in the future or after your separation date.</div>
       <p class="helper-text">Used to calculate time in current grade for pay accuracy.</p>
     </div>
@@ -264,104 +271,104 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
       </div>
     </div>
   </div>
-  <div data-id="66" class="mt-4">
-    <label data-id="67" class="block text-sm font-medium text-navy-600 mb-2">Type of Transition <span data-id="68" class="text-danger-500">*</span></label>
-    <div data-id="69" class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="transTypeGroup">
-      <div data-id="70" class="radio-card" data-value="Retirement"><div data-id="71" class="radio-dot"></div><div data-id="72"><span data-id="73" class="text-sm font-medium">Retirement</span><span data-id="74" class="text-xs text-navy-400 block">20+ years of service</span></div></div>
-      <div data-id="75" class="radio-card" data-value="Separation"><div data-id="76" class="radio-dot"></div><div data-id="77"><span data-id="78" class="text-sm font-medium">Separation</span><span data-id="79" class="text-xs text-navy-400 block">Under 20 years</span></div></div>
+  <div class="mt-4">
+    <label class="block text-sm font-medium text-navy-600 mb-2">Type of Transition <span class="text-danger-500">*</span></label>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="transTypeGroup" aria-label="Type of transition" aria-describedby="err-transType">
+      <div class="radio-card" data-value="Retirement"><div class="radio-dot"></div><div><span class="text-sm font-medium">Retirement</span><span class="text-xs text-navy-400 block">20+ years of service</span></div></div>
+      <div class="radio-card" data-value="Separation"><div class="radio-dot"></div><div><span class="text-sm font-medium">Separation</span><span class="text-xs text-navy-400 block">Under 20 years</span></div></div>
     </div>
-    <div data-id="80" class="error-msg" id="err-transType">Please select transition type.</div>
+    <div class="error-msg" id="err-transType">Please select transition type.</div>
   </div>
 </div>
 
 <!-- Section 2: Key Dates -->
-<div data-id="81" class="section-card">
-  <h2 data-id="82" class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-id="83" data-lucide="calendar" class="w-5 h-5 text-gold-500"></i> Key Dates</h2>
-  <div data-id="84" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div data-id="85">
-      <label data-id="86" class="block text-sm font-medium text-navy-600 mb-1">Estimated Retirement / Separation Date <span data-id="87" class="text-danger-500">*</span></label>
-      <input data-id="88" type="date" id="sepDate" class="input-field" required />
-      <div data-id="89" class="error-msg" id="err-sepDate">Date must be in the future.</div>
+<div class="section-card">
+  <h2 class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-lucide="calendar" class="w-5 h-5 text-gold-500"></i> Key Dates</h2>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <label class="block text-sm font-medium text-navy-600 mb-1">Estimated Retirement / Separation Date <span class="text-danger-500">*</span></label>
+      <input type="date" id="sepDate" class="input-field" required aria-describedby="err-sepDate" />
+      <div class="error-msg" id="err-sepDate">Date must be in the future.</div>
     </div>
-    <div data-id="90">
-      <label data-id="91" class="block text-sm font-medium text-navy-600 mb-1">Today's Date</label>
-      <input data-id="92" type="date" id="todayDate" class="input-field" />
-      <p data-id="93" class="helper-text">Auto-set. Edit only if needed.</p>
+    <div>
+      <label class="block text-sm font-medium text-navy-600 mb-1">Today's Date</label>
+      <input type="date" id="todayDate" class="input-field" />
+      <p class="helper-text">Auto-set. Edit only if needed.</p>
     </div>
   </div>
 </div>
 
 <!-- Section 3: Leave & Time Off -->
-<div data-id="94" class="section-card">
-  <h2 data-id="95" class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-id="96" data-lucide="plane" class="w-5 h-5 text-gold-500"></i> Leave & Time Off</h2>
-  <div data-id="97" class="mb-4">
-    <label data-id="98" class="block text-sm font-medium text-navy-600 mb-1">Days of Accrued Leave Planned to Use</label>
-    <input data-id="99" type="number" id="leaveDays" class="input-field" min="0" max="120" value="60" />
-    <p data-id="100" class="helper-text">This becomes your terminal leave period before your separation date.</p>
+<div class="section-card">
+  <h2 class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-lucide="plane" class="w-5 h-5 text-gold-500"></i> Leave & Time Off</h2>
+  <div class="mb-4">
+    <label class="block text-sm font-medium text-navy-600 mb-1">Days of Accrued Leave Planned to Use</label>
+    <input type="number" id="leaveDays" class="input-field" min="0" max="120" value="60" />
+    <p class="helper-text">This becomes your terminal leave period before your separation date.</p>
   </div>
-  <div data-id="101" class="mb-4">
-    <div data-id="102" class="flex items-center justify-between mb-1">
-      <label data-id="103" class="text-sm font-medium text-navy-600">Taking Permissive TDY?</label>
-      <div data-id="104" class="toggle-track active" id="ptdyToggle"><div data-id="105" class="toggle-thumb"></div></div>
+  <div class="mb-4">
+    <div class="flex items-center justify-between mb-1">
+      <label class="text-sm font-medium text-navy-600">Taking Permissive TDY?</label>
+      <div class="toggle-track active" id="ptdyToggle"><div class="toggle-thumb"></div></div>
     </div>
-    <p data-id="106" class="helper-text">Per DAFI 36-3003 / service equivalent, members may be authorized up to 20 days for house and job hunting.</p>
-    <div data-id="107" id="ptdyFields" class="mt-3">
-      <label data-id="108" class="block text-sm font-medium text-navy-600 mb-1">Days of Permissive TDY</label>
-      <input data-id="109" type="number" id="ptdyDays" class="input-field" min="1" max="20" value="20" />
-      <p data-id="110" class="helper-text">Max 20 days per regulation.</p>
+    <p class="helper-text">Per DAFI 36-3003 / service equivalent, members may be authorized up to 20 days for house and job hunting.</p>
+    <div id="ptdyFields" class="mt-3">
+      <label class="block text-sm font-medium text-navy-600 mb-1">Days of Permissive TDY</label>
+      <input type="number" id="ptdyDays" class="input-field" min="1" max="20" value="20" />
+      <p class="helper-text">Max 20 days per regulation.</p>
     </div>
   </div>
-  <div data-id="111">
-    <div data-id="112" class="flex items-center justify-between mb-1">
-      <label data-id="113" class="text-sm font-medium text-navy-600">Taking SkillBridge?</label>
-      <div data-id="114" class="toggle-track active" id="sbToggle"><div data-id="115" class="toggle-thumb"></div></div>
+  <div>
+    <div class="flex items-center justify-between mb-1">
+      <label class="text-sm font-medium text-navy-600">Taking SkillBridge?</label>
+      <div class="toggle-track active" id="sbToggle"><div class="toggle-thumb"></div></div>
     </div>
-    <p data-id="116" class="helper-text">DoD SkillBridge allows up to 180 days of civilian work experience before separation while receiving full military pay.</p>
-    <div data-id="117" id="sbFields" class="mt-3">
-      <label data-id="118" class="block text-sm font-medium text-navy-600 mb-1 flex items-center gap-1.5">Days of SkillBridge <i data-id="119" data-lucide="pencil" class="w-3.5 h-3.5 text-navy-400"></i> <span data-id="120" id="sbBadge" class="sb-badge sb-badge-auto" style="display:none;"></span></label>
-      <input data-id="121" type="number" id="sbDays" class="input-field" min="1" max="180" value="90" />
-      <div data-id="122" id="sbPolicyNote" class="sb-policy-note mt-1 text-sm text-navy-400">ℹ️ Select your branch and rank above to auto-populate your authorized SkillBridge days.</div>
-      <div data-id="123" id="sbEditFeedback" class="sb-edit-feedback"></div>
-      <div data-id="124" id="sbOverMaxError" class="error-msg"></div>
-      <p data-id="125" class="helper-text">Max 180 days per DoD policy.</p>
+    <p class="helper-text">DoD SkillBridge allows up to 180 days of civilian work experience before separation while receiving full military pay.</p>
+    <div id="sbFields" class="mt-3">
+      <label class="block text-sm font-medium text-navy-600 mb-1 flex items-center gap-1.5">Days of SkillBridge <i data-lucide="pencil" class="w-3.5 h-3.5 text-navy-400"></i> <span id="sbBadge" class="sb-badge sb-badge-auto" style="display:none;"></span></label>
+      <input type="number" id="sbDays" class="input-field" min="1" max="180" value="90" />
+      <div id="sbPolicyNote" class="sb-policy-note mt-1 text-sm text-navy-400">ℹ️ Select your branch and rank above to auto-populate your authorized SkillBridge days.</div>
+      <div id="sbEditFeedback" class="sb-edit-feedback"></div>
+      <div id="sbOverMaxError" class="error-msg"></div>
+      <p class="helper-text">Max 180 days per DoD policy.</p>
     </div>
   </div>
 </div>
 
 <!-- Section 4: Post-Transition Plans -->
-<div data-id="126" class="section-card">
-  <h2 data-id="127" class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-id="128" data-lucide="compass" class="w-5 h-5 text-gold-500"></i> Post-Transition Plans</h2>
-  <div data-id="129" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-    <div data-id="130">
-      <label data-id="131" class="block text-sm font-medium text-navy-600 mb-1">Desired Post-Transition Location</label>
-      <input data-id="132" type="text" id="postLocation" class="input-field" placeholder="e.g., San Antonio, TX" />
+<div class="section-card">
+  <h2 class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-lucide="compass" class="w-5 h-5 text-gold-500"></i> Post-Transition Plans</h2>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div>
+      <label class="block text-sm font-medium text-navy-600 mb-1">Desired Post-Transition Location</label>
+      <input type="text" id="postLocation" class="input-field" placeholder="e.g., San Antonio, TX" />
     </div>
-    <div data-id="133">
-      <label data-id="134" class="block text-sm font-medium text-navy-600 mb-1">Career Interest</label>
-      <select data-id="135" id="careerInterest" class="input-field">
-        <option data-id="136" value="">Select…</option>
-        <option data-id="137">Defense/Government Contracting</option>
-        <option data-id="138">Technology/Cybersecurity</option>
-        <option data-id="139">Healthcare</option>
-        <option data-id="140">Education</option>
-        <option data-id="141">Law Enforcement/Public Safety</option>
-        <option data-id="142">Finance/Business</option>
-        <option data-id="143">Logistics/Supply Chain</option>
-        <option data-id="144">Aviation</option>
-        <option data-id="145">Engineering</option>
-        <option data-id="146">Entrepreneurship</option>
-        <option data-id="147">Undecided</option>
+    <div>
+      <label class="block text-sm font-medium text-navy-600 mb-1">Career Interest</label>
+      <select id="careerInterest" class="input-field">
+        <option value="">Select…</option>
+        <option>Defense/Government Contracting</option>
+        <option>Technology/Cybersecurity</option>
+        <option>Healthcare</option>
+        <option>Education</option>
+        <option>Law Enforcement/Public Safety</option>
+        <option>Finance/Business</option>
+        <option>Logistics/Supply Chain</option>
+        <option>Aviation</option>
+        <option>Engineering</option>
+        <option>Entrepreneurship</option>
+        <option>Undecided</option>
       </select>
     </div>
   </div>
-  <div data-id="148" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-    <div data-id="149" class="flex items-center justify-between">
-      <label data-id="150" class="text-sm font-medium text-navy-600">Planning to use GI Bill?</label>
-      <div data-id="151" class="toggle-track" id="giBillToggle"><div data-id="152" class="toggle-thumb"></div></div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div class="flex items-center justify-between">
+      <label class="text-sm font-medium text-navy-600">Planning to use GI Bill?</label>
+      <div class="toggle-track" id="giBillToggle"><div class="toggle-thumb"></div></div>
     </div>
-    <div data-id="153" class="flex items-center justify-between">
-      <label data-id="154" class="text-sm font-medium text-navy-600">Planning to file VA disability?</label>
-      <div data-id="155" class="toggle-track" id="vaClaimToggle"><div data-id="156" class="toggle-thumb"></div></div>
+    <div class="flex items-center justify-between">
+      <label class="text-sm font-medium text-navy-600">Planning to file VA disability?</label>
+      <div class="toggle-track" id="vaClaimToggle"><div class="toggle-thumb"></div></div>
     </div>
     <div class="flex items-center justify-between">
       <label class="text-sm font-medium text-navy-600">Married / have a spouse?</label>
@@ -388,35 +395,38 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 </div>
 
 <!-- Submit -->
-<button data-id="157" type="submit" id="submitBtn" class="w-full py-3.5 rounded-xl font-semibold text-white text-base transition-all hover:shadow-lg active:scale-[0.98]" style="background: linear-gradient(135deg, #c9a227 0%, #a6841e 100%);">
+<div id="form-status" aria-live="assertive" class="sr-only"></div>
+<button type="submit" id="submitBtn" class="w-full py-3.5 rounded-xl font-semibold text-white text-base transition-all hover:shadow-lg active:scale-[0.98]" style="background: linear-gradient(135deg, #c9a227 0%, #a6841e 100%);">
   Build My Transition Plan →
 </button>
-<p data-id="158" class="text-center text-xs text-navy-400 mt-3 mb-6"><i data-id="159" data-lucide="lock" class="w-3 h-3 inline-block mr-1 align-[-2px]"></i> Your data is private. As a guest it stays in this browser; create a free account to securely sync your plan.</p>
+<p class="text-center text-xs text-navy-400 mt-3 mb-6"><i data-lucide="lock" class="w-3 h-3 inline-block mr-1 align-[-2px]"></i> Your data is private. As a guest it stays in this browser; create a free account to securely sync your plan.</p>
 </form>
 </div>
 </div>
 
 <!-- ===== RESULTS SCREEN ===== -->
-<div data-id="160" id="results-screen" class="hidden flex-1">
+<div id="results-screen" class="hidden flex-1">
 
 <!-- Header Bar -->
-<div data-id="161" class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-navy-100" style="border-color: rgba(26,39,68,0.08);">
-  <div data-id="162" class="max-w-6xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between flex-wrap gap-2">
-    <div data-id="163" class="flex items-center gap-3 flex-wrap">
-      <button data-id="164" id="editBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-700 transition-colors px-2 py-1 rounded-lg hover:bg-navy-50">
-        <i data-id="165" data-lucide="arrow-left" class="w-4 h-4"></i> Edit My Info
+<div class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-navy-100" style="border-color: rgba(26,39,68,0.08);">
+  <div class="max-w-6xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between flex-wrap gap-2">
+    <div class="flex items-center gap-3 flex-wrap">
+      <button id="editBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-700 transition-colors px-2 py-1 rounded-lg hover:bg-navy-50">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i> Edit My Info
       </button>
-      <h1 data-id="166" id="resultTitle" class="text-lg md:text-xl font-bold text-navy-700"></h1>
-      <span data-id="167" id="branchBadge" class="branch-badge text-xs"></span>
-      <span data-id="168" id="rankBadge" class="text-xs font-medium text-navy-400 hidden md:inline"></span>
+      <h1 id="resultTitle" class="text-lg md:text-xl font-bold text-navy-700"></h1>
+      <span id="branchBadge" class="branch-badge text-xs"></span>
+      <span id="rankBadge" class="text-xs font-medium text-navy-400 hidden md:inline"></span>
     </div>
-    <div data-id="169" class="flex items-center gap-2 flex-wrap">
-      <div id="accountArea" class="flex items-center gap-2 flex-wrap"></div>
-      <button data-id="170" id="jumpToPayBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-gold-600 hover:text-gold-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-gold-50">
-        <i data-id="171" data-lucide="bar-chart-3" class="w-4 h-4"></i> Pay Estimator
+    <div class="flex items-center gap-2 flex-wrap">
+      <button id="headerLinkBtn" class="no-print hidden items-center gap-1.5 text-sm font-medium text-gold-600 hover:text-gold-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-gold-50" title="Copy your plan's edit link">
+        <i data-lucide="link" class="w-4 h-4"></i> Copy link
       </button>
-      <button data-id="172" id="printBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-navy-50">
-        <i data-id="173" data-lucide="printer" class="w-4 h-4"></i> Print Plan
+      <button id="jumpToPayBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-gold-600 hover:text-gold-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-gold-50">
+        <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Pay Estimator
+      </button>
+      <button id="printBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-navy-50">
+        <i data-lucide="printer" class="w-4 h-4"></i> Print Plan
       </button>
       <button id="icsBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-navy-50" title="Download your milestones as a calendar (.ics) file">
         <i data-lucide="calendar-plus" class="w-4 h-4"></i> Calendar
@@ -432,31 +442,56 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
   </div>
 </div>
 
-<div data-id="174" class="max-w-6xl mx-auto px-4 md:px-6 py-6 space-y-6">
+<div class="max-w-6xl mx-auto px-4 md:px-6 py-6 space-y-6">
+
+<!-- PLAN LINK BANNER (editable) -->
+<div id="planLinkBanner" class="no-print hidden section-card" style="background:#fdf9ed; border:1px solid #f0d266;">
+  <div class="flex items-start gap-3 flex-wrap">
+    <i data-lucide="bookmark" class="w-5 h-5 mt-0.5 flex-shrink-0" style="color:#a6841e;"></i>
+    <div class="flex-1 min-w-[220px]">
+      <p class="text-sm font-semibold text-navy-700">Your plan is saved at a private link</p>
+      <p class="text-xs text-navy-500 mt-0.5">Bookmark it to come back and edit later — there's no login. Anyone with this link can edit, so only share it with people you trust.</p>
+      <input id="planLinkInput" type="text" readonly class="input-field mt-2 text-xs" style="font-family:monospace;" />
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      <button id="copyEditLinkBtn" class="text-sm font-semibold text-white px-3 py-2 rounded-lg" style="background:#a6841e;"><i data-lucide="copy" class="w-4 h-4 inline align-[-2px]"></i> Copy edit link</button>
+      <button id="copyViewLinkBtn" class="text-sm font-medium text-navy-600 px-3 py-2 rounded-lg hover:bg-navy-50" title="A read-only link others can't edit">Copy read-only link</button>
+    </div>
+  </div>
+</div>
+
+<!-- READ-ONLY BANNER (viewing someone else's link) -->
+<div id="readOnlyBanner" class="no-print hidden section-card" style="background:#dbeafe; border:1px solid #93c5fd;">
+  <div class="flex items-center gap-3 flex-wrap">
+    <i data-lucide="eye" class="w-5 h-5 flex-shrink-0" style="color:#1e40af;"></i>
+    <p class="flex-1 text-sm text-navy-700 min-w-[220px]">You're viewing a shared plan (read-only). Changes you make here won't be saved.</p>
+    <button id="makeCopyBtn" class="text-sm font-semibold text-white px-3 py-2 rounded-lg" style="background:#1e40af;"><i data-lucide="copy-plus" class="w-4 h-4 inline align-[-2px]"></i> Make my own copy</button>
+  </div>
+</div>
 
 <!-- A. COUNTDOWN HERO -->
-<div data-id="175" id="countdownHero" class="section-card text-center fade-in-up" style="background: linear-gradient(135deg, #1a2744 0%, #2e3f66 100%); color: white;">
-  <div data-id="176" class="py-4 md:py-6">
-    <p data-id="177" id="countdownNumber" class="text-5xl md:text-7xl font-bold tabular-nums" style="color: #c9a227;"></p>
-    <p data-id="178" class="text-lg md:text-xl font-medium mt-2 text-white/90" id="countdownLabel"></p>
-    <p data-id="179" class="text-sm text-white/60 mt-1" id="countdownSub"></p>
-    <div data-id="180" class="mt-5 max-w-md mx-auto">
-      <div data-id="181" class="flex items-center justify-between text-xs text-white/50 mb-1">
-        <span data-id="182">2-Year Window</span>
-        <span data-id="183" id="progressPct" class="tabular-nums"></span>
+<div id="countdownHero" class="section-card text-center fade-in-up" style="background: linear-gradient(135deg, #1a2744 0%, #2e3f66 100%); color: white;">
+  <div class="py-4 md:py-6">
+    <p id="countdownNumber" class="text-5xl md:text-7xl font-bold tabular-nums" style="color: #c9a227;"></p>
+    <p class="text-lg md:text-xl font-medium mt-2 text-white/90" id="countdownLabel"></p>
+    <p class="text-sm text-white/60 mt-1" id="countdownSub"></p>
+    <div class="mt-5 max-w-md mx-auto">
+      <div class="flex items-center justify-between text-xs text-white/50 mb-1">
+        <span>2-Year Window</span>
+        <span id="progressPct" class="tabular-nums"></span>
       </div>
-      <div data-id="184" class="w-full h-2.5 rounded-full bg-white/10 overflow-hidden">
-        <div data-id="185" id="progressBar" class="h-full rounded-full progress-animate" style="width:0%; background: linear-gradient(90deg, #c9a227, #f5e199);"></div>
+      <div class="w-full h-2.5 rounded-full bg-white/10 overflow-hidden">
+        <div id="progressBar" class="h-full rounded-full progress-animate" style="width:0%; background: linear-gradient(90deg, #c9a227, #f5e199);"></div>
       </div>
     </div>
-    <div data-id="186" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6" id="subCounters"></div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6" id="subCounters"></div>
   </div>
 </div>
 
 <!-- B. MILESTONE DATES -->
-<div data-id="187" class="fade-in-up stagger-2">
-  <h2 data-id="188" class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-id="189" data-lucide="flag" class="w-5 h-5 text-gold-500"></i> Key Milestone Dates</h2>
-  <div data-id="190" id="milestoneGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+<div class="fade-in-up stagger-2">
+  <h2 class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-lucide="flag" class="w-5 h-5 text-gold-500"></i> Key Milestone Dates</h2>
+  <div id="milestoneGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
 </div>
 
 <!-- B2. HORIZONTAL TIMELINE -->
@@ -467,181 +502,181 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 </div>
 
 <!-- C. PRE-TRANSITION SUMMARY -->
-<div data-id="191" class="section-card fade-in-up stagger-3">
-  <h2 data-id="192" class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-id="193" data-lucide="bar-chart-3" class="w-5 h-5 text-gold-500"></i> Total Pre-Transition Period</h2>
-  <p data-id="194" id="preSummaryText" class="text-sm text-navy-500 mb-2"></p>
-  <div data-id="195" id="sbAuthLine" class="hidden mb-3"></div>
-  <div data-id="196" class="w-full h-8 rounded-lg overflow-hidden flex" id="preBar"></div>
-  <div data-id="197" id="preBarLegend" class="flex flex-wrap gap-4 mt-3 text-xs font-medium"></div>
+<div class="section-card fade-in-up stagger-3">
+  <h2 class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-lucide="bar-chart-3" class="w-5 h-5 text-gold-500"></i> Total Pre-Transition Period</h2>
+  <p id="preSummaryText" class="text-sm text-navy-500 mb-2"></p>
+  <div id="sbAuthLine" class="hidden mb-3"></div>
+  <div class="w-full h-8 rounded-lg overflow-hidden flex" id="preBar"></div>
+  <div id="preBarLegend" class="flex flex-wrap gap-4 mt-3 text-xs font-medium"></div>
 </div>
 
 <!-- ===== PAY & INCOME ESTIMATOR ===== -->
-<div data-id="198" id="payEstimatorSection" class="fade-in-up stagger-4">
-  <div data-id="199" class="section-card" style="padding:0; overflow:hidden;">
-    <div data-id="200" id="payEstimatorHeader" class="flex items-center gap-3 px-6 py-5 cursor-pointer select-none hover:bg-navy-50 transition-colors rounded-t-2xl">
-      <div data-id="201" class="flex-1">
-        <h2 data-id="202" class="text-lg font-semibold text-navy-700 flex items-center gap-2">
-          <i data-id="203" data-lucide="wallet" class="w-5 h-5 text-gold-500"></i> Pay &amp; Income Estimator
+<div id="payEstimatorSection" class="fade-in-up stagger-4">
+  <div class="section-card" style="padding:0; overflow:hidden;">
+    <div id="payEstimatorHeader" class="flex items-center gap-3 px-6 py-5 cursor-pointer select-none hover:bg-navy-50 transition-colors rounded-t-2xl">
+      <div class="flex-1">
+        <h2 class="text-lg font-semibold text-navy-700 flex items-center gap-2">
+          <i data-lucide="wallet" class="w-5 h-5 text-gold-500"></i> Pay &amp; Income Estimator
         </h2>
-        <p data-id="204" class="text-xs text-navy-400 mt-0.5">Retirement pay + VA disability + TSP — your full projected income</p>
+        <p class="text-xs text-navy-400 mt-0.5">Retirement pay + VA disability + TSP — your full projected income</p>
       </div>
-      <i data-id="205" data-lucide="chevron-down" class="w-5 h-5 text-navy-400 flex-shrink-0 transition-transform" id="payChevron"></i>
+      <i data-lucide="chevron-down" class="w-5 h-5 text-navy-400 flex-shrink-0 transition-transform" id="payChevron"></i>
     </div>
 
-    <div data-id="206" id="payEstimatorContent" class="pay-section-inner">
-      <div data-id="207" class="px-6 pb-6 space-y-6">
+    <div id="payEstimatorContent" class="pay-section-inner">
+      <div class="px-6 pb-6 space-y-6">
 
         <!-- Separation notice -->
-        <div data-id="208" id="paySepNotice" class="hidden rounded-xl p-4 text-sm" style="background:#dbeafe; color:#1e40af; border:1px solid #93c5fd;">
-          <div data-id="209" class="flex items-start gap-2">
-            <i data-id="210" data-lucide="info" class="w-4 h-4 mt-0.5 flex-shrink-0" style="color:#3b82f6;"></i>
-            <p data-id="211">Retirement pay estimates apply to members retiring with 20+ years of service. For separations under 20 years, retirement pay does not apply — VA disability compensation may still apply. The VA compensation section below is still relevant to you.</p>
+        <div id="paySepNotice" class="hidden rounded-xl p-4 text-sm" style="background:#dbeafe; color:#1e40af; border:1px solid #93c5fd;">
+          <div class="flex items-start gap-2">
+            <i data-lucide="info" class="w-4 h-4 mt-0.5 flex-shrink-0" style="color:#3b82f6;"></i>
+            <p>Retirement pay estimates apply to members retiring with 20+ years of service. For separations under 20 years, retirement pay does not apply — VA disability compensation may still apply. The VA compensation section below is still relevant to you.</p>
           </div>
         </div>
 
         <!-- PART 1: Retirement Base Pay Calculator -->
-        <div data-id="212" id="payRetirementBlock">
-          <h3 data-id="213" class="text-base font-semibold text-navy-700 mb-4 flex items-center gap-2">
-            <i data-id="214" data-lucide="badge-dollar-sign" class="w-4 h-4 text-gold-500"></i> Retirement Pay Calculator
+        <div id="payRetirementBlock">
+          <h3 class="text-base font-semibold text-navy-700 mb-4 flex items-center gap-2">
+            <i data-lucide="badge-dollar-sign" class="w-4 h-4 text-gold-500"></i> Retirement Pay Calculator
           </h3>
-          <div data-id="215" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div data-id="216">
-              <label data-id="217" class="block text-sm font-medium text-navy-600 mb-1">Monthly Base Pay (2026 DFAS)</label>
-              <input data-id="218" type="number" id="payBasePay" class="input-field" placeholder="Auto-populated from rank & YOS" step="0.01" />
-              <p data-id="219" class="helper-text mt-1" id="payBasePayHint">Select rank and YOS to auto-populate.</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="block text-sm font-medium text-navy-600 mb-1">Monthly Base Pay (2026 DFAS)</label>
+              <input type="number" id="payBasePay" class="input-field" placeholder="Auto-populated from rank & YOS" step="0.01" />
+              <p class="helper-text mt-1" id="payBasePayHint">Select rank and YOS to auto-populate.</p>
             </div>
-            <div data-id="220">
-              <label data-id="221" class="block text-sm font-medium text-navy-600 mb-1">Years of Service at Retirement</label>
-              <input data-id="222" type="number" id="payYOS" class="input-field" min="1" max="40" />
+            <div>
+              <label class="block text-sm font-medium text-navy-600 mb-1">Years of Service at Retirement</label>
+              <input type="number" id="payYOS" class="input-field" min="1" max="40" />
             </div>
           </div>
-          <div data-id="223" class="mb-4">
-            <label data-id="224" class="block text-sm font-medium text-navy-600 mb-2 flex items-center gap-2">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-navy-600 mb-2 flex items-center gap-2">
               Retirement System
-              <span data-id="225" class="tooltip-container">
-                <i data-id="226" data-lucide="help-circle" class="w-3.5 h-3.5 text-navy-400 cursor-help"></i>
-                <span data-id="227" class="tooltip-box" style="width:300px;">Not sure which system you're under? If you joined before Jan 1, 2018, you're likely under High-3. If you joined after Jan 1, 2018, you're under BRS. If you joined between 2006–2017, you may have opted into BRS.</span>
+              <span class="tooltip-container">
+                <i data-lucide="help-circle" class="w-3.5 h-3.5 text-navy-400 cursor-help"></i>
+                <span class="tooltip-box" style="width:300px;">Not sure which system you're under? If you joined before Jan 1, 2018, you're likely under High-3. If you joined after Jan 1, 2018, you're under BRS. If you joined between 2006–2017, you may have opted into BRS.</span>
               </span>
             </label>
-            <div data-id="228" class="flex gap-3" id="payRetSystemGroup">
-              <div data-id="229" class="radio-card selected" data-value="high3" style="flex:1;"><div data-id="230" class="radio-dot"></div><div data-id="231"><span data-id="232" class="text-sm font-medium">High-3 / Legacy</span><span data-id="233" class="text-xs text-navy-400 block">YOS × 2.5%</span></div></div>
-              <div data-id="234" class="radio-card" data-value="brs" style="flex:1;"><div data-id="235" class="radio-dot"></div><div data-id="236"><span data-id="237" class="text-sm font-medium">BRS</span><span data-id="238" class="text-xs text-navy-400 block">YOS × 2.0%</span></div></div>
+            <div class="flex gap-3" id="payRetSystemGroup">
+              <div class="radio-card selected" data-value="high3" style="flex:1;"><div class="radio-dot"></div><div><span class="text-sm font-medium">High-3 / Legacy</span><span class="text-xs text-navy-400 block">YOS × 2.5%</span></div></div>
+              <div class="radio-card" data-value="brs" style="flex:1;"><div class="radio-dot"></div><div><span class="text-sm font-medium">BRS</span><span class="text-xs text-navy-400 block">YOS × 2.0%</span></div></div>
             </div>
           </div>
-          <div data-id="239" id="payRetResult" class="bg-navy-50 rounded-xl p-5 hidden">
-            <div data-id="240" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-              <div data-id="241" class="text-center">
-                <p data-id="242" class="text-xs font-medium uppercase tracking-wide text-navy-400 mb-1">Monthly Retirement Pay</p>
-                <p data-id="243" id="payRetMonthly" class="text-3xl font-bold tabular-nums" style="color:#c9a227;"></p>
+          <div id="payRetResult" class="bg-navy-50 rounded-xl p-5 hidden">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div class="text-center">
+                <p class="text-xs font-medium uppercase tracking-wide text-navy-400 mb-1">Monthly Retirement Pay</p>
+                <p id="payRetMonthly" class="text-3xl font-bold tabular-nums" style="color:#c9a227;"></p>
               </div>
-              <div data-id="244" class="text-center">
-                <p data-id="245" class="text-xs font-medium uppercase tracking-wide text-navy-400 mb-1">Annual Retirement Pay</p>
-                <p data-id="246" id="payRetAnnual" class="text-2xl font-bold text-navy-700 tabular-nums"></p>
+              <div class="text-center">
+                <p class="text-xs font-medium uppercase tracking-wide text-navy-400 mb-1">Annual Retirement Pay</p>
+                <p id="payRetAnnual" class="text-2xl font-bold text-navy-700 tabular-nums"></p>
               </div>
             </div>
-            <p data-id="247" id="payRetFormula" class="text-xs text-navy-400 text-center"></p>
-            <p data-id="248" id="payBrsNote" class="text-xs text-gold-600 text-center mt-1 hidden">With BRS, you also receive up to 5% TSP matching from DoD during service.</p>
+            <p id="payRetFormula" class="text-xs text-navy-400 text-center"></p>
+            <p id="payBrsNote" class="text-xs text-gold-600 text-center mt-1 hidden">With BRS, you also receive up to 5% TSP matching from DoD during service.</p>
           </div>
-          <p data-id="249" class="text-xs text-navy-400 mt-2 italic">Based on 2026 DFAS Basic Pay Tables, effective January 1, 2026. Source: dfas.mil. Your High-3 average may differ. Contact DFAS for your official figure.</p>
+          <p class="text-xs text-navy-400 mt-2 italic">Based on 2026 DFAS Basic Pay Tables, effective January 1, 2026. Source: dfas.mil. Your High-3 average may differ. Contact DFAS for your official figure.</p>
         </div>
 
-        <div data-id="250" class="border-t" style="border-color:rgba(26,39,68,0.08);"></div>
+        <div class="border-t" style="border-color:rgba(26,39,68,0.08);"></div>
 
         <!-- PART 2: VA Disability Compensation -->
-        <div data-id="251">
-          <h3 data-id="252" class="text-base font-semibold text-navy-700 mb-4 flex items-center gap-2">
-            <i data-id="253" data-lucide="shield-check" class="w-4 h-4 text-gold-500"></i> VA Disability Compensation
+        <div>
+          <h3 class="text-base font-semibold text-navy-700 mb-4 flex items-center gap-2">
+            <i data-lucide="shield-check" class="w-4 h-4 text-gold-500"></i> VA Disability Compensation
           </h3>
-          <label data-id="254" class="block text-sm font-medium text-navy-600 mb-3">Select Your VA Disability Rating</label>
-          <div data-id="255" id="vaRatingBtns" class="flex flex-wrap gap-2 mb-4"></div>
-          <div data-id="256" id="vaCompResult" class="bg-navy-50 rounded-xl p-5 mb-3 hidden">
-            <div data-id="257" class="text-center">
-              <p data-id="258" class="text-xs font-medium uppercase tracking-wide text-navy-400 mb-1">Monthly VA Compensation (<span data-id="259" id="vaRatingLabel">0%</span>)</p>
-              <p data-id="260" id="vaCompAmount" class="text-3xl font-bold tabular-nums" style="color:#c9a227;"></p>
-              <p data-id="261" class="text-xs text-navy-400 mt-1">Tax-free income</p>
+          <label class="block text-sm font-medium text-navy-600 mb-3">Select Your VA Disability Rating</label>
+          <div id="vaRatingBtns" role="group" aria-label="VA disability rating" class="flex flex-wrap gap-2 mb-4"></div>
+          <div id="vaCompResult" class="bg-navy-50 rounded-xl p-5 mb-3 hidden">
+            <div class="text-center">
+              <p class="text-xs font-medium uppercase tracking-wide text-navy-400 mb-1">Monthly VA Compensation (<span id="vaRatingLabel">0%</span>)</p>
+              <p id="vaCompAmount" class="text-3xl font-bold tabular-nums" style="color:#c9a227;"></p>
+              <p class="text-xs text-navy-400 mt-1">Tax-free income</p>
             </div>
           </div>
-          <p data-id="262" class="text-xs text-navy-400 italic">Rates shown are for a Veteran with no dependents, effective Dec 1, 2024 (most current VA COLA adjustment). Rates increase with dependents (spouse, children, parents).</p>
-          <div data-id="263" class="mt-3 flex items-center justify-between">
-            <label data-id="264" class="text-sm font-medium text-navy-600">I have dependents</label>
-            <div data-id="265" class="toggle-track" id="depToggle"><div data-id="266" class="toggle-thumb"></div></div>
+          <p class="text-xs text-navy-400 italic">Rates shown are for a Veteran with no dependents, effective Dec 1, 2024 (most current VA COLA adjustment). Rates increase with dependents (spouse, children, parents).</p>
+          <div class="mt-3 flex items-center justify-between">
+            <label class="text-sm font-medium text-navy-600">I have dependents</label>
+            <div class="toggle-track" id="depToggle"><div class="toggle-thumb"></div></div>
           </div>
-          <div data-id="267" id="depNote" class="hidden mt-2 rounded-lg p-3 text-xs" style="background:#fef3c7; color:#b45309; border:1px solid #fcd34d;">
+          <div id="depNote" class="hidden mt-2 rounded-lg p-3 text-xs" style="background:#fef3c7; color:#b45309; border:1px solid #fcd34d;">
             With dependents, your VA compensation increases. For 30%+ ratings with a spouse, add approximately $50–$150/month depending on rating and number of dependents. Visit va.gov/disability/compensation-rates for exact amounts with your dependent status.
           </div>
         </div>
 
-        <div data-id="268" class="border-t" style="border-color:rgba(26,39,68,0.08);"></div>
+        <div class="border-t" style="border-color:rgba(26,39,68,0.08);"></div>
 
         <!-- PART 3: Combined Income Summary -->
-        <div data-id="269">
-          <h3 data-id="270" class="text-base font-semibold text-navy-700 mb-4 flex items-center gap-2">
-            <i data-id="271" data-lucide="trending-up" class="w-4 h-4 text-gold-500"></i> Combined Income Summary
+        <div>
+          <h3 class="text-base font-semibold text-navy-700 mb-4 flex items-center gap-2">
+            <i data-lucide="trending-up" class="w-4 h-4 text-gold-500"></i> Combined Income Summary
           </h3>
-          <div data-id="272" id="crdpNotice" class="rounded-xl p-4 text-sm mb-4" style="background:#fef3c7; color:#92400e; border:1px solid #fcd34d;">
-            <div data-id="273" class="flex items-start gap-2">
-              <i data-id="274" data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 flex-shrink-0" style="color:#f59e0b;"></i>
-              <div data-id="275">
-                <p data-id="276" class="font-semibold mb-1">Concurrent Receipt Rules</p>
-                <p data-id="277">If your VA disability rating is below 50%, your retirement pay may be reduced by the amount of VA compensation (VA waiver). However, if you qualify for CRDP (Concurrent Retirement and Disability Pay) at 50% or higher VA rating, you can receive <strong data-id="278">both</strong> full retirement pay AND full VA compensation with no offset. Members with combat-related disabilities may qualify for CRSC regardless of rating percentage. Consult your finance office for your specific situation.</p>
+          <div id="crdpNotice" class="rounded-xl p-4 text-sm mb-4" style="background:#fef3c7; color:#92400e; border:1px solid #fcd34d;">
+            <div class="flex items-start gap-2">
+              <i data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 flex-shrink-0" style="color:#f59e0b;"></i>
+              <div>
+                <p class="font-semibold mb-1">Concurrent Receipt Rules</p>
+                <p>If your VA disability rating is below 50%, your retirement pay may be reduced by the amount of VA compensation (VA waiver). However, if you qualify for CRDP (Concurrent Retirement and Disability Pay) at 50% or higher VA rating, you can receive <strong>both</strong> full retirement pay AND full VA compensation with no offset. Members with combat-related disabilities may qualify for CRSC regardless of rating percentage. Consult your finance office for your specific situation.</p>
               </div>
             </div>
           </div>
-          <div data-id="279" class="overflow-x-auto rounded-xl border" style="border-color:rgba(26,39,68,0.1);">
-            <table data-id="280" class="w-full text-sm" id="incomeTable">
-              <thead data-id="281">
-                <tr data-id="282" class="bg-navy-50">
-                  <th data-id="283" class="text-left px-3 py-2.5 text-xs font-semibold text-navy-500 uppercase tracking-wide">Rating</th>
-                  <th data-id="284" class="text-right px-3 py-2.5 text-xs font-semibold text-navy-500 uppercase tracking-wide whitespace-nowrap">Ret. Pay</th>
-                  <th data-id="285" class="text-right px-3 py-2.5 text-xs font-semibold text-navy-500 uppercase tracking-wide whitespace-nowrap">VA Comp</th>
-                  <th data-id="286" class="text-right px-3 py-2.5 text-xs font-semibold text-navy-500 uppercase tracking-wide whitespace-nowrap">Total/Mo</th>
-                  <th data-id="287" class="text-right px-3 py-2.5 text-xs font-semibold text-navy-500 uppercase tracking-wide whitespace-nowrap">Annual</th>
-                  <th data-id="288" class="px-3 py-2.5 text-xs font-semibold text-navy-500 uppercase tracking-wide text-center">Status</th>
+          <div class="overflow-x-auto rounded-xl border" style="border-color:rgba(26,39,68,0.1);">
+            <table class="w-full text-sm" id="incomeTable">
+              <thead>
+                <tr class="bg-navy-50">
+                  <th class="text-left px-3 py-2.5 text-xs font-semibold text-navy-500 uppercase tracking-wide">Rating</th>
+                  <th class="text-right px-3 py-2.5 text-xs font-semibold text-navy-500 uppercase tracking-wide whitespace-nowrap">Ret. Pay</th>
+                  <th class="text-right px-3 py-2.5 text-xs font-semibold text-navy-500 uppercase tracking-wide whitespace-nowrap">VA Comp</th>
+                  <th class="text-right px-3 py-2.5 text-xs font-semibold text-navy-500 uppercase tracking-wide whitespace-nowrap">Total/Mo</th>
+                  <th class="text-right px-3 py-2.5 text-xs font-semibold text-navy-500 uppercase tracking-wide whitespace-nowrap">Annual</th>
+                  <th class="px-3 py-2.5 text-xs font-semibold text-navy-500 uppercase tracking-wide text-center">Status</th>
                 </tr>
               </thead>
-              <tbody data-id="289" id="incomeTableBody"></tbody>
+              <tbody id="incomeTableBody"></tbody>
             </table>
           </div>
-          <p data-id="290" class="text-xs text-navy-400 mt-2 italic">Total Monthly shown assumes CRDP eligibility (50%+ rating) or no offset. For ratings below 50%, actual retirement pay received may be reduced. This tool shows gross entitlements for planning purposes.</p>
-          <div data-id="291" class="mt-6">
-            <h4 data-id="292" class="text-sm font-semibold text-navy-600 mb-3">Income by VA Rating — Visual Comparison</h4>
-            <div data-id="293" id="incomeBarChart" class="space-y-1.5"></div>
-            <div data-id="294" class="flex items-center gap-4 mt-3 text-xs font-medium text-navy-500">
-              <span data-id="295" class="flex items-center gap-1.5"><span data-id="296" class="w-3 h-3 rounded-sm inline-block" style="background:#1a2744;"></span> Retirement Pay</span>
-              <span data-id="297" class="flex items-center gap-1.5"><span data-id="298" class="w-3 h-3 rounded-sm inline-block" style="background:#c9a227;"></span> VA Compensation</span>
+          <p class="text-xs text-navy-400 mt-2 italic">Total Monthly shown assumes CRDP eligibility (50%+ rating) or no offset. For ratings below 50%, actual retirement pay received may be reduced. This tool shows gross entitlements for planning purposes.</p>
+          <div class="mt-6">
+            <h4 class="text-sm font-semibold text-navy-600 mb-3">Income by VA Rating — Visual Comparison</h4>
+            <div id="incomeBarChart" class="space-y-1.5"></div>
+            <div class="flex items-center gap-4 mt-3 text-xs font-medium text-navy-500">
+              <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm inline-block" style="background:#1a2744;"></span> Retirement Pay</span>
+              <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm inline-block" style="background:#c9a227;"></span> VA Compensation</span>
             </div>
           </div>
         </div>
 
-        <div data-id="299" class="border-t" style="border-color:rgba(26,39,68,0.08);"></div>
+        <div class="border-t" style="border-color:rgba(26,39,68,0.08);"></div>
 
         <!-- ===== PART 5: TSP INCOME ESTIMATOR ===== -->
-        <div data-id="300" id="tspEstimatorBlock">
-          <h3 data-id="301" class="text-base font-semibold text-navy-700 mb-4 flex items-center gap-2">
-            <i data-id="302" data-lucide="trending-up" class="w-4 h-4 text-gold-500"></i> TSP Savings &amp; Withdrawal Estimate
+        <div id="tspEstimatorBlock">
+          <h3 class="text-base font-semibold text-navy-700 mb-4 flex items-center gap-2">
+            <i data-lucide="trending-up" class="w-4 h-4 text-gold-500"></i> TSP Savings &amp; Withdrawal Estimate
           </h3>
 
           <!-- TSP Inputs -->
-          <div data-id="303" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div data-id="304">
-              <label data-id="305" class="block text-sm font-medium text-navy-600 mb-1">Current TSP Balance ($)</label>
-              <input data-id="306" type="number" id="tspBalance" class="input-field" placeholder="e.g., 85000" min="0" step="100" />
-              <p data-id="307" class="helper-text">Enter your current Thrift Savings Plan balance.</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="block text-sm font-medium text-navy-600 mb-1">Current TSP Balance ($)</label>
+              <input type="number" id="tspBalance" class="input-field" placeholder="e.g., 85000" min="0" step="100" />
+              <p class="helper-text">Enter your current Thrift Savings Plan balance.</p>
             </div>
-            <div data-id="308">
-              <label data-id="309" class="block text-sm font-medium text-navy-600 mb-1">Estimated Years Until Retirement</label>
-              <input data-id="310" type="number" id="tspYearsToRet" class="input-field" min="0" max="40" step="0.1" />
-              <p data-id="311" class="helper-text">Auto-calculated from your separation date. Editable.</p>
+            <div>
+              <label class="block text-sm font-medium text-navy-600 mb-1">Estimated Years Until Retirement</label>
+              <input type="number" id="tspYearsToRet" class="input-field" min="0" max="40" step="0.1" />
+              <p class="helper-text">Auto-calculated from your separation date. Editable.</p>
             </div>
           </div>
 
-          <div data-id="312" class="mb-4">
-            <label data-id="313" class="block text-sm font-medium text-navy-600 mb-2">Expected Annual Growth Rate: <span data-id="314" id="tspRateDisplay" class="font-bold text-gold-600">6%</span></label>
-            <input data-id="315" type="range" id="tspRate" class="range-slider w-full" min="1" max="10" step="0.5" value="6" />
-            <div data-id="316" class="flex justify-between text-xs text-navy-400 mt-1 px-0.5">
-              <span data-id="317">1%</span><span data-id="318">3%</span><span data-id="319">5%</span><span data-id="320">6%</span><span data-id="321">7%</span><span data-id="322">8%</span><span data-id="323">10%</span>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-navy-600 mb-2">Expected Annual Growth Rate: <span id="tspRateDisplay" class="font-bold text-gold-600">6%</span></label>
+            <input type="range" id="tspRate" class="range-slider w-full" min="1" max="10" step="0.5" value="6" />
+            <div class="flex justify-between text-xs text-navy-400 mt-1 px-0.5">
+              <span>1%</span><span>3%</span><span>5%</span><span>6%</span><span>7%</span><span>8%</span><span>10%</span>
             </div>
-            <p data-id="324" class="helper-text mt-1">TSP L2040/L2050 funds have historically averaged ~6–7% annually. This is an estimate, not a guarantee.</p>
+            <p class="helper-text mt-1">TSP L2040/L2050 funds have historically averaged ~6–7% annually. This is an estimate, not a guarantee.</p>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -677,104 +712,104 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
           </div>
 
           <!-- Projected Balance Result -->
-          <div data-id="334" id="tspProjectedResult" class="bg-navy-50 rounded-xl p-5 mb-4 hidden">
-            <div data-id="335" class="text-center mb-3">
-              <p data-id="336" class="text-xs font-medium uppercase tracking-wide text-navy-400 mb-1">Projected TSP Balance at Retirement</p>
-              <p data-id="337" id="tspProjectedBalance" class="text-3xl font-bold tabular-nums" style="color:#c9a227;"></p>
+          <div id="tspProjectedResult" class="bg-navy-50 rounded-xl p-5 mb-4 hidden">
+            <div class="text-center mb-3">
+              <p class="text-xs font-medium uppercase tracking-wide text-navy-400 mb-1">Projected TSP Balance at Retirement</p>
+              <p id="tspProjectedBalance" class="text-3xl font-bold tabular-nums" style="color:#c9a227;"></p>
             </div>
-            <div data-id="338" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-center">
-              <div data-id="339" class="bg-white rounded-lg p-3">
-                <p data-id="340" class="text-xs text-navy-400">Current balance grows to</p>
-                <p data-id="341" id="tspGrowthCurrent" class="text-lg font-semibold text-navy-700 tabular-nums"></p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-center">
+              <div class="bg-white rounded-lg p-3">
+                <p class="text-xs text-navy-400">Current balance grows to</p>
+                <p id="tspGrowthCurrent" class="text-lg font-semibold text-navy-700 tabular-nums"></p>
               </div>
-              <div data-id="342" class="bg-white rounded-lg p-3">
-                <p data-id="343" class="text-xs text-navy-400">Contributions add</p>
-                <p data-id="344" id="tspGrowthContrib" class="text-lg font-semibold text-navy-700 tabular-nums"></p>
+              <div class="bg-white rounded-lg p-3">
+                <p class="text-xs text-navy-400">Contributions add</p>
+                <p id="tspGrowthContrib" class="text-lg font-semibold text-navy-700 tabular-nums"></p>
               </div>
             </div>
           </div>
 
           <!-- Withdrawal Method -->
-          <div data-id="345" class="mb-4">
-            <label data-id="346" class="block text-sm font-medium text-navy-600 mb-2">Withdrawal Method</label>
-            <div data-id="347" class="space-y-2" id="tspWithdrawalGroup">
-              <div data-id="348" class="tsp-withdrawal-card selected" data-value="fixed">
-                <div data-id="349" class="tsp-withdrawal-dot"></div>
-                <div data-id="350">
-                  <span data-id="351" class="text-sm font-medium flex items-center gap-1.5"><i data-id="352" data-lucide="calendar" class="w-3.5 h-3.5 text-navy-400"></i> Monthly Installments (Fixed Amount)</span>
-                  <span data-id="353" class="text-xs text-navy-400 block">You choose a fixed monthly withdrawal</span>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-navy-600 mb-2">Withdrawal Method</label>
+            <div class="space-y-2" id="tspWithdrawalGroup">
+              <div class="tsp-withdrawal-card selected" data-value="fixed">
+                <div class="tsp-withdrawal-dot"></div>
+                <div>
+                  <span class="text-sm font-medium flex items-center gap-1.5"><i data-lucide="calendar" class="w-3.5 h-3.5 text-navy-400"></i> Monthly Installments (Fixed Amount)</span>
+                  <span class="text-xs text-navy-400 block">You choose a fixed monthly withdrawal</span>
                 </div>
               </div>
-              <div data-id="354" class="tsp-withdrawal-card" data-value="life">
-                <div data-id="355" class="tsp-withdrawal-dot"></div>
-                <div data-id="356">
-                  <span data-id="357" class="text-sm font-medium flex items-center gap-1.5"><i data-id="358" data-lucide="clock" class="w-3.5 h-3.5 text-navy-400"></i> Monthly Installments (Life Expectancy / IRS Tables)</span>
-                  <span data-id="359" class="text-xs text-navy-400 block">Payment recalculates annually based on IRS tables</span>
+              <div class="tsp-withdrawal-card" data-value="life">
+                <div class="tsp-withdrawal-dot"></div>
+                <div>
+                  <span class="text-sm font-medium flex items-center gap-1.5"><i data-lucide="clock" class="w-3.5 h-3.5 text-navy-400"></i> Monthly Installments (Life Expectancy / IRS Tables)</span>
+                  <span class="text-xs text-navy-400 block">Payment recalculates annually based on IRS tables</span>
                 </div>
               </div>
-              <div data-id="360" class="tsp-withdrawal-card" data-value="annuity">
-                <div data-id="361" class="tsp-withdrawal-dot"></div>
-                <div data-id="362">
-                  <span data-id="363" class="text-sm font-medium flex items-center gap-1.5"><i data-id="364" data-lucide="landmark" class="w-3.5 h-3.5 text-navy-400"></i> TSP Annuity (Lifetime Payments)</span>
-                  <span data-id="365" class="text-xs text-navy-400 block">Guaranteed income for life; balance is no longer yours</span>
+              <div class="tsp-withdrawal-card" data-value="annuity">
+                <div class="tsp-withdrawal-dot"></div>
+                <div>
+                  <span class="text-sm font-medium flex items-center gap-1.5"><i data-lucide="landmark" class="w-3.5 h-3.5 text-navy-400"></i> TSP Annuity (Lifetime Payments)</span>
+                  <span class="text-xs text-navy-400 block">Guaranteed income for life; balance is no longer yours</span>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Fixed withdrawal sub-input -->
-          <div data-id="366" id="tspFixedFields" class="mb-4">
-            <label data-id="367" class="block text-sm font-medium text-navy-600 mb-1">Desired Monthly Withdrawal ($)</label>
-            <input data-id="368" type="number" id="tspFixedAmount" class="input-field" value="500" min="1" step="50" />
+          <div id="tspFixedFields" class="mb-4">
+            <label class="block text-sm font-medium text-navy-600 mb-1">Desired Monthly Withdrawal ($)</label>
+            <input type="number" id="tspFixedAmount" class="input-field" value="500" min="1" step="50" />
           </div>
 
           <!-- Withdrawal Result -->
-          <div data-id="369" id="tspWithdrawalResult" class="bg-navy-50 rounded-xl p-5 mb-4 hidden">
-            <div data-id="370" id="tspWithdrawalContent"></div>
+          <div id="tspWithdrawalResult" class="bg-navy-50 rounded-xl p-5 mb-4 hidden">
+            <div id="tspWithdrawalContent"></div>
           </div>
 
           <!-- BRS Callout -->
-          <div data-id="371" id="tspBrsCallout" class="rounded-xl p-4 text-sm mb-4 hidden" style="background:#fdf9ed; color:#92400e; border:1px solid #f0d266;">
-            <div data-id="372" class="flex items-start gap-2">
-              <i data-id="373" data-lucide="lightbulb" class="w-4 h-4 mt-0.5 flex-shrink-0" style="color:#c9a227;"></i>
-              <p data-id="374" id="tspBrsCalloutText"></p>
+          <div id="tspBrsCallout" class="rounded-xl p-4 text-sm mb-4 hidden" style="background:#fdf9ed; color:#92400e; border:1px solid #f0d266;">
+            <div class="flex items-start gap-2">
+              <i data-lucide="lightbulb" class="w-4 h-4 mt-0.5 flex-shrink-0" style="color:#c9a227;"></i>
+              <p id="tspBrsCalloutText"></p>
             </div>
           </div>
 
           <!-- Full Monthly Income Picture -->
-          <div data-id="375" id="tspFullIncomeSummary" class="rounded-xl p-5 hidden" style="background: linear-gradient(135deg, #1a2744 0%, #2e3f66 100%); color: white;">
-            <h4 data-id="376" class="text-sm font-semibold text-white/90 mb-4 flex items-center gap-2">
-              <i data-id="377" data-lucide="bar-chart-3" class="w-4 h-4" style="color:#c9a227;"></i> Your Full Monthly Income Picture
+          <div id="tspFullIncomeSummary" class="rounded-xl p-5 hidden" style="background: linear-gradient(135deg, #1a2744 0%, #2e3f66 100%); color: white;">
+            <h4 class="text-sm font-semibold text-white/90 mb-4 flex items-center gap-2">
+              <i data-lucide="bar-chart-3" class="w-4 h-4" style="color:#c9a227;"></i> Your Full Monthly Income Picture
             </h4>
-            <div data-id="378" id="tspFullIncomeRows" class="space-y-3"></div>
-            <div data-id="379" class="mt-4 pt-3 border-t border-white/15">
-              <div data-id="380" class="flex items-center justify-between">
-                <span data-id="381" class="text-sm font-bold text-white/90 flex items-center gap-2"><i data-id="382" data-lucide="wallet" class="w-4 h-4" style="color:#c9a227;"></i> Total Estimated Monthly</span>
-                <span data-id="383" id="tspFullTotal" class="text-2xl font-bold tabular-nums" style="color:#c9a227;"></span>
+            <div id="tspFullIncomeRows" class="space-y-3"></div>
+            <div class="mt-4 pt-3 border-t border-white/15">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-bold text-white/90 flex items-center gap-2"><i data-lucide="wallet" class="w-4 h-4" style="color:#c9a227;"></i> Total Estimated Monthly</span>
+                <span id="tspFullTotal" class="text-2xl font-bold tabular-nums" style="color:#c9a227;"></span>
               </div>
-              <p data-id="384" id="tspFullAnnual" class="text-xs text-white/50 text-right mt-1 tabular-nums"></p>
+              <p id="tspFullAnnual" class="text-xs text-white/50 text-right mt-1 tabular-nums"></p>
             </div>
           </div>
 
-          <p data-id="385" class="text-xs text-navy-400 mt-3 italic leading-relaxed">All figures are estimates for planning purposes only. TSP projections assume consistent growth and do not account for market volatility, taxes, or inflation. Consult a CERTIFIED FINANCIAL PLANNER® or your installation's Personal Financial Counselor before making financial decisions.</p>
+          <p class="text-xs text-navy-400 mt-3 italic leading-relaxed">All figures are estimates for planning purposes only. TSP projections assume consistent growth and do not account for market volatility, taxes, or inflation. Consult a CERTIFIED FINANCIAL PLANNER® or your installation's Personal Financial Counselor before making financial decisions.</p>
 
           <!-- TSP Resources -->
-          <div data-id="386" class="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-xs">
-            <a data-id="387" href="https://www.tsp.gov/calculators/" target="_blank" rel="noopener" class="text-gold-500 hover:underline">TSP Official Calculator</a>
-            <a data-id="388" href="https://www.tsp.gov/calculators/tsp-annuity-calculator/" target="_blank" rel="noopener" class="text-gold-500 hover:underline">TSP Annuity Calculator</a>
-            <a data-id="389" href="https://www.tsp.gov/tsp-basics/when-you-separate/" target="_blank" rel="noopener" class="text-gold-500 hover:underline">TSP Withdrawal Options</a>
+          <div class="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-xs">
+            <a href="https://www.tsp.gov/calculators/" target="_blank" rel="noopener" class="text-gold-500 hover:underline">TSP Official Calculator</a>
+            <a href="https://www.tsp.gov/calculators/tsp-annuity-calculator/" target="_blank" rel="noopener" class="text-gold-500 hover:underline">TSP Annuity Calculator</a>
+            <a href="https://www.tsp.gov/tsp-basics/when-you-separate/" target="_blank" rel="noopener" class="text-gold-500 hover:underline">TSP Withdrawal Options</a>
           </div>
         </div>
         <!-- ===== END TSP ESTIMATOR ===== -->
 
-        <div data-id="390" class="border-t" style="border-color:rgba(26,39,68,0.08);"></div>
+        <div class="border-t" style="border-color:rgba(26,39,68,0.08);"></div>
 
         <!-- PART 4: Key Financial Takeaways -->
-        <div data-id="391">
-          <h3 data-id="392" class="text-base font-semibold text-navy-700 mb-4 flex items-center gap-2">
-            <i data-id="393" data-lucide="lightbulb" class="w-4 h-4 text-gold-500"></i> Key Financial Takeaways
+        <div>
+          <h3 class="text-base font-semibold text-navy-700 mb-4 flex items-center gap-2">
+            <i data-lucide="lightbulb" class="w-4 h-4 text-gold-500"></i> Key Financial Takeaways
           </h3>
-          <div data-id="394" id="insightCards" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+          <div id="insightCards" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
           <!-- State Tax Panel -->
           <div id="stateTaxPanel" class="grid grid-cols-1 gap-4 mt-4"></div>
         </div>
@@ -901,9 +936,9 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 </div>
 
 <!-- E. PHASE CHECKLIST -->
-<div data-id="418" class="fade-in-up stagger-5">
-  <h2 data-id="419" class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-id="420" data-lucide="list-checks" class="w-5 h-5 text-gold-500"></i> Personalized Phase Checklist</h2>
-  <div data-id="421" id="phaseList" class="space-y-3"></div>
+<div class="fade-in-up stagger-5">
+  <h2 class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-lucide="list-checks" class="w-5 h-5 text-gold-500"></i> Personalized Phase Checklist</h2>
+  <div id="phaseList" class="space-y-3"></div>
 </div>
 
 <!-- E2. THINGS TO THINK ABOUT -->
@@ -923,24 +958,25 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 </div>
 
 <!-- F. RESOURCES -->
-<div data-id="422" class="fade-in-up stagger-6">
-  <h2 data-id="423" class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-id="424" data-lucide="external-link" class="w-5 h-5 text-gold-500"></i> Key Resources</h2>
-  <div data-id="425" id="resourceGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+<div class="fade-in-up stagger-6">
+  <h2 class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-lucide="external-link" class="w-5 h-5 text-gold-500"></i> Key Resources</h2>
+  <div id="resourceGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
 </div>
 
 </div>
 
 <!-- G. FOOTER -->
-<footer data-id="426" class="text-center py-8 mt-4 border-t" style="border-color: rgba(26,39,68,0.08);">
-  <p data-id="427" class="text-sm text-navy-500">Built for the military community — by someone who served 🇺🇸</p>
-  <p data-id="428" class="text-xs text-navy-400 mt-1">Share this tool with your fellow service members</p>
-  <button data-id="429" id="copyLinkBtn" class="no-print mt-3 inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl transition-all hover:shadow" style="background: #1a2744; color: #c9a227;">
-    <i data-id="430" data-lucide="link" class="w-4 h-4"></i> Copy Shareable Link
+<footer class="text-center py-8 mt-4 border-t" style="border-color: rgba(26,39,68,0.08);">
+  <p class="text-sm text-navy-500">Built for the military community — by someone who served 🇺🇸</p>
+  <p class="text-xs text-navy-400 mt-1">Share this tool with your fellow service members</p>
+  <button id="copyLinkBtn" class="no-print mt-3 inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl transition-all hover:shadow" style="background: #1a2744; color: #c9a227;">
+    <i data-lucide="link" class="w-4 h-4"></i> Copy read-only link
   </button>
   <p id="dataVintage" class="text-xs text-navy-400 mt-4"></p>
-  <p data-id="431" class="text-xs text-navy-400 mt-1">Made by Copilot</p>
+  <p class="text-xs text-navy-400 mt-1">Made by Copilot</p>
 </footer>
 </div>
+</main>
 
 <script type="module">
 import {
@@ -951,9 +987,9 @@ import {
   DATA_VINTAGE, FLAG_OFFICER_GRADES,
   computeSBP, compareConcurrentReceipt, TRICARE_FEES_2026, estimateRetireeHealthcareCost,
   compareTricarePrimeSelect, compareStates, estimatePPM, tspKeepVsRoll
-} from './js/calc.js';
-import * as store from './js/store.js';
-import { initAuthUI } from './js/auth-ui.js';
+} from '/js/calc.js';
+import * as store from '/js/store.js';
+import { initAuthUI } from '/js/auth-ui.js';
 // ===== DATA =====
 const STORAGE_KEY = 'military-transition-calc-v5';
 
@@ -1001,10 +1037,21 @@ const RANKS = {
 
 // ===== UTILITIES =====
 function $(id) { return document.getElementById(id); }
+// LOCAL calendar date as YYYY-MM-DD. toISOString() is UTC, which rolls a US evening to
+// "tomorrow" — every date here is parsed as local midnight, so produce a local string.
+function todayLocalStr() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+}
 function fmtDate(d) { return d.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }); }
 function fmtDateShort(d) { return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'2-digit' }); }
 function fmtCurrency(val) { return val.toLocaleString('en-US', { style:'currency', currency:'USD' }); }
 function fmtCurrencyWhole(val) { return val.toLocaleString('en-US', { style:'currency', currency:'USD', maximumFractionDigits:0 }); }
+// Escape untrusted/plan-derived strings before they enter an innerHTML template.
+// Plans can arrive from a shared /p/<id> link or an imported backup, so any free-text
+// field (e.g. postLocation) must be escaped at the sink to prevent DOM XSS.
+const ESC_MAP = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (ch) => ESC_MAP[ch]); }
 
 function showToast(msg) {
   const t = $('toast');
@@ -1162,10 +1209,11 @@ let tspContribMode = 'fixed';
 let toggles = { ptdy: true, sb: true, giBill: false, vaClaim: false, married: false, homeowner: false, clearance: false, federalJob: false, oconus: false };
 
 // ===== TOGGLE LOGIC =====
-function initToggle(id, key) {
+function initToggle(id, key, label) {
   const el = $(id);
   el.setAttribute('role', 'switch');
   el.setAttribute('tabindex', '0');
+  if (label) el.setAttribute('aria-label', label);
   el.setAttribute('aria-checked', String(!!toggles[key]));
   const fire = () => {
     toggles[key] = !toggles[key];
@@ -1182,10 +1230,10 @@ function initToggle(id, key) {
 }
 
 // ===== RADIO GROUP =====
-function initRadioGroup(containerId, cb) {
+function initRadioGroup(containerId, cb, cardSelector = '.radio-card') {
   const container = $(containerId);
   container.setAttribute('role', 'radiogroup');
-  const cards = container.querySelectorAll('.radio-card');
+  const cards = container.querySelectorAll(cardSelector);
   cards.forEach(card => {
     card.setAttribute('role', 'radio');
     card.setAttribute('tabindex', '0');
@@ -1228,7 +1276,13 @@ function populateRanks() {
 }
 
 // ===== VALIDATION =====
-function showErr(id, show) { const el = $(id); if (el) el.classList.toggle('show', show); }
+function showErr(id, show) {
+  const el = $(id);
+  if (el) el.classList.toggle('show', show);
+  // Mirror the visual error onto the associated control so AT announces invalid state.
+  const ctrl = document.querySelector('[aria-describedby="' + id + '"]');
+  if (ctrl) ctrl.setAttribute('aria-invalid', String(show));
+}
 
 function validate() {
   let ok = true;
@@ -1242,7 +1296,7 @@ function validate() {
   if (!transType) { showErr('err-transType', true); ok = false; } else { showErr('err-transType', false); }
   if (transType === 'Retirement' && yos < 20) { showErr('err-yos', true); $('yos').classList.add('error'); ok = false; }
   const sd = $('sepDate').value;
-  let today = new Date(($('todayDate').value || new Date().toISOString().split('T')[0]) + 'T00:00:00');
+  let today = new Date(($('todayDate').value || todayLocalStr()) + 'T00:00:00');
   if (isNaN(today)) today = new Date();
   if (!sd || new Date(sd + 'T00:00:00') <= today) { showErr('err-sepDate', true); $('sepDate').classList.add('error'); ok = false; } else { showErr('err-sepDate', false); $('sepDate').classList.remove('error'); }
   // Date of Rank sanity: not in the future, not after separation.
@@ -1276,7 +1330,9 @@ function buildState() {
   s.ptdy = toggles.ptdy;
   s.ptdyDays = toggles.ptdy ? clamp(parseInt($('ptdyDays').value) || 20, 1, 20) : 0;
   s.sb = toggles.sb;
-  s.sbDays = toggles.sb ? clamp(parseInt($('sbDays').value) || 90, 1, 180) : 0;
+  // Preserve a deliberate 0 (e.g. E-1 "not eligible"); only default to 90 on a blank/NaN field.
+  const sbN = parseInt($('sbDays').value, 10);
+  s.sbDays = toggles.sb ? clamp(Number.isFinite(sbN) ? sbN : 90, 0, 180) : 0;
   s.postLocation = $('postLocation').value.trim();
   s.careerInterest = $('careerInterest').value;
   s.giBill = toggles.giBill;
@@ -1303,12 +1359,10 @@ function buildState() {
 }
 
 // ===== SAVE / LOAD =====
-// Persistence routes through store.js: D1-backed API when signed in, localStorage for guests.
+// Persistence routes through store.js: a plan lives at /p/<id> in D1, cached in localStorage.
 function saveState(s) { store.savePlan(s); }
-async function loadState() { return await store.loadPlan(); }
-function clearState() { store.lsClear(); }
 
-// Checklist state now travels inside the plan (state.checks), persisted via saveState.
+// Checklist state travels inside the plan (state.checks), persisted via saveState.
 function loadChecks() { return (state && state.checks) || {}; }
 function saveChecks(checks) { if (state) { state.checks = checks; saveState(state); } }
 
@@ -1341,6 +1395,30 @@ function migrateChecks(checks, s) {
   return out;
 }
 
+// Reflect the current plan's link/read-only state in the header + banners.
+function renderPlanLink() {
+  const banner = $('planLinkBanner');
+  const ro = $('readOnlyBanner');
+  const headerBtn = $('headerLinkBtn');
+  const editUrl = store.getEditUrl();
+  if (store.isReadOnly()) {
+    ro.classList.remove('hidden');
+    banner.classList.add('hidden');
+    headerBtn.classList.add('hidden');
+  } else if (editUrl) {
+    ro.classList.add('hidden');
+    banner.classList.remove('hidden');
+    $('planLinkInput').value = editUrl;
+    headerBtn.classList.remove('hidden');
+    headerBtn.classList.add('flex');
+  } else {
+    banner.classList.add('hidden');
+    ro.classList.add('hidden');
+    headerBtn.classList.add('hidden');
+  }
+  if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') lucide.createIcons();
+}
+
 // ===== SHOW RESULTS =====
 function showResults() {
   $('setup-screen').classList.add('hidden');
@@ -1371,10 +1449,12 @@ function renderTimeline(milestones, today, sep) {
     const pct = clamp(((m.date.getTime() - axisStart) / span) * 100, 0, 100);
     const st = milestoneStatus(daysBetween(today, m.date));
     const dotClass = st === 'past' ? 'status-red' : (st === 'future' ? 'status-green' : 'status-gold');
+    const statusText = st === 'past' ? 'Past' : (st === 'today' ? 'Today' : (st === 'soon' ? 'Due soon' : 'Upcoming'));
     const pos = (i % 2 === 0) ? 'tl-above' : 'tl-below';
+    const safeLabel = escapeHtml(m.label);
     html += '<div class="tl-marker" style="left:' + pct + '%;">'
-      + '<span class="tl-dot ' + dotClass + '"></span>'
-      + '<div class="tl-box ' + pos + '"><div class="tl-label">' + m.label + '</div><div class="tl-date">' + fmtDateShort(m.date) + '</div></div>'
+      + '<span class="tl-dot ' + dotClass + '" role="img" aria-label="' + safeLabel + ' — ' + statusText + '"></span>'
+      + '<div class="tl-box ' + pos + '"><div class="tl-label">' + safeLabel + '</div><div class="tl-date">' + fmtDateShort(m.date) + '</div><div class="tl-status">' + statusText + '</div></div>'
       + '</div>';
   });
   track.innerHTML = html;
@@ -1382,7 +1462,7 @@ function renderTimeline(milestones, today, sep) {
 
 function renderResults() {
   const s = state;
-  const bm = BRANCH_META[s.branch];
+  const bm = BRANCH_META[s.branch] || { color:'#1a2744', emoji:'🎖️', terms:{ spec:'Specialty', member:'Member', nco:'NCO' } };
   const today = new Date(s.todayDate + 'T00:00:00');
   const sep = new Date(s.sepDate + 'T00:00:00');
   const isRet = s.transType === 'Retirement';
@@ -1394,14 +1474,16 @@ function renderResults() {
   $('rankBadge').classList.remove('hidden');
 
   const daysLeft = daysBetween(today, sep);
-  $('countdownNumber').textContent = daysLeft;
-  $('countdownLabel').textContent = `Days Until ${s.transType}`;
+  const past = daysLeft < 0; // a saved/shared plan can have a sepDate that has since passed
+  $('countdownNumber').textContent = past ? Math.abs(daysLeft) : daysLeft;
+  $('countdownLabel').textContent = past ? `Days Since ${s.transType}` : `Days Until ${s.transType}`;
   $('countdownSub').textContent = `${fmtDate(sep)} · ${s.transType}`;
 
   const twoYearStart = subDays(sep, 730);
   let pct = 0;
   if (today >= twoYearStart) pct = clamp(Math.round((daysBetween(twoYearStart, today) / 730) * 100), 0, 100);
-  $('progressPct').textContent = today < twoYearStart ? `2-Year Window Opens: ${fmtDateShort(twoYearStart)}` : `${pct}% through 2-year window`;
+  $('progressPct').textContent = past ? '2-Year Window Closed'
+    : (today < twoYearStart ? `2-Year Window Opens: ${fmtDateShort(twoYearStart)}` : `${pct}% through 2-year window`);
   setTimeout(() => { $('progressBar').style.width = pct + '%'; }, 200);
 
   const termStart = subDays(sep, s.leaveDays);
@@ -1415,9 +1497,12 @@ function renderResults() {
   const tricareDeadline = subDays(sep, 90);
   const vaClaimBy = subDays(sep, 365);
 
+  // Relative-day label that reads sanely when the date is today or already past
+  // (a near-term sepDate pushes SkillBridge/terminal-leave starts before "today").
+  const relDays = (d) => { const n = daysBetween(today, d); return n < 0 ? `Started ${Math.abs(n)} days ago` : (n === 0 ? 'Today' : `${n} days`); };
   const subs = [];
-  if (s.sb) subs.push({ label: 'SkillBridge Starts', val: `${daysBetween(today, sbStart)} days`, icon: 'briefcase' });
-  subs.push({ label: 'Terminal Leave', val: `${daysBetween(today, termStart)} days`, icon: 'palm-tree' });
+  if (s.sb) subs.push({ label: 'SkillBridge Starts', val: relDays(sbStart), icon: 'briefcase' });
+  subs.push({ label: 'Terminal Leave', val: relDays(termStart), icon: 'palm-tree' });
   subs.push({ label: 'Freedom Day', val: fmtDateShort(sep), icon: 'flag' });
 
   $('subCounters').innerHTML = subs.map(c => `
@@ -1533,10 +1618,14 @@ function renderResults() {
   if (s.ptdy) segments.push({ days: s.ptdyDays, color: '#c9a227', label: 'PTDY' });
   segments.push({ days: s.leaveDays, color: '#2d6a4f', label: 'Terminal Leave' });
 
-  $('preBar').innerHTML = segments.map(seg => {
-    const w = Math.max((seg.days / totalPre) * 100, 2);
-    return `<div style="width:${w}%; background:${seg.color};" class="flex items-center justify-center text-white text-xs font-medium">${seg.days}d</div>`;
-  }).join('');
+  if (totalPre === 0) {
+    $('preBar').innerHTML = '<div style="width:100%; background:#e2e8f0; color:#475569;" class="flex items-center justify-center text-xs font-medium py-1">No pre-transition leave planned</div>';
+  } else {
+    $('preBar').innerHTML = segments.map(seg => {
+      const w = Math.max((seg.days / totalPre) * 100, 2);
+      return `<div style="width:${w}%; background:${seg.color};" class="flex items-center justify-center text-white text-xs font-medium">${seg.days}d</div>`;
+    }).join('');
+  }
 
   $('preBarLegend').innerHTML = segments.map(seg =>
     `<span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm inline-block" style="background:${seg.color};"></span>${seg.label}</span>`
@@ -1552,7 +1641,9 @@ function renderResults() {
 }
 
 // ===== PAY ESTIMATOR RENDERING =====
-function renderPayEstimator(isRet) {
+// persist=false on the initial display render so we don't write back data we just loaded;
+// user-driven recalcs (input handlers) call recalcPayEstimator() directly and do persist.
+function renderPayEstimator(isRet, persist = false) {
   const s = state;
   const rg = getRankGrade(s.rank);
 
@@ -1566,9 +1657,10 @@ function renderPayEstimator(isRet) {
     $('crdpNotice').style.display = '';
   }
 
-  // DOR: calculate time in grade
-  if (s.dateOfRank) {
-    const dorDate = new Date(s.dateOfRank + 'T00:00:00');
+  // DOR: calculate time in grade (guard a malformed dateOfRank → Invalid Date → NaN)
+  const dorDate0 = s.dateOfRank ? new Date(s.dateOfRank + 'T00:00:00') : null;
+  if (dorDate0 && !isNaN(dorDate0.getTime())) {
+    const dorDate = dorDate0;
     const today = new Date(s.todayDate + 'T00:00:00');
     const sep = new Date(s.sepDate + 'T00:00:00');
     const tigDays = daysBetween(dorDate, sep);
@@ -1587,6 +1679,8 @@ function renderPayEstimator(isRet) {
       $('payBasePay').value = basePay2026.toFixed(2);
       $('payBasePayHint').textContent = `2026 DFAS table: ${rg} at ${s.yos} YOS = ${fmtCurrency(basePay2026)}/mo · DOR: ${fmtDate(dorDate)} (${tigYearsToday} yrs in grade)`;
     } else {
+      // No table value (e.g. flag officers O-8..O-10) — restore the user's saved manual entry.
+      $('payBasePay').value = s.payBasePay ? Number(s.payBasePay).toFixed(2) : '';
       $('payBasePayHint').textContent = FLAG_OFFICER_GRADES.includes(rg)
         ? `General/flag officer pay (${rg}) is capped at the Executive Schedule limit — enter your exact monthly base pay from your LES.`
         : 'Could not auto-populate — enter your monthly base pay from your LES.';
@@ -1599,6 +1693,8 @@ function renderPayEstimator(isRet) {
       $('payBasePay').value = basePay2026.toFixed(2);
       $('payBasePayHint').textContent = `2026 DFAS table: ${rg} at ${s.yos} YOS = ${fmtCurrency(basePay2026)}/mo`;
     } else {
+      // No table value (e.g. flag officers O-8..O-10) — restore the user's saved manual entry.
+      $('payBasePay').value = s.payBasePay ? Number(s.payBasePay).toFixed(2) : '';
       $('payBasePayHint').textContent = FLAG_OFFICER_GRADES.includes(rg)
         ? `General/flag officer pay (${rg}) is capped at the Executive Schedule limit — enter your exact monthly base pay from your LES.`
         : 'Could not auto-populate — enter your monthly base pay from your LES.';
@@ -1609,7 +1705,7 @@ function renderPayEstimator(isRet) {
 
   payRetSystem = s.payRetSystem || 'high3';
   const retCards = $('payRetSystemGroup').querySelectorAll('.radio-card');
-  retCards.forEach(c => c.classList.toggle('selected', c.dataset.value === payRetSystem));
+  retCards.forEach(c => { const on = c.dataset.value === payRetSystem; c.classList.toggle('selected', on); c.setAttribute('aria-checked', String(on)); });
 
   selectedVARating = s.selectedVARating || 0;
   hasDependents = s.hasDependents || false;
@@ -1624,6 +1720,7 @@ function renderPayEstimator(isRet) {
     btn.className = `va-rating-btn${r === selectedVARating ? ' active' : ''}`;
     btn.textContent = r + '%';
     btn.dataset.rating = r;
+    btn.setAttribute('aria-pressed', String(r === selectedVARating));
     ratingBtns.appendChild(btn);
   });
 
@@ -1644,7 +1741,7 @@ function renderPayEstimator(isRet) {
   // TSP contribution mode
   tspContribMode = s.tspContribMode || 'fixed';
   const cmCards = $('tspContribModeGroup').querySelectorAll('.radio-card');
-  cmCards.forEach(c => c.classList.toggle('selected', c.dataset.value === tspContribMode));
+  cmCards.forEach(c => { const on = c.dataset.value === tspContribMode; c.classList.toggle('selected', on); c.setAttribute('aria-checked', String(on)); });
   $('tspContribFixedField').classList.toggle('hidden', tspContribMode !== 'fixed');
   $('tspContribPctField').classList.toggle('hidden', tspContribMode !== 'pct');
 
@@ -1652,13 +1749,13 @@ function renderPayEstimator(isRet) {
 
   // Set withdrawal method radio
   const wCards = $('tspWithdrawalGroup').querySelectorAll('.tsp-withdrawal-card');
-  wCards.forEach(c => c.classList.toggle('selected', c.dataset.value === tspWithdrawalMethod));
+  wCards.forEach(c => { const on = c.dataset.value === tspWithdrawalMethod; c.classList.toggle('selected', on); c.setAttribute('aria-checked', String(on)); });
   $('tspFixedFields').style.display = tspWithdrawalMethod === 'fixed' ? '' : 'none';
 
-  recalcPayEstimator();
+  recalcPayEstimator(persist);
 }
 
-function recalcPayEstimator() {
+function recalcPayEstimator(persist = true) {
   const s = state;
   const isRet = s.transType === 'Retirement';
   const bp = parseFloat($('payBasePay').value) || 0;
@@ -1709,7 +1806,9 @@ function recalcPayEstimator() {
   state.tspRetAge = parseInt($('tspRetAge').value) || 45;
   state.tspWithdrawalMethod = tspWithdrawalMethod;
   state.tspFixedAmount = parseFloat($('tspFixedAmount').value) || 500;
-  saveState(state);
+  // Persist the (possibly manually-entered) base pay so flag-officer entries survive reloads.
+  state.payBasePay = parseFloat($('payBasePay').value) || 0;
+  if (persist) saveState(state);
 
   if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') lucide.createIcons();
 }
@@ -1774,12 +1873,18 @@ function recalcTSP(monthlyRet, isRet, basePay) {
           const years = Math.floor(totalMonths / 12);
           const remMonths = totalMonths % 12;
           const depletionAge = retAge + years + (remMonths / 12);
+          const LIFE_EXP_AGE = 90; // longevity target for the depletion check
 
           let warningHtml = '';
-          if (depletionAge < 85) {
+          if (totalMonths === 0) {
             warningHtml = `<div class="mt-3 rounded-lg p-3 flex items-start gap-2 text-xs" style="background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5;">
               <i data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
-              <span>At this withdrawal rate, your TSP may be depleted by age ${Math.round(depletionAge)}. Consider a lower withdrawal or annuity option.</span>
+              <span>This withdrawal exceeds your projected balance — it wouldn't cover a single month. Choose a smaller monthly amount.</span>
+            </div>`;
+          } else if (depletionAge < LIFE_EXP_AGE) {
+            warningHtml = `<div class="mt-3 rounded-lg p-3 flex items-start gap-2 text-xs" style="background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5;">
+              <i data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+              <span>At this withdrawal rate, your TSP may be depleted by age ${Math.round(depletionAge)} (before age ${LIFE_EXP_AGE}). Consider a lower withdrawal or annuity option.</span>
             </div>`;
           }
 
@@ -1986,16 +2091,20 @@ function renderStateTaxPanel(monthlyRet, isRet) {
   // Estimated state tax on retirement pay
   let retTaxAnnual = 0;
   let retTaxNote = '';
+  // topRate is the state's TOP marginal rate. A military pension sits well below the top
+  // bracket in graduated states, so the full top rate badly overstates the real liability.
+  // Damp it toward an effective rate (~0.55x) and label every figure as an upper bound.
+  const EFFECTIVE_FACTOR = 0.55;
   if (td.militaryRetirementTax === 'exempt') {
     retTaxAnnual = 0;
     retTaxNote = 'Fully exempt';
   } else if (td.militaryRetirementTax === 'taxed') {
-    retTaxAnnual = isRet ? annualRet * (td.topRate / 100) : 0;
-    retTaxNote = `Est. ~${fmtCurrencyWhole(retTaxAnnual)}/yr at ${td.topRate}% top rate`;
+    retTaxAnnual = isRet ? annualRet * (td.topRate / 100) * EFFECTIVE_FACTOR : 0;
+    retTaxNote = `Approx. ~${fmtCurrencyWhole(retTaxAnnual)}/yr (effective estimate; ${td.topRate}% top marginal rate — your actual rate is lower in graduated brackets)`;
   } else {
-    // partial — rough estimate at half effective rate
-    retTaxAnnual = isRet ? annualRet * (td.topRate / 100) * 0.5 : 0;
-    retTaxNote = `Partial exemption — est. ~${fmtCurrencyWhole(retTaxAnnual)}/yr (varies by age/income)`;
+    // partial — effective-rate estimate, further halved for the partial exemption
+    retTaxAnnual = isRet ? annualRet * (td.topRate / 100) * EFFECTIVE_FACTOR * 0.5 : 0;
+    retTaxNote = `Partial exemption — approx. ~${fmtCurrencyWhole(retTaxAnnual)}/yr (varies by age/income)`;
   }
 
   const afterTaxMonthly = isRet ? ((annualRet - retTaxAnnual) / 12) : 0;
@@ -2104,7 +2213,7 @@ function renderPhases(today, sep, termStart, ptdyStart, ptdyEnd, sbStart, sbEnd,
         T('cert-research','Research professional certifications in target field'),
         T('sb-network','Network with SkillBridge alumni in your career field'),
         s.vaClaim ? T('vre','Research and apply for VR&E (Chapter 31, VA Form 28-1900) — separate from the GI Bill') : null,
-        s.federalJob ? T('vow-cert','Request a VOW Act certification of expected discharge to claim Veterans’ Preference before your DD-214') : null,
+        s.federalJob ? T('vow-cert','Request a VOW Act certification of expected discharge to claim Veterans' Preference before your DD-214') : null,
         s.federalJob ? T('fed-packet','Assemble your federal-hiring packet — SF-15, VA rating letter, DD-214; identify your path (VEOA, VRA, 30%, Schedule A)') : null,
         s.vaClaim ? T('fdc-evidence','Prepare an FDC-style evidence package — completed DBQs and, where causation is contested, a nexus letter') : null,
       ].filter(Boolean) }
@@ -2229,7 +2338,7 @@ function renderPhases(today, sep, termStart, ptdyStart, ptdyEnd, sbStart, sbEnd,
             ${phase.tasks.map((task, ti) => `
               <label class="check-item">
                 <input type="checkbox" data-phase="${phase.id}" data-task-id="${task.id}" ${taskChecks[ti] ? 'checked' : ''} />
-                <span class="text-sm text-navy-600" style="${taskChecks[ti] ? 'text-decoration:line-through; opacity:0.5;' : ''}">${task.text}</span>
+                <span class="text-sm text-navy-600" style="${taskChecks[ti] ? 'text-decoration:line-through; opacity:0.5;' : ''}">${escapeHtml(task.text)}</span>
               </label>
             `).join('')}
           </div>
@@ -2275,7 +2384,7 @@ function renderResources() {
   const s = state;
   const resources = [
     { title:'TAP / Transition', links:[['militaryonesource.mil','https://www.militaryonesource.mil'],['tapevents.mil','https://www.tapevents.mil']], icon:'book-open' },
-    { title:'SkillBridge', links:[['skillbridge.defense.gov','https://skillbridge.osd.mil']], icon:'briefcase' },
+    { title:'SkillBridge', links:[['skillbridge.osd.mil','https://skillbridge.osd.mil']], icon:'briefcase' },
     { title:'VA Benefits', links:[['va.gov','https://www.va.gov'],['benefits.va.gov','https://benefits.va.gov']], icon:'shield' },
     { title:'Resume Help', links:[['hireheroesusa.org','https://www.hireheroesusa.org'],['acp-usa.org','https://www.acp-usa.org']], icon:'file-text' },
     { title:'Federal Jobs', links:[['usajobs.gov — Veterans Preference','https://www.usajobs.gov']], icon:'building-2' },
@@ -2490,6 +2599,17 @@ function recalcTSPRoll() {
 function applyLoadedPlan(plan) {
   if (!plan || !plan.firstName || !plan.sepDate) return;
   state = plan;
+  // The countdown is relative to the viewer's actual "now", not a date frozen into a
+  // plan saved on a prior day (or shared by someone else). Refresh it on every load;
+  // also repairs a missing/malformed todayDate that would otherwise render NaN.
+  state.todayDate = todayLocalStr();
+  // Defense-in-depth: coerce day fields to safe integers so a malformed loaded plan
+  // can never reach an innerHTML sink as a string (see escapeHtml + isValidState).
+  const toInt = (v, dflt, lo, hi) => { const n = Math.trunc(Number(v)); return Number.isFinite(n) ? clamp(n, lo, hi) : dflt; };
+  state.sbDays = toInt(state.sbDays, 0, 0, 180);
+  state.ptdyDays = toInt(state.ptdyDays, 0, 0, 20);
+  state.leaveDays = toInt(state.leaveDays, 60, 0, 120);
+  state.payBasePay = Number.isFinite(+state.payBasePay) ? Math.max(0, +state.payBasePay) : 0;
   toggles.ptdy = state.ptdy;
   toggles.sb = state.sb;
   toggles.giBill = state.giBill || false;
@@ -2508,22 +2628,22 @@ function applyLoadedPlan(plan) {
   tspContribMode = state.tspContribMode || 'fixed';
   state.checks = migrateChecks(state.checks, state);
   showResults();
+  renderPlanLink();
 }
 
 async function init() {
-  const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  const todayStr = todayLocalStr();
   $('todayDate').value = todayStr;
 
-  initToggle('ptdyToggle', 'ptdy');
-  initToggle('sbToggle', 'sb');
-  initToggle('giBillToggle', 'giBill');
-  initToggle('vaClaimToggle', 'vaClaim');
-  initToggle('marriedToggle', 'married');
-  initToggle('homeownerToggle', 'homeowner');
-  initToggle('clearanceToggle', 'clearance');
-  initToggle('federalJobToggle', 'federalJob');
-  initToggle('oconusToggle', 'oconus');
+  initToggle('ptdyToggle', 'ptdy', 'Taking Permissive TDY?');
+  initToggle('sbToggle', 'sb', 'Taking SkillBridge?');
+  initToggle('giBillToggle', 'giBill', 'Planning to use GI Bill?');
+  initToggle('vaClaimToggle', 'vaClaim', 'Planning to file VA disability?');
+  initToggle('marriedToggle', 'married', 'Married / have a spouse?');
+  initToggle('homeownerToggle', 'homeowner', 'Own (or buying) a home?');
+  initToggle('clearanceToggle', 'clearance', 'Hold a security clearance?');
+  initToggle('federalJobToggle', 'federalJob', 'Pursuing federal employment?');
+  initToggle('oconusToggle', 'oconus', 'Retiring from an OCONUS station?');
 
   initRadioGroup('rankCatGroup', val => { rankCat = val; populateRanks(); });
   initRadioGroup('transTypeGroup', val => { transType = val; });
@@ -2532,14 +2652,33 @@ async function init() {
   $('rank').addEventListener('change', () => { updateSkillbridgeLimit(); });
   $('sbDays').addEventListener('input', () => { updateSbEditFeedback(); });
 
-  $('setup-form').addEventListener('submit', e => {
+  $('setup-form').addEventListener('submit', async e => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!validate()) {
+      const invalid = document.querySelectorAll('[aria-invalid="true"]');
+      const fs = $('form-status');
+      if (fs) fs.textContent = `${invalid.length} field${invalid.length === 1 ? '' : 's'} need attention — please review the highlighted fields.`;
+      const first = invalid[0];
+      if (first && typeof first.focus === 'function') first.focus();
+      return;
+    }
+    if ($('form-status')) $('form-status').textContent = '';
     const prevChecks = (state && state.checks) || {};
     state = buildState();
     state.checks = prevChecks; // keep checklist progress across edits
-    saveState(state);
     showResults();
+    if (store.isReadOnly()) {
+      renderPlanLink(); // viewing a shared plan — local edits only, can't save
+    } else if (store.hasPlan()) {
+      saveState(state); // editing an existing plan → update it
+      renderPlanLink();
+    } else {
+      // Brand-new plan → create it server-side to mint the shareable link.
+      const created = await store.createPlan(state);
+      history.replaceState(null, '', created ? `/p/${created.id}#k=${created.editKey}` : (location.pathname + location.search));
+      renderPlanLink();
+      showToast(created ? 'Plan saved — bookmark your link to come back' : 'Saved in this browser — couldn\'t create an online link');
+    }
   });
 
   $('editBtn').addEventListener('click', () => {
@@ -2548,33 +2687,45 @@ async function init() {
     if (state.branch) $('branch').value = state.branch;
     if (state.rankCat) {
       rankCat = state.rankCat;
-      document.querySelectorAll('#rankCatGroup .radio-card').forEach(c => c.classList.toggle('selected', c.dataset.value === rankCat));
+      document.querySelectorAll('#rankCatGroup .radio-card').forEach(c => { const on = c.dataset.value === rankCat; c.classList.toggle('selected', on); c.setAttribute('aria-checked', String(on)); });
       populateRanks();
-      if (state.rank) setTimeout(() => { $('rank').value = state.rank; updateSkillbridgeLimit(); }, 50);
+      if (state.rank) setTimeout(() => {
+        $('rank').value = state.rank;
+        updateSkillbridgeLimit(); // resets sbDays to the rank's auto-max…
+        // …so restore the user's saved value AFTER it, or the custom value is clobbered.
+        if (state.sb && state.sbDays !== undefined) { $('sbDays').value = state.sbDays; updateSbEditFeedback(); }
+      }, 50);
     }
     if (state.yos) $('yos').value = state.yos;
     if (state.dateOfRank) $('dateOfRank').value = state.dateOfRank;
     if (state.transType) {
       transType = state.transType;
-      document.querySelectorAll('#transTypeGroup .radio-card').forEach(c => c.classList.toggle('selected', c.dataset.value === transType));
+      document.querySelectorAll('#transTypeGroup .radio-card').forEach(c => { const on = c.dataset.value === transType; c.classList.toggle('selected', on); c.setAttribute('aria-checked', String(on)); });
     }
     if (state.sepDate) $('sepDate').value = state.sepDate;
-    if (state.todayDate) $('todayDate').value = state.todayDate;
+    // "Today's Date" is auto-set to the real current date; don't restore a stale saved value.
+    $('todayDate').value = todayLocalStr();
     if (state.leaveDays !== undefined) $('leaveDays').value = state.leaveDays;
-    toggles.ptdy = state.ptdy;
+    toggles.ptdy = !!state.ptdy;
     $('ptdyToggle').classList.toggle('active', toggles.ptdy);
+    $('ptdyToggle').setAttribute('aria-checked', String(toggles.ptdy));
     $('ptdyFields').classList.toggle('hidden', !toggles.ptdy);
     if (state.ptdyDays) $('ptdyDays').value = state.ptdyDays;
-    toggles.sb = state.sb;
+    toggles.sb = !!state.sb;
     $('sbToggle').classList.toggle('active', toggles.sb);
+    $('sbToggle').setAttribute('aria-checked', String(toggles.sb));
     $('sbFields').classList.toggle('hidden', !toggles.sb);
-    if (state.sbDays) $('sbDays').value = state.sbDays;
+    // Restore for the no-deferred path (no rank); when rank is set the deferred callback
+    // above re-restores after updateSkillbridgeLimit(). Both guard on state.sb.
+    if (state.sb && state.sbDays !== undefined) $('sbDays').value = state.sbDays;
     if (state.postLocation) $('postLocation').value = state.postLocation;
     if (state.careerInterest) $('careerInterest').value = state.careerInterest;
-    toggles.giBill = state.giBill;
+    toggles.giBill = !!state.giBill;
     $('giBillToggle').classList.toggle('active', toggles.giBill);
-    toggles.vaClaim = state.vaClaim;
+    $('giBillToggle').setAttribute('aria-checked', String(toggles.giBill));
+    toggles.vaClaim = !!state.vaClaim;
     $('vaClaimToggle').classList.toggle('active', toggles.vaClaim);
+    $('vaClaimToggle').setAttribute('aria-checked', String(toggles.vaClaim));
     [['married','marriedToggle'],['homeowner','homeownerToggle'],['clearance','clearanceToggle'],['federalJob','federalJobToggle'],['oconus','oconusToggle']].forEach(([key, id]) => {
       toggles[key] = state[key] || false;
       const el = $(id);
@@ -2602,12 +2753,22 @@ async function init() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  // Shareable link encodes the plan into the URL hash (client-only; no server round-trip).
-  $('copyLinkBtn').addEventListener('click', () => {
-    try {
-      const url = location.origin + location.pathname + '#state=' + encodeState(state);
-      navigator.clipboard.writeText(url).then(() => showToast('Shareable link copied!')).catch(() => showToast('Could not copy link'));
-    } catch { showToast('Could not create link'); }
+  // ----- plan links: edit (private) vs read-only (safe to share) -----
+  function copyText(text, okMsg) {
+    if (!text) { showToast('Build your plan first'); return; }
+    navigator.clipboard.writeText(text).then(() => showToast(okMsg)).catch(() => showToast('Could not copy link'));
+  }
+  const copyEditLink = () => copyText(store.getEditUrl(), 'Edit link copied — keep it private');
+  const copyViewLink = () => copyText(store.getViewUrl(), 'Read-only link copied');
+  $('copyEditLinkBtn').addEventListener('click', copyEditLink);
+  $('headerLinkBtn').addEventListener('click', copyEditLink);
+  $('copyViewLinkBtn').addEventListener('click', copyViewLink);
+  $('copyLinkBtn').addEventListener('click', copyViewLink); // footer button shares the read-only link
+  $('makeCopyBtn').addEventListener('click', async () => {
+    if (!state.firstName) { showToast('Nothing to copy yet'); return; }
+    const created = await store.createPlan(state);
+    if (created) location.href = `/p/${created.id}#k=${created.editKey}`; // reload into your own editable copy
+    else showToast('Could not create a copy — check your connection');
   });
 
   // Calendar (.ics) export of every milestone.
@@ -2625,21 +2786,26 @@ async function init() {
     showToast('Backup downloaded');
   });
   $('importBtn').addEventListener('click', () => $('importInput').click());
-  $('importInput').addEventListener('change', (e) => {
+  $('importInput').addEventListener('change', async (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const obj = JSON.parse(reader.result);
-        if (!isValidState(obj)) { showToast('Invalid backup file'); return; }
-        saveState(obj);
-        applyLoadedPlan(obj);
-        showToast('Plan restored');
-      } catch { showToast('Could not read backup'); }
-      $('importInput').value = '';
-    };
-    reader.readAsText(file);
+    let obj = null;
+    try { obj = JSON.parse(await file.text()); } catch { showToast('Could not read backup'); $('importInput').value = ''; return; }
+    $('importInput').value = '';
+    if (!isValidState(obj)) { showToast('Invalid backup file'); return; }
+    applyLoadedPlan(obj);
+    // Mirror the submit flow: overwrite the current plan, or mint a new link for a fresh one.
+    if (store.isReadOnly()) {
+      renderPlanLink();
+    } else if (store.hasPlan()) {
+      saveState(obj);
+      renderPlanLink();
+    } else {
+      const created = await store.createPlan(obj);
+      history.replaceState(null, '', created ? `/p/${created.id}#k=${created.editKey}` : (location.pathname + location.search));
+      renderPlanLink();
+    }
+    showToast('Plan restored');
   });
 
 
@@ -2685,7 +2851,7 @@ async function init() {
     const btn = e.target.closest('.va-rating-btn');
     if (!btn) return;
     selectedVARating = parseInt(btn.dataset.rating);
-    $('vaRatingBtns').querySelectorAll('.va-rating-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.rating) === selectedVARating));
+    $('vaRatingBtns').querySelectorAll('.va-rating-btn').forEach(b => { const on = parseInt(b.dataset.rating) === selectedVARating; b.classList.toggle('active', on); b.setAttribute('aria-pressed', String(on)); });
     recalcPayEstimator();
   });
 
@@ -2693,6 +2859,7 @@ async function init() {
     const dep = $('depToggle');
     dep.setAttribute('role', 'switch');
     dep.setAttribute('tabindex', '0');
+    dep.setAttribute('aria-label', 'I have dependents');
     dep.setAttribute('aria-checked', String(hasDependents));
     const fire = () => {
       hasDependents = !hasDependents;
@@ -2717,28 +2884,20 @@ async function init() {
   $('tspRetAge').addEventListener('input', () => { recalcPayEstimator(); });
   $('tspFixedAmount').addEventListener('input', () => { recalcPayEstimator(); });
 
-  // TSP contribution mode radio
-  $('tspContribModeGroup').querySelectorAll('.radio-card').forEach(card => {
-    card.addEventListener('click', () => {
-      $('tspContribModeGroup').querySelectorAll('.radio-card').forEach(c => c.classList.remove('selected'));
-      card.classList.add('selected');
-      tspContribMode = card.dataset.value;
-      $('tspContribFixedField').classList.toggle('hidden', tspContribMode !== 'fixed');
-      $('tspContribPctField').classList.toggle('hidden', tspContribMode !== 'pct');
-      recalcPayEstimator();
-    });
+  // TSP contribution mode radio (keyboard-accessible via initRadioGroup)
+  initRadioGroup('tspContribModeGroup', (val) => {
+    tspContribMode = val;
+    $('tspContribFixedField').classList.toggle('hidden', tspContribMode !== 'fixed');
+    $('tspContribPctField').classList.toggle('hidden', tspContribMode !== 'pct');
+    recalcPayEstimator();
   });
 
-  // TSP withdrawal method radio
-  $('tspWithdrawalGroup').querySelectorAll('.tsp-withdrawal-card').forEach(card => {
-    card.addEventListener('click', () => {
-      $('tspWithdrawalGroup').querySelectorAll('.tsp-withdrawal-card').forEach(c => c.classList.remove('selected'));
-      card.classList.add('selected');
-      tspWithdrawalMethod = card.dataset.value;
-      $('tspFixedFields').style.display = tspWithdrawalMethod === 'fixed' ? '' : 'none';
-      recalcPayEstimator();
-    });
-  });
+  // TSP withdrawal method radio (uses .tsp-withdrawal-card, also keyboard-accessible)
+  initRadioGroup('tspWithdrawalGroup', (val) => {
+    tspWithdrawalMethod = val;
+    $('tspFixedFields').style.display = tspWithdrawalMethod === 'fixed' ? '' : 'none';
+    recalcPayEstimator();
+  }, '.tsp-withdrawal-card');
 
   // Date of Rank live update
   $('dateOfRank').addEventListener('change', () => {
@@ -2768,21 +2927,50 @@ async function init() {
     }
   });
 
-  // Plan source priority: a shared link (#state=) wins, then the account (D1)
-  // when signed in, else localStorage.
-  let hashPlan = null;
-  if (location.hash.startsWith('#state=')) {
-    const decoded = decodeState(location.hash.slice(7));
-    if (decoded && isValidState(decoded)) hashPlan = decoded;
-  }
-  await store.bootAuth();
-  initAuthUI({ getCurrentState: () => state, onPlanLoaded: applyLoadedPlan });
-  if (hashPlan) {
-    saveState(hashPlan);
-    applyLoadedPlan(hashPlan);
+  // Concurrent-edit (multi-tab / multi-device) conflict resolution.
+  store.onConflict(async (serverPlan) => {
+    const keepMine = confirm(
+      'Your plan was changed in another tab or on another device.\n\n' +
+      'OK — keep the version in THIS tab (overwrite the other).\n' +
+      'Cancel — load the other version (discard unsaved changes here).'
+    );
+    if (keepMine) return 'mine';
+    if (serverPlan && serverPlan.firstName && serverPlan.sepDate) {
+      applyLoadedPlan(serverPlan);
+      showToast('Loaded the latest version of your plan');
+    }
+    return 'theirs';
+  });
+
+  // Resolve which plan to load: from the URL (/p/<id> + #k=<key>), or — at the root path —
+  // from this browser's cached link so a returning visitor lands back on their plan.
+  let id = null, key = null, fromCache = false;
+  const pathMatch = location.pathname.match(/^\/p\/([A-Za-z0-9_-]+)\/?$/);
+  if (pathMatch) {
+    id = pathMatch[1];
+    const km = location.hash.match(/[#&]k=([A-Za-z0-9_-]+)/);
+    key = km ? km[1] : null;
   } else {
-    const saved = await loadState();
-    if (saved && saved.firstName && saved.sepDate) applyLoadedPlan(saved);
+    const cached = store.getCached();
+    if (cached && cached.id) { id = cached.id; key = cached.editKey || null; fromCache = true; }
+  }
+
+  if (id) {
+    store.configure({ id, key });
+    if (fromCache) history.replaceState(null, '', `/p/${id}${key ? '#k=' + key : ''}`);
+    const plan = await store.loadRemote();
+    if (plan && plan.firstName && plan.sepDate) {
+      applyLoadedPlan(plan);
+    } else if (plan === null) {
+      // 404 or offline — fall back to the cache only if it's the SAME plan.
+      const cached = store.getCached();
+      if (cached && cached.id === id && cached.plan && cached.plan.firstName && cached.plan.sepDate) applyLoadedPlan(cached.plan);
+      else if (!fromCache) showToast('That plan link could not be found.');
+    }
+  } else {
+    // No id anywhere — recover a cached plan that was never saved online (create had failed).
+    const cached = store.getCached();
+    if (cached && cached.plan && cached.plan.firstName && cached.plan.sepDate) applyLoadedPlan(cached.plan);
   }
 
   updateSkillbridgeLimit();
