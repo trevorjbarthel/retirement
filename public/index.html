@@ -370,7 +370,28 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
       <label class="text-sm font-medium text-navy-600">Planning to file VA disability?</label>
       <div class="toggle-track" id="vaClaimToggle"><div class="toggle-thumb"></div></div>
     </div>
+    <div class="flex items-center justify-between">
+      <label class="text-sm font-medium text-navy-600">Married / have a spouse?</label>
+      <div class="toggle-track" id="marriedToggle"><div class="toggle-thumb"></div></div>
+    </div>
+    <div class="flex items-center justify-between">
+      <label class="text-sm font-medium text-navy-600">Own (or buying) a home?</label>
+      <div class="toggle-track" id="homeownerToggle"><div class="toggle-thumb"></div></div>
+    </div>
+    <div class="flex items-center justify-between">
+      <label class="text-sm font-medium text-navy-600">Hold a security clearance?</label>
+      <div class="toggle-track" id="clearanceToggle"><div class="toggle-thumb"></div></div>
+    </div>
+    <div class="flex items-center justify-between">
+      <label class="text-sm font-medium text-navy-600">Pursuing federal employment?</label>
+      <div class="toggle-track" id="federalJobToggle"><div class="toggle-thumb"></div></div>
+    </div>
+    <div class="flex items-center justify-between">
+      <label class="text-sm font-medium text-navy-600">Retiring from an OCONUS (overseas) station?</label>
+      <div class="toggle-track" id="oconusToggle"><div class="toggle-thumb"></div></div>
+    </div>
   </div>
+  <p class="helper-text mt-3">These tailor your checklist, deadlines, and decision tools to your situation.</p>
 </div>
 
 <!-- Submit -->
@@ -798,10 +819,142 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
   </div>
 </div>
 
+<!-- D2. DECISION TOOLS & CALCULATORS -->
+<div id="decisionToolsSection" class="fade-in-up stagger-4">
+  <div class="section-card" style="padding:0; overflow:hidden;">
+    <div id="decisionToolsHeader" class="flex items-center gap-3 px-6 py-5 cursor-pointer select-none hover:bg-navy-50 transition-colors rounded-t-2xl">
+      <div class="flex-1">
+        <h2 class="text-lg font-semibold text-navy-700 flex items-center gap-2"><i data-lucide="calculator" class="w-5 h-5 text-gold-500"></i> Decision Tools &amp; Calculators</h2>
+        <p class="text-xs text-navy-400 mt-0.5">Estimate the big, irreversible decisions — SBP, concurrent receipt, healthcare, domicile, your move, and your TSP</p>
+      </div>
+      <i data-lucide="chevron-down" class="w-5 h-5 text-navy-400 flex-shrink-0 transition-transform" id="decisionToolsChevron"></i>
+    </div>
+    <div id="decisionToolsContent" class="pay-section-inner">
+      <div class="px-6 pb-6 space-y-6">
+
+        <!-- 1. SBP -->
+        <div>
+          <h3 class="text-base font-semibold text-navy-700 mb-3 flex items-center gap-2"><i data-lucide="shield" class="w-4 h-4 text-gold-500"></i> SBP Premium &amp; Break-Even</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+            <div><label class="block text-xs font-medium text-navy-600 mb-1">SBP base amount ($/mo)</label><input type="number" id="dtSbpBase" class="input-field" min="0" step="50" /></div>
+            <div><label class="block text-xs font-medium text-navy-600 mb-1">Your age at retirement</label><input type="number" id="dtSbpRetAge" class="input-field" min="37" max="70" value="45" /></div>
+            <div><label class="block text-xs font-medium text-navy-600 mb-1">Spouse age (optional)</label><input type="number" id="dtSbpSpouseAge" class="input-field" min="18" max="100" /></div>
+          </div>
+          <div id="dtSbpResult" class="bg-navy-50 rounded-xl p-4 text-sm"></div>
+          <p class="text-xs text-navy-400 mt-2 italic">Premium = 6.5% of the elected base amount; survivor annuity = 55% of base. Coverage is paid-up only after 360 payments AND age 70. The SBP-DIC offset was repealed in 2023. <a href="https://www.dfas.mil/RetiredMilitary/provide/sbp/" target="_blank" rel="noopener" class="text-gold-500 hover:underline">DFAS SBP →</a></p>
+        </div>
+
+        <div class="border-t" style="border-color:rgba(26,39,68,0.08);"></div>
+
+        <!-- 2. CRDP vs CRSC -->
+        <div>
+          <h3 class="text-base font-semibold text-navy-700 mb-3 flex items-center gap-2"><i data-lucide="git-compare" class="w-4 h-4 text-gold-500"></i> CRDP vs. CRSC Net Pay</h3>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+            <div><label class="block text-xs font-medium text-navy-600 mb-1">Gross retired pay ($/mo)</label><input type="number" id="dtCrGross" class="input-field" min="0" step="50" /></div>
+            <div><label class="block text-xs font-medium text-navy-600 mb-1">VA rating</label><select id="dtCrRating" class="input-field"></select></div>
+            <div><label class="block text-xs font-medium text-navy-600 mb-1">Combat-related %</label><input type="number" id="dtCrCombat" class="input-field" min="0" max="100" value="0" /></div>
+            <div><label class="block text-xs font-medium text-navy-600 mb-1">Marginal tax rate</label><select id="dtCrBracket" class="input-field"><option value="0.10">10%</option><option value="0.12">12%</option><option value="0.22" selected>22%</option><option value="0.24">24%</option><option value="0.32">32%</option></select></div>
+          </div>
+          <div id="dtCrResult" class="bg-navy-50 rounded-xl p-4 text-sm"></div>
+          <p class="text-xs text-navy-400 mt-2 italic">VA comp offsets retired pay dollar-for-dollar. CRDP (auto at 20yr + 50%+) is taxable; CRSC (combat-related, requires DD 2860) is tax-free. Estimates only. <a href="https://www.dfas.mil/RetiredMilitary/disability/" target="_blank" rel="noopener" class="text-gold-500 hover:underline">DFAS →</a></p>
+        </div>
+
+        <div class="border-t" style="border-color:rgba(26,39,68,0.08);"></div>
+
+        <!-- 3. Retiree healthcare cost -->
+        <div>
+          <h3 class="text-base font-semibold text-navy-700 mb-3 flex items-center gap-2"><i data-lucide="heart-pulse" class="w-4 h-4 text-gold-500"></i> Retiree Healthcare Cost (TRICARE Select + FEDVIP)</h3>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+            <div><label class="block text-xs font-medium text-navy-600 mb-1">TRICARE group</label><select id="dtHcGroup" class="input-field"><option value="A">Group A (enlisted/commissioned before Jan 1 2018)</option><option value="B">Group B (on/after Jan 1 2018)</option></select></div>
+            <div><label class="block text-xs font-medium text-navy-600 mb-1">Coverage</label><select id="dtHcCoverage" class="input-field"><option value="family">Family</option><option value="individual">Individual</option></select></div>
+            <div><label class="block text-xs font-medium text-navy-600 mb-1">Est. annual Rx ($)</label><input type="number" id="dtHcRx" class="input-field" min="0" step="50" value="0" /></div>
+            <div><label class="block text-xs font-medium text-navy-600 mb-1">FEDVIP premium ($/mo)</label><input type="number" id="dtHcFedvip" class="input-field" min="0" step="5" value="0" /></div>
+          </div>
+          <div id="dtHcResult" class="bg-navy-50 rounded-xl p-4 text-sm"></div>
+          <p class="text-xs text-navy-400 mt-2 italic">CY2026 TRICARE Select enrollment fees. Medically retired members &amp; survivors (Group A) pay $0. Active-duty healthcare costs $0 — budget for the jump. <a href="https://tricare.mil/Costs/PayFees/SelectFees" target="_blank" rel="noopener" class="text-gold-500 hover:underline">TRICARE fees →</a></p>
+        </div>
+
+        <div class="border-t" style="border-color:rgba(26,39,68,0.08);"></div>
+
+        <!-- 4. Prime vs Select -->
+        <div>
+          <h3 class="text-base font-semibold text-navy-700 mb-3 flex items-center gap-2"><i data-lucide="git-fork" class="w-4 h-4 text-gold-500"></i> TRICARE Prime vs. Select</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3 items-end">
+            <div><label class="block text-xs font-medium text-navy-600 mb-1">Expected doctor visits</label><select id="dtPsVisits" class="input-field"><option value="low">Low</option><option value="moderate" selected>Moderate</option><option value="high">High</option></select></div>
+            <label class="flex items-center gap-2 text-sm text-navy-600"><input type="checkbox" id="dtPsLowCost" checked /> I prioritize lowest cost</label>
+            <label class="flex items-center gap-2 text-sm text-navy-600"><input type="checkbox" id="dtPsFlex" /> I want provider flexibility / no referrals</label>
+          </div>
+          <div id="dtPsResult" class="bg-navy-50 rounded-xl p-4 text-sm"></div>
+          <p class="text-xs text-navy-400 mt-2 italic">Decide within 90 days of retirement (retroactive up to 12 months). General guidance, not a coverage determination. <a href="https://www.tricare.mil/Plans/HealthPlans" target="_blank" rel="noopener" class="text-gold-500 hover:underline">Compare plans →</a></p>
+        </div>
+
+        <div class="border-t" style="border-color:rgba(26,39,68,0.08);"></div>
+
+        <!-- 5. Best state of residence -->
+        <div>
+          <h3 class="text-base font-semibold text-navy-700 mb-3 flex items-center gap-2"><i data-lucide="map" class="w-4 h-4 text-gold-500"></i> Best State of Residence (Domicile)</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+            <div><label class="block text-xs font-medium text-navy-600 mb-1">Annual retired pay ($)</label><input type="number" id="dtStPay" class="input-field" min="0" step="500" /></div>
+            <div><label class="block text-xs font-medium text-navy-600 mb-1">Candidate states (2-letter codes)</label><input type="text" id="dtStStates" class="input-field" placeholder="e.g., TX, CA, VA, FL" /></div>
+          </div>
+          <div id="dtStResult" class="bg-navy-50 rounded-xl p-4 text-sm"></div>
+          <p class="text-xs text-navy-400 mt-2 italic">Estimates tax on military RETIRED pay only (VA comp is always tax-free). "Taxed" uses the top marginal rate as an upper bound; partial exemptions vary. Confirm with a tax pro. </p>
+        </div>
+
+        <div class="border-t" style="border-color:rgba(26,39,68,0.08);"></div>
+
+        <!-- 6. PPM / DITY -->
+        <div>
+          <h3 class="text-base font-semibold text-navy-700 mb-3 flex items-center gap-2"><i data-lucide="truck" class="w-4 h-4 text-gold-500"></i> PPM / DITY Move Estimator</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+            <div><label class="block text-xs font-medium text-navy-600 mb-1">Government Constructed Cost / GCC ($)</label><input type="number" id="dtPpmGcc" class="input-field" min="0" step="100" placeholder="Ask your TMO for the GCC estimate" /></div>
+            <div><label class="block text-xs font-medium text-navy-600 mb-1">Your expected expenses ($)</label><input type="number" id="dtPpmExpenses" class="input-field" min="0" step="100" value="0" /></div>
+          </div>
+          <div id="dtPpmResult" class="bg-navy-50 rounded-xl p-4 text-sm"></div>
+          <p class="text-xs text-navy-400 mt-2 italic">Incentive is 100% of GCC (2025+); profit (incentive minus documented expenses) is taxable and withheld at ~22%. <a href="https://www.move.mil/moving-guide/ppm" target="_blank" rel="noopener" class="text-gold-500 hover:underline">Move.mil PPM →</a></p>
+        </div>
+
+        <div class="border-t" style="border-color:rgba(26,39,68,0.08);"></div>
+
+        <!-- 7. TSP keep vs roll -->
+        <div>
+          <h3 class="text-base font-semibold text-navy-700 mb-3 flex items-center gap-2"><i data-lucide="landmark" class="w-4 h-4 text-gold-500"></i> TSP: Keep-In vs. Roll-Out</h3>
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
+            <div><label class="block text-xs font-medium text-navy-600 mb-1">Age at separation</label><input type="number" id="dtTspAge" class="input-field" min="37" max="70" value="45" /></div>
+            <div><label class="block text-xs font-medium text-navy-600 mb-1">Traditional ($)</label><input type="number" id="dtTspTrad" class="input-field" min="0" step="1000" /></div>
+            <div><label class="block text-xs font-medium text-navy-600 mb-1">Roth ($)</label><input type="number" id="dtTspRoth" class="input-field" min="0" step="1000" value="0" /></div>
+            <div><label class="block text-xs font-medium text-navy-600 mb-1">Advisory fee (%)</label><input type="number" id="dtTspAdvFee" class="input-field" min="0" max="5" step="0.05" value="1.0" /></div>
+            <div><label class="block text-xs font-medium text-navy-600 mb-1">Years invested</label><input type="number" id="dtTspYears" class="input-field" min="1" max="50" value="20" /></div>
+          </div>
+          <div id="dtTspResult" class="bg-navy-50 rounded-xl p-4 text-sm"></div>
+          <p class="text-xs text-navy-400 mt-2 italic">Fee drag assumes ~6% growth and the TSP's ~0.05% expense ratio. Not investment advice — vet any advisor on <a href="https://brokercheck.finra.org" target="_blank" rel="noopener" class="text-gold-500 hover:underline">FINRA BrokerCheck</a>.</p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- E. PHASE CHECKLIST -->
 <div class="fade-in-up stagger-5">
   <h2 class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-lucide="list-checks" class="w-5 h-5 text-gold-500"></i> Personalized Phase Checklist</h2>
   <div id="phaseList" class="space-y-3"></div>
+</div>
+
+<!-- E2. THINGS TO THINK ABOUT -->
+<div class="fade-in-up stagger-6">
+  <div class="section-card" style="padding:0; overflow:hidden;">
+    <div id="thinkAboutHeader" class="flex items-center gap-3 px-6 py-5 cursor-pointer select-none hover:bg-navy-50 transition-colors rounded-t-2xl">
+      <div class="flex-1">
+        <h2 class="text-lg font-semibold text-navy-700 flex items-center gap-2"><i data-lucide="brain" class="w-5 h-5 text-gold-500"></i> Things to Think About</h2>
+        <p class="text-xs text-navy-400 mt-0.5">Big, often-overlooked decisions and the personal side of retiring — not a checklist, but worth a hard think</p>
+      </div>
+      <i data-lucide="chevron-down" class="w-5 h-5 text-navy-400 flex-shrink-0 transition-transform" id="thinkChevron"></i>
+    </div>
+    <div id="thinkAboutContent" class="pay-section-inner">
+      <div class="px-6 pb-6"><div id="thinkAboutGrid" class="space-y-3"></div></div>
+    </div>
+  </div>
 </div>
 
 <!-- F. RESOURCES -->
@@ -830,8 +983,10 @@ import {
   SKILLBRIDGE_LIMITS, BASE_PAY_2026, getBasePay2026, VA_RATES_2025, STATE_TAX_DATA,
   parseStateFromLocation, ANNUITY_FACTORS, interpolateAnnuityFactor, getLifeExpDistributionPeriod,
   subDays, addDays, daysBetween, firstOfNextMonth, clamp, getRankGrade, getSkillbridgeAuthorizedMax,
-  computeRetirementPay, milestoneStatus, buildICS, isValidState,
-  DATA_VINTAGE, FLAG_OFFICER_GRADES
+  computeRetirementPay, milestoneStatus, buildICS, encodeState, decodeState, isValidState,
+  DATA_VINTAGE, FLAG_OFFICER_GRADES,
+  computeSBP, compareConcurrentReceipt, TRICARE_FEES_2026, estimateRetireeHealthcareCost,
+  compareTricarePrimeSelect, compareStates, estimatePPM, tspKeepVsRoll
 } from '/js/calc.js';
 import * as store from '/js/store.js';
 // ===== DATA =====
@@ -1050,7 +1205,7 @@ let rankCat = '';
 let transType = '';
 let lastMilestones = [];
 let tspContribMode = 'fixed';
-let toggles = { ptdy: true, sb: true, giBill: false, vaClaim: false };
+let toggles = { ptdy: true, sb: true, giBill: false, vaClaim: false, married: false, homeowner: false, clearance: false, federalJob: false, oconus: false };
 
 // ===== TOGGLE LOGIC =====
 function initToggle(id, key, label) {
@@ -1181,6 +1336,11 @@ function buildState() {
   s.careerInterest = $('careerInterest').value;
   s.giBill = toggles.giBill;
   s.vaClaim = toggles.vaClaim;
+  s.married = toggles.married;
+  s.homeowner = toggles.homeowner;
+  s.clearance = toggles.clearance;
+  s.federalJob = toggles.federalJob;
+  s.oconus = toggles.oconus;
   s.payRetSystem = payRetSystem;
   s.selectedVARating = selectedVARating;
   s.hasDependents = hasDependents;
@@ -1204,6 +1364,35 @@ function saveState(s) { store.savePlan(s); }
 // Checklist state travels inside the plan (state.checks), persisted via saveState.
 function loadChecks() { return (state && state.checks) || {}; }
 function saveChecks(checks) { if (state) { state.checks = checks; saveState(state); } }
+
+// One-time migration: checklist state used to be keyed by array index ("p1-0").
+// It is now keyed by a stable task id. Map the old index keys (in the original
+// per-phase order, accounting for the SkillBridge variant) to the new ids so a
+// returning user keeps their progress. Unknown/already-migrated keys pass through.
+function oldTaskIds(s) {
+  return {
+    p1: ['finance-plan','tsp-review','service-records','linkedin','va-doc','housing-research','estate-docs','sgli-review','budget','mypay-access'],
+    p2: ['tap-register','tap-core','itp','tap-track','capstone','va-claim','tricare-research','career-fields','hiring-events','training-records'],
+    p3: s.sb
+      ? ['sb-research','sb-top3','sb-cmd-pkg','sb-memo','resume','linkedin-optimize','cp-exam','edu-research','cert-research','sb-network']
+      : ['resume','linkedin-optimize','job-apps','info-interviews','job-fairs','cert-research','edu-research','cp-exam','build-network','mock-interview'],
+    p4: ['sb-or-apps','ref-letters','pre-ret-brief','dfas-setup','tricare-enroll','retiree-id','shpe','sbp-election','va-home-loan','resume-update'],
+    p5: ['outprocess-start','return-equipment','clear-agencies','ptdy-hunt','dd214-pickup','dd214-review','dd214-register','final-pay','transfer-medical','confirm-orders'],
+    p6: ['job-final','tricare-activate','first-pay-confirm','civilian-beneficiaries','state-benefits','va-tracking','civilian-healthcare','final-pcs','dl-vehicle','celebrate'],
+  };
+}
+function migrateChecks(checks, s) {
+  if (!checks || typeof checks !== 'object') return {};
+  if (!Object.keys(checks).some(k => /^p\d+-\d+$/.test(k))) return checks; // already stable ids
+  const map = oldTaskIds(s);
+  const out = {};
+  for (const [k, v] of Object.entries(checks)) {
+    const m = k.match(/^(p\d+)-(\d+)$/);
+    if (m && map[m[1]] && map[m[1]][+m[2]]) out[map[m[1]][+m[2]]] = v;
+    else out[k] = v;
+  }
+  return out;
+}
 
 // Reflect the current plan's link/read-only state in the header + banners.
 function renderPlanLink() {
@@ -1340,15 +1529,33 @@ function renderResults() {
   milestones.push({ label: `${s.transType} Date`, date: sep, icon: 'flag' });
   if (firstRetPay) milestones.push({ label: 'First Retirement Pay', date: firstRetPay, icon: 'dollar-sign' });
 
-  // Government Paid Move (JTR): 3 calendar years from retirement, or 180 days from separation.
-  const govMoveDeadline = isRet
-    ? new Date(sep.getFullYear() + 3, sep.getMonth(), sep.getDate())
-    : addDays(sep, 180);
-  milestones.push({
-    label: isRet ? 'Gov\'t Paid Move Deadline (3 yrs)' : 'Gov\'t Paid Move Deadline (6 mo)',
-    date: govMoveDeadline,
-    icon: 'truck'
-  });
+  // ----- Decision / benefit deadlines (retirement-depth expansion) -----
+  if (s.vaClaim) milestones.push({ label: 'BDD Filing Window Closes', date: subDays(sep, 90), icon: 'file-clock' });
+  if (s.giBill) milestones.push({ label: 'GI Bill Transfer (TEB) Approved By', date: sep, icon: 'graduation-cap' });
+  milestones.push({ label: 'FEDVIP Dental/Vision Enrollment Closes', date: addDays(sep, 60), icon: 'smile' });
+  if (s.married || s.hasDependents) milestones.push({ label: 'FSGLI Spouse Conversion Deadline', date: addDays(sep, 120), icon: 'heart-handshake' });
+  milestones.push({ label: 'VGLI: No Health Questions Deadline', date: addDays(sep, 240), icon: 'shield-plus' });
+  milestones.push({ label: 'VGLI Final Application Deadline', date: addDays(sep, 485), icon: 'shield-alert' });
+  milestones.push({ label: 'Military OneSource Eligibility Ends', date: addDays(sep, 365), icon: 'life-buoy' });
+  if (s.married || s.hasDependents) milestones.push({ label: 'MIC3 School-Compact Protection Ends', date: addDays(sep, 365), icon: 'school' });
+  if (s.clearance) milestones.push({ label: 'Clearance Reinstatement Window Closes', date: addDays(sep, 730), icon: 'lock' });
+  if (isRet && firstRetPay) {
+    const sbpOpen = new Date(firstRetPay.getFullYear(), firstRetPay.getMonth() + 25, 1);
+    const sbpClose = new Date(firstRetPay.getFullYear(), firstRetPay.getMonth() + 36, 1);
+    milestones.push({ label: 'SBP Withdrawal Window Opens', date: sbpOpen, icon: 'calendar-clock' });
+    milestones.push({ label: 'SBP Withdrawal Window Closes', date: sbpClose, icon: 'calendar-x' });
+  }
+  if (isRet && s.vaClaim) {
+    let osYear = today.getFullYear();
+    if (today > new Date(osYear, 11, 1)) osYear += 1;
+    milestones.push({ label: 'CRDP/CRSC Open Season (Dec–Jan)', date: new Date(osYear, 11, 1), icon: 'repeat' });
+  }
+
+  // Final move entitlements: HHG shipment/storage runs ~1 year (180 days for
+  // short separations); retirees also get Home-of-Selection travel up to 3 years.
+  const hhgDeadline = isRet ? addDays(sep, 365) : addDays(sep, 182);
+  milestones.push({ label: isRet ? 'HHG Shipment/Storage Deadline (~1 yr)' : 'HHG Shipment Deadline (180 days)', date: hhgDeadline, icon: 'truck' });
+  if (isRet) milestones.push({ label: 'Home-of-Selection Travel Deadline (3 yrs)', date: addDays(sep, 3 * 365), icon: 'map' });
 
   milestones.sort((a, b) => a.date - b.date);
 
@@ -1424,7 +1631,9 @@ function renderResults() {
   ).join('');
 
   renderPayEstimator(isRet);
+  renderDecisionTools(isRet);
   renderPhases(today, sep, termStart, ptdyStart, ptdyEnd, sbStart, sbEnd, tapDeadline, isRet);
+  renderThinkAbout();
   renderResources();
 
   if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') lucide.createIcons();
@@ -1943,30 +2152,168 @@ function renderPhases(today, sep, termStart, ptdyStart, ptdyEnd, sbStart, sbEnd,
   const m18 = subDays(sep, 547);
   const tapMinus6 = subDays(tapDeadline, 180);
   const sbPrepStart = s.sb ? subDays(sbStart, 180) : subDays(sep, 365);
+  const firstRetPay = isRet ? firstOfNextMonth(sep) : null;
+  const hasFamily = s.married || s.hasDependents;
+  // Tasks carry a STABLE id (not an array index) so saved progress survives
+  // insertion, reordering, and conditional show/hide. T() builds one; falsy
+  // entries are filtered out so conditional tasks read inline.
+  const T = (id, text) => ({ id, text });
 
   const phases = [
     { id:'p1', name:'Phase 1: Foundation', range:`${fmtDateShort(today > m18 ? today : m18)} — ${fmtDateShort(subDays(tapMinus6, 1))}`,
-      tasks:['Create/update financial plan and emergency fund','Review TSP allocations and contributions','Collect and organize all service records','Create or update LinkedIn profile','Begin VA disability documentation — gather medical records','Research housing options in target location' + (s.postLocation ? ` (${s.postLocation})` : ''),'Update will, power of attorney, and advance directive','Review SGLI beneficiary designations','Build a detailed post-transition budget','Verify myPay account access and settings'] },
+      tasks:[
+        T('finance-plan','Create/update financial plan and emergency fund'),
+        T('tsp-review','Review TSP allocations and contributions'),
+        T('service-records','Collect and organize all service records'),
+        T('ompf-download','Download your full OMPF/personnel file to encrypted storage while you still have CAC and network access'),
+        T('records-vault','Start a secure, encrypted "records vault" (DD-214, OMPF, service treatment records, evaluations, award & retirement orders)'),
+        T('linkedin','Create or update LinkedIn profile'),
+        T('va-gov-account','Set up and identity-verify your VA.gov account (Login.gov or ID.me) — the gateway to VA benefits'),
+        T('va-doc','Begin VA disability documentation — gather medical records'),
+        T('va-intent-to-file','File a VA Intent to File (VA Form 21-0966) to lock your earliest effective date; complete the full claim within 1 year'),
+        s.giBill ? T('teb','Submit and get APPROVAL of your Post-9/11 GI Bill transfer (TEB) in milConnect — it cannot be done after you retire') : null,
+        T('housing-research','Research housing options in target location' + (s.postLocation ? ` (${s.postLocation})` : '')),
+        T('domicile','Confirm or change your state of legal residence (DD Form 2058) — SCRA/MSRRA tax protection ends at retirement'),
+        T('estate-docs','Update will, power of attorney, and advance directive'),
+        T('sgli-review','Review SGLI beneficiary designations'),
+        T('budget','Build a detailed post-transition budget'),
+        T('mypay-access','Verify myPay account access and settings'),
+        s.payRetSystem === 'brs' ? T('tsp-vesting','Verify your TSP Service Computation Date and that agency Automatic 1% contributions are vested') : null,
+        hasFamily ? T('deers-students','Update DEERS full-time-student status for children ages 21–23 (DD Form 1172-2 + registrar letter)') : null,
+      ].filter(Boolean) },
     { id:'p2', name:'Phase 2: TAP & Benefits', range:`${fmtDateShort(tapMinus6)} — ${fmtDateShort(tapDeadline)}`,
-      tasks:['Register for Transition Assistance Program (TAP)','Complete 5-day TAP core curriculum','Complete Individual Transition Plan (ITP)','Choose TAP track: Employment / Education / Entrepreneurship','Complete Capstone requirements',s.vaClaim ? 'File VA disability claim (BDD program if 90-180 days out)' : 'Research VA disability claim process','Research TRICARE options for post-transition healthcare','Identify target career fields and required certifications','Attend veteran hiring events and career fairs','Request copies of training records and evaluations'] },
+      tasks:[
+        T('tap-register','Register for Transition Assistance Program (TAP)'),
+        T('tap-core','Complete 5-day TAP core curriculum'),
+        T('itp','Complete Individual Transition Plan (ITP)'),
+        T('tap-track','Choose TAP track: Employment / Education / Entrepreneurship'),
+        T('capstone','Complete Capstone requirements'),
+        T('va-claim', s.vaClaim ? 'File VA disability claim (BDD program if 90-180 days out)' : 'Research VA disability claim process'),
+        s.vaClaim ? T('vso','Appoint a free VA-accredited VSO (VA Form 21-22); verify at va.gov/ogc — avoid paid claim consultants') : null,
+        T('tricare-research','Research TRICARE options for post-transition healthcare'),
+        T('career-fields','Identify target career fields and required certifications'),
+        T('cred-assist','Use your branch Credentialing Assistance / COOL to earn civilian certifications while it is still free'),
+        T('hiring-events','Attend veteran hiring events and career fairs'),
+        T('record-review','Conduct a personnel record review — confirm every award, badge, and evaluation is recorded before it reaches your DD-214'),
+        T('training-records','Request copies of training records and evaluations'),
+        s.married ? T('spouse-seco','Connect your spouse to SECO/SpouseWorks and apply for MyCAA before retirement ends eligibility') : null,
+        s.married ? T('spouse-tap','Have your spouse attend TAP classes and the online VA Benefits course') : null,
+      ].filter(Boolean) },
     s.sb ? { id:'p3', name:'Phase 3: SkillBridge Prep', range:`${fmtDateShort(sbPrepStart)} — ${fmtDateShort(subDays(sbStart, 1))}`,
-      tasks:['Research SkillBridge employers at skillbridge.osd.mil','Identify top 3 SkillBridge program choices','Submit commander approval package (60+ days before start)','Get SkillBridge approval memo signed','Finalize and tailor civilian resume','Optimize LinkedIn — headline, summary, keywords','Schedule C&P exams for VA disability (if applicable)',s.giBill ? 'Research GI Bill benefits and eligible programs' : 'Research education benefits options','Research professional certifications in target field','Network with SkillBridge alumni in your career field'] }
+      tasks:[
+        T('sb-research','Research SkillBridge employers at skillbridge.osd.mil'),
+        T('sb-top3','Identify top 3 SkillBridge program choices'),
+        T('sb-cmd-pkg','Submit commander approval package (60+ days before start)'),
+        T('sb-memo','Get SkillBridge approval memo signed'),
+        T('resume','Finalize and tailor civilian resume'),
+        T('linkedin-optimize','Optimize LinkedIn — headline, summary, keywords'),
+        T('cp-exam','Schedule C&P exams for VA disability (if applicable)'),
+        T('edu-research', s.giBill ? 'Research GI Bill benefits and eligible programs' : 'Research education benefits options'),
+        T('cert-research','Research professional certifications in target field'),
+        T('sb-network','Network with SkillBridge alumni in your career field'),
+        s.vaClaim ? T('vre','Research and apply for VR&E (Chapter 31, VA Form 28-1900) — separate from the GI Bill') : null,
+        s.federalJob ? T('vow-cert','Request a VOW Act certification of expected discharge to claim Veterans' Preference before your DD-214') : null,
+        s.federalJob ? T('fed-packet','Assemble your federal-hiring packet — SF-15, VA rating letter, DD-214; identify your path (VEOA, VRA, 30%, Schedule A)') : null,
+        s.vaClaim ? T('fdc-evidence','Prepare an FDC-style evidence package — completed DBQs and, where causation is contested, a nexus letter') : null,
+      ].filter(Boolean) }
     : { id:'p3', name:'Phase 3: Job Search & Networking', range:`${fmtDateShort(sbPrepStart)} — ${fmtDateShort(subDays(s.ptdy ? ptdyStart : termStart, 1))}`,
-      tasks:['Finalize and tailor civilian resume for target roles','Optimize LinkedIn profile for civilian job search','Begin submitting job applications','Conduct informational interviews in target industry','Attend veteran-specific job fairs and networking events','Research professional certifications in target field',s.giBill ? 'Research GI Bill benefits and school options' : 'Research continuing education options','Schedule C&P exams for VA disability (if applicable)','Build professional network in target location','Practice interviewing — use ACP or Hire Heroes USA mock interviews'] },
+      tasks:[
+        T('resume','Finalize and tailor civilian resume for target roles'),
+        T('linkedin-optimize','Optimize LinkedIn profile for civilian job search'),
+        T('job-apps','Begin submitting job applications'),
+        T('info-interviews','Conduct informational interviews in target industry'),
+        T('job-fairs','Attend veteran-specific job fairs and networking events'),
+        T('cert-research','Research professional certifications in target field'),
+        T('edu-research', s.giBill ? 'Research GI Bill benefits and school options' : 'Research continuing education options'),
+        T('cp-exam','Schedule C&P exams for VA disability (if applicable)'),
+        T('build-network','Build professional network in target location'),
+        T('mock-interview','Practice interviewing — use ACP or Hire Heroes USA mock interviews'),
+        s.vaClaim ? T('vre','Research and apply for VR&E (Chapter 31, VA Form 28-1900) — separate from the GI Bill') : null,
+        s.federalJob ? T('vow-cert','Request a VOW Act certification of expected discharge to claim Veterans’ Preference before your DD-214') : null,
+        s.federalJob ? T('fed-packet','Assemble your federal-hiring packet — SF-15, VA rating letter, DD-214; identify your path (VEOA, VRA, 30%, Schedule A)') : null,
+        s.vaClaim ? T('fdc-evidence','Prepare an FDC-style evidence package — completed DBQs and, where causation is contested, a nexus letter') : null,
+      ].filter(Boolean) },
     { id:'p4', name: s.sb ? 'Phase 4: SkillBridge & Active Prep' : 'Phase 4: Final Active Duty Prep',
       range: s.sb ? `${fmtDateShort(sbStart)} — ${fmtDateShort(sbEnd)}` : `${fmtDateShort(subDays(s.ptdy ? ptdyStart : termStart, 180))} — ${fmtDateShort(subDays(s.ptdy ? ptdyStart : termStart, 1))}`,
-      tasks:[s.sb ? 'Begin SkillBridge program — treat it like your first civilian job' : 'Continue civilian job applications and interviews','Request reference/recommendation letters from leadership','Complete pre-retirement briefing (if retiring)','Confirm DFAS retirement pay setup (if retiring)','Enroll in TRICARE retiree plan (90-day window)','Register for retired/veteran ID card','Complete all medical and dental appointments','Evaluate SBP election (if retiring)','Research VA home loan eligibility and pre-approval','Update resume with SkillBridge experience (if applicable)'] },
+      tasks:[
+        T('sb-or-apps', s.sb ? 'Begin SkillBridge program — treat it like your first civilian job' : 'Continue civilian job applications and interviews'),
+        T('ref-letters','Request reference/recommendation letters from leadership'),
+        T('pre-ret-brief','Complete pre-retirement briefing (if retiring)'),
+        T('dfas-setup','Confirm DFAS retirement pay setup (if retiring)'),
+        T('tricare-enroll','Enroll in TRICARE retiree plan (90-day window)'),
+        T('fedvip','Enroll in FEDVIP dental and vision via BENEFEDS before your retirement date (TRDP no longer exists; window closes 60 days after retirement)'),
+        T('retiree-id','Register for retired/veteran ID card'),
+        T('shpe','Complete your Separation History & Physical Exam (DD 2807-1 + DD 2808) and document every condition you intend to claim'),
+        T('eye-exam','Complete any needed eye exam and order glasses/contacts before retirement (routine vision is covered by FEDVIP, not TRICARE)'),
+        T('va-healthcare','Apply for VA health care enrollment (VA Form 10-10EZ) — separate from your disability claim'),
+        T('sbp-election','Complete your SBP election on DD Form 2656; if declining or reducing, obtain your spouse’s notarized concurrence'),
+        T('va-home-loan','Research VA home loan eligibility and pre-approval'),
+        T('tsp-final-max','Maximize your final TSP payroll contributions and capture remaining agency match before final pay'),
+        s.federalJob ? T('ethics','Obtain an ethics opinion (18 U.S.C. 207) before accepting a contractor offer or launching a venture') : null,
+        T('resume-update','Update resume with SkillBridge experience (if applicable)'),
+      ].filter(Boolean) },
     { id:'p5', name:'Phase 5: Out-Processing' + (s.ptdy ? ' & PTDY' : ''),
       range: s.ptdy ? `${fmtDateShort(ptdyStart)} — ${fmtDateShort(ptdyEnd)}` : `${fmtDateShort(subDays(termStart, 14))} — ${fmtDateShort(termStart)}`,
-      tasks:['Begin formal out-processing checklist','Return all government equipment and property','Clear all base agencies (finance, housing, medical, etc.)','Complete house/job hunting during PTDY (if applicable)','Pick up DD-214 on final out-processing day','Review DD-214 carefully for accuracy and errors','Register DD-214 with local county clerk','Confirm final leave and pay settlement','Transfer medical records to VA','Confirm retirement/separation orders are correct'] },
+      tasks:[
+        T('outprocess-start','Begin formal out-processing checklist'),
+        T('hhg-schedule','Schedule your final HHG shipment and non-temporary storage before the orders-based deadline'),
+        T('return-equipment','Return all government equipment and property'),
+        T('clear-agencies','Clear all base agencies (finance, housing, medical, etc.)'),
+        T('ptdy-hunt','Complete house/job hunting during PTDY (if applicable)'),
+        T('str-download','Download your own certified copy of your full Service Treatment Records (medical + dental) before portal access ends'),
+        T('dd93','Verify and update DD Form 93 (death gratuity + emergency notification) before clearing personnel'),
+        s.clearance ? T('diss-record','Document your DISS clearance record and investigation type/date before clearing the security office') : null,
+        T('dd214-pickup','Pick up DD-214 on final out-processing day'),
+        T('dd214-review','Review DD-214 carefully for accuracy and errors'),
+        T('dd214-register','Register DD-214 with local county clerk'),
+        T('retiree-id-appt','Book your retiree ID (USID) appointment for the day AFTER your retirement date; confirm DEERS shows "Retired" before enrolling in TRICARE'),
+        T('final-pay','Confirm final leave and pay settlement'),
+        T('final-les','Save your final LES and retirement points / service-computation records before active myPay access ends'),
+        T('transfer-medical','Transfer medical records to VA'),
+        T('confirm-orders','Confirm retirement/separation orders are correct'),
+        s.oconus ? T('pov-return','Book government return shipment of one POV and sign DD Form 788 within the 1-year window') : null,
+      ].filter(Boolean) },
     { id:'p6', name:'Phase 6: Terminal Leave & Freedom',
       range:`${fmtDateShort(termStart)} — ${fmtDateShort(sep)}`,
-      tasks:['Continue job search or accept final offer before separation','Activate TRICARE post-service coverage','Confirm first retirement pay date and amount (if retiring)','Update all beneficiary designations for civilian accounts','Apply for state veteran benefits in ' + (s.postLocation || 'your new state'),'Open VA.gov claim tracking — monitor status','Set up civilian healthcare if not using TRICARE','Complete final PCS move (if applicable)','Update driver\'s license and vehicle registration','Celebrate your service and transition! 🎉'] }
-  ];
+      tasks:[
+        T('job-final','Continue job search or accept final offer before separation'),
+        T('tricare-activate','Activate TRICARE post-service coverage'),
+        T('first-pay-confirm','Confirm first retirement pay date and amount (if retiring)'),
+        T('civilian-beneficiaries','Update all beneficiary designations for civilian accounts'),
+        T('state-benefits','Apply for state veteran benefits in ' + (s.postLocation || 'your new state')),
+        T('va-tracking','Open VA.gov claim tracking — monitor status'),
+        T('civilian-healthcare','Set up civilian healthcare if not using TRICARE'),
+        T('final-pcs','Complete final PCS move (if applicable)'),
+        T('dl-vehicle','Update driver\'s license and vehicle registration'),
+        T('dl-veteran-designation','Request the veteran designation on your driver\'s license / REAL ID (bring DD-214 Member-4)'),
+        T('routine','Build a written daily routine and join a VSO or veteran community group within your first 30 days'),
+        T('celebrate','Celebrate your service and transition! 🎉'),
+      ].filter(Boolean) },
+    isRet ? { id:'p7', name:'Phase 7: First-Year Post-Retirement',
+      range:`${fmtDateShort(firstRetPay)} — ${fmtDateShort(addDays(sep, 365))}`,
+      tasks:[
+        T('w4p','Submit Form W-4P in myPay for federal withholding and elect state withholding (DFAS defaults to single/no adjustments and withholds NO state tax)'),
+        T('retired-pay-verify','Verify your retired pay setup in myPay within 30 days — direct deposit, address, and SBP/allotments'),
+        T('beneficiary-audit','Run a beneficiary audit — DD 2894 (Arrears of Pay), TSP-3, SGLV/VGLI, IRA/401k, bank POD, brokerage TOD — confirm all match your will'),
+        T('vgli','Apply for VGLI to replace SGLI (no health questions if within 240 days of separation)'),
+        T('tsp3','Update your TSP beneficiary (Form TSP-3) — it overrides your will and divorce decree'),
+        T('address-everywhere','Update your address in every system separately — DFAS retired pay (myPay) is NOT linked to DEERS, TRICARE, VA, IRS, banks, or TSP'),
+        (s.vaClaim && hasFamily) ? T('dependency-claim','File VA Form 21-686c to add dependents within 1 year of a 30%+ rating to capture retroactive pay') : null,
+        s.vaClaim ? T('crsc','If rated 50%+ with combat-related disabilities, apply for CRSC via DD Form 2860 (separate from automatic CRDP)') : null,
+        T('solid-start','Update your contact info in VA.gov and expect VA Solid Start calls at about 90, 180, and 365 days'),
+        T('mil-onesource','Use Military OneSource non-medical counseling for yourself, spouse, and kids before the 365-day eligibility cutoff'),
+        T('crisis-line','Save the Veterans/Military Crisis Line (988 then 1) and locate your nearest Vet Center (1-877-927-8387)'),
+        T('travel-voucher','File your final-move travel voucher (DD 1351-2 / SmartVoucher); file a separate voucher for separately-traveling dependents'),
+        T('pet-reimburse','Claim PCS pet relocation reimbursement (one pet: $550 CONUS / $2,000 OCONUS) if you moved a pet on orders'),
+        (s.vaClaim && s.homeowner) ? T('property-tax','Apply for your state’s disabled-veteran property tax exemption as soon as your VA rating posts (watch county filing deadlines)') : null,
+        T('ras-reconcile','Each January/February, reconcile your Retiree Account Statement (RAS) against your IRS 1099-R'),
+        T('bcmr','File DD Form 149 with your service’s Board for Correction of Military Records for any record error a DD-215 can’t fix (3-year clock)'),
+      ].filter(Boolean) } : null,
+  ].filter(Boolean);
 
   let html = '';
   phases.forEach((phase, pi) => {
-    const taskChecks = phase.tasks.map((_, ti) => checks[`${phase.id}-${ti}`] || false);
+    const taskChecks = phase.tasks.map(t => checks[t.id] || false);
     const done = taskChecks.filter(Boolean).length;
     const total = phase.tasks.length;
     const pctDone = Math.round((done / total) * 100);
@@ -1989,8 +2336,8 @@ function renderPhases(today, sep, termStart, ptdyStart, ptdyEnd, sbStart, sbEnd,
           <div class="px-4 pb-4 pt-1 space-y-1">
             ${phase.tasks.map((task, ti) => `
               <label class="check-item">
-                <input type="checkbox" data-phase="${phase.id}" data-task="${ti}" ${taskChecks[ti] ? 'checked' : ''} />
-                <span class="text-sm text-navy-600" style="${taskChecks[ti] ? 'text-decoration:line-through; opacity:0.5;' : ''}">${escapeHtml(task)}</span>
+                <input type="checkbox" data-phase="${phase.id}" data-task-id="${task.id}" ${taskChecks[ti] ? 'checked' : ''} />
+                <span class="text-sm text-navy-600" style="${taskChecks[ti] ? 'text-decoration:line-through; opacity:0.5;' : ''}">${escapeHtml(task.text)}</span>
               </label>
             `).join('')}
           </div>
@@ -2012,7 +2359,7 @@ function renderPhases(today, sep, termStart, ptdyStart, ptdyEnd, sbStart, sbEnd,
   document.querySelectorAll('#phaseList input[type="checkbox"]').forEach(cb => {
     cb.addEventListener('change', () => {
       const checks = loadChecks();
-      checks[`${cb.dataset.phase}-${cb.dataset.task}`] = cb.checked;
+      checks[cb.dataset.taskId] = cb.checked;
       saveChecks(checks);
       const span = cb.nextElementSibling;
       if (span) { span.style.textDecoration = cb.checked ? 'line-through' : ''; span.style.opacity = cb.checked ? '0.5' : '1'; }
@@ -2041,10 +2388,22 @@ function renderResources() {
     { title:'Resume Help', links:[['hireheroesusa.org','https://www.hireheroesusa.org'],['acp-usa.org','https://www.acp-usa.org']], icon:'file-text' },
     { title:'Federal Jobs', links:[['usajobs.gov — Veterans Preference','https://www.usajobs.gov']], icon:'building-2' },
     { title:'Financial', links:[['mypay.dfas.mil','https://mypay.dfas.mil'],['tsp.gov','https://www.tsp.gov']], icon:'dollar-sign' },
-    { title:'TRICARE', links:[['tricare.mil','https://www.tricare.mil']], icon:'heart-pulse' },
+    { title:'TRICARE', links:[['tricare.mil','https://www.tricare.mil'],['TRICARE For Life','https://www.tricare.mil/tfl']], icon:'heart-pulse' },
+    { title:'Dental & Vision (FEDVIP)', links:[['benefeds.gov','https://www.benefeds.gov']], icon:'smile' },
+    { title:'Survivor Benefits & Life Insurance', links:[['DFAS — SBP','https://www.dfas.mil/RetiredMilitary/provide/sbp/'],['VA — VGLI','https://www.va.gov/life-insurance/options-eligibility/vgli/']], icon:'shield' },
+    { title:'Retired Pay (DFAS)', links:[['VA Waiver / CRDP / CRSC','https://www.dfas.mil/RetiredMilitary/disability/'],['Arrears of Pay (DD 2894)','https://www.dfas.mil/RetiredMilitary/provide/aop/'],['State Tax Withholding','https://www.dfas.mil/RetiredMilitary/manage/taxes/sitw/']], icon:'landmark' },
+    { title:'VA Health Care', links:[['Eligibility / PACT Act','https://www.va.gov/health-care/eligibility/']], icon:'stethoscope' },
+    { title:'Mental Health & First Year', links:[['Veterans Crisis Line (988→1)','https://www.veteranscrisisline.net'],['Vet Centers','https://www.vetcenter.va.gov'],['VA Solid Start','https://benefits.va.gov/transition/solid-start.asp']], icon:'life-buoy' },
+    { title:'Relocation', links:[['Move.mil — Retirees & Separatees','https://www.move.mil/moving-guide/retirees-separatees']], icon:'truck' },
+    { title:'Credentialing', links:[['DoD COOL','https://www.cool.osd.mil']], icon:'award' },
+    { title:'Financial Protection', links:[['FINRA BrokerCheck','https://brokercheck.finra.org']], icon:'search-check' },
+    { title:'ID Cards & Lifetime Privileges', links:[['RAPIDS ID Office Locator','https://idco.dmdc.osd.mil'],['AMC Space-A Travel','https://www.amc.af.mil/Home/AMC-Travel-Site/']], icon:'id-card' },
+    { title:'Records', links:[['National Archives / NPRC','https://www.archives.gov/personnel-records-center']], icon:'folder-archive' },
   ];
   if (s.giBill) resources.push({ title:'GI Bill', links:[['benefits.va.gov/gibill','https://benefits.va.gov/gibill']], icon:'graduation-cap' });
-  if (s.vaClaim) resources.push({ title:'VA Disability', links:[['va.gov/disability','https://www.va.gov/disability']], icon:'clipboard-list' });
+  if (s.vaClaim) resources.push({ title:'VA Disability', links:[['va.gov/disability','https://www.va.gov/disability'],['Find an accredited VSO','https://www.va.gov/get-help-from-accredited-representative/'],['VR&E (Chapter 31)','https://www.va.gov/careers-employment/vocational-rehabilitation/']], icon:'clipboard-list' });
+  if (s.married) resources.push({ title:'Spouse Support', links:[['Military OneSource SECO / MyCAA','https://myseco.militaryonesource.mil']], icon:'users' });
+  if (s.federalJob) resources.push({ title:'Federal Employment', links:[['OPM FedsHireVets','https://www.fedshirevets.gov']], icon:'building-2' });
 
   $('resourceGrid').innerHTML = resources.map(r => `
     <div class="resource-card">
@@ -2052,6 +2411,186 @@ function renderResources() {
       ${r.links.map(l => `<a href="${l[1]}" target="_blank" rel="noopener">${l[0]}</a>`).join('')}
     </div>
   `).join('');
+}
+
+// ===== THINGS TO THINK ABOUT =====
+// Non-checkbox, strategic/qualitative prompts — the decisions and personal
+// realities the task list can't capture. Some are gated to the user's situation.
+function renderThinkAbout() {
+  const s = state;
+  const isRet = s.transType === 'Retirement';
+  const hasFamily = s.married || s.hasDependents;
+  const items = [
+    { icon:'compass', title:'Identity, purpose & routine', text:'You will no longer be addressed by rank, and the built-in structure, hierarchy, and community disappear overnight. Draft a written week-one-to-month-three daily routine and pick one or two "belonging" anchors before your date.' },
+    { icon:'heart-pulse', title:'Mental-health continuity', text:'The first 12 months after separation are a documented high-risk window. Save the Veterans/Military Crisis Line (988 then 1) and your nearest Vet Center now, and line up a TRICARE-network or telehealth provider so therapy/medication doesn\'t lapse during the move.' },
+    { icon:'wallet', title:'Money & lifestyle — a family conversation', text:'Retired pay is a fraction of active-duty take-home and is taxable, and the free on-base lifestyle changes. Talk through wants vs. needs and what "enough" looks like before lifestyle creep — or a let-down — sets in.' },
+    s.married ? { icon:'users', title:'Bring your spouse into the transition', text:'Retirement reshapes your spouse\'s identity and routine too. Have them attend TAP and the VA Benefits course, and have a shared "what does month 3 look like for both of us?" conversation.' } : null,
+    { icon:'map-pin', title:'State of domicile is a lifetime tax decision', text:'It controls the tax on your pension (and possibly TSP/IRA) for the rest of your life. Choose deliberately with the Best-State tool below — don\'t default to your last duty station.' },
+    isRet ? { icon:'shield', title:'SBP is effectively irreversible', text:'Understand the full-spouse default, the notarized-concurrence requirement to decline, the 25–36 month withdrawal window, and that the SBP-DIC offset was repealed in 2023 — so old "SBP is wasted if DIC applies" advice is obsolete.' } : null,
+    { icon:'file-signature', title:'A beneficiary form beats your will', text:'TSP-3, SGLV/VGLI, Arrears of Pay (DD 2894), DD-93 death gratuity, and bank/brokerage POD/TOD each pay the named person regardless of your will or divorce decree. Audit every one.' },
+    s.vaClaim ? { icon:'minus-circle', title:'The VA-waiver offset shrinks your first check', text:'Retired pay is reduced dollar-for-dollar by tax-free VA compensation. Understand CRDP (auto at 50%+, taxable) vs. CRSC (combat-related, tax-free, must apply) before you budget — use the comparison tool below.' } : null,
+    s.vaClaim ? { icon:'stethoscope', title:'VA health care ≠ your disability claim', text:'Filing a claim does NOT enroll you in VA health care, and vice-versa. Enroll within the PACT Act combat-veteran window for the strongest eligibility.' } : null,
+    s.vaClaim ? { icon:'briefcase', title:'Screen for TDIU', text:'If service-connected conditions prevent gainful work (one at 60%, or 70% combined with one at 40%), TDIU pays at the 100% rate without a 100% schedular rating.' } : null,
+    s.vaClaim ? { icon:'unlock', title:'Map what a rating unlocks', text:'A 100% Permanent & Total rating can trigger Chapter 35 (DEA) for dependents, CHAMPVA, and the largest state property-tax exemptions — none of which enroll automatically.' } : null,
+    s.vaClaim ? { icon:'graduation-cap', title:'VR&E vs. the GI Bill', text:'Veteran Readiness & Employment (Chapter 31) can fund retraining and pay a subsistence allowance WITHOUT consuming your GI Bill — evaluate it first if you have a service-connected disability.' } : null,
+    hasFamily ? { icon:'baby', title:'Minor children need a trust or custodian', text:'Name a guardian in your will AND route life insurance/TSP through a trust or UTMA custodian — insurers and TSP cannot pay a minor directly, which freezes the benefit pending a court-appointed conservator.' } : null,
+    { icon:'search-check', title:'Vet any financial advisor before rolling out the TSP', text:'Confirm fiduciary status, request Form CRS/ADV, and check FINRA BrokerCheck. Advisory IRAs charging ~2% vs. the TSP\'s ~0.05% can cost six figures over a retirement.' },
+    s.federalJob ? { icon:'landmark', title:'FERS buyback math + no salary offset', text:'If you take a FERS-covered federal job, run the military service buyback math early (the interest-free window is short); for most active-duty retirees, waiving an immediate pension does NOT pay off. And since 1999 there is NO salary offset — pension and GS pay are both paid in full.' } : null,
+    s.federalJob ? { icon:'scale', title:'Post-government ethics (18 U.S.C. 207)', text:'Acquisition, contracting, and program-office retirees can face lifetime or 1–2 year cooling-off restrictions. Get an ethics opinion before signing with a contractor or launching a venture.' } : null,
+    { icon:'calendar-clock', title:'Long-horizon: Medicare Part B at 65', text:'At 65 you MUST enroll in Medicare Part B to keep any TRICARE (TRICARE For Life). Skipping it means losing TRICARE plus a lifelong Part B late-enrollment penalty (10% per 12 months delayed).' },
+    { icon:'piggy-bank', title:'Long-horizon: TSP RMDs', text:'Traditional TSP required minimum distributions begin at age 73 (75 if born 1960+); Roth TSP has no lifetime RMDs. This shapes today\'s keep-vs-roll and Roth-conversion decisions.' },
+    isRet ? { icon:'flag', title:'Plan the retirement ceremony deliberately', text:'The 20+ year no-cost flag is a once-per-career statutory benefit. Coordinate the flag, spouse/retirement certificates, and shadow box about two months out — and verify every award is in your record before it hits the DD-214.' } : null,
+  ].filter(Boolean);
+
+  $('thinkAboutGrid').innerHTML = items.map(it => `
+    <div class="rounded-xl p-4" style="background:#f7f8fb; border:1px solid rgba(26,39,68,0.08); border-left:3px solid #c9a227;">
+      <h4 class="text-sm font-semibold text-navy-700 flex items-center gap-2 mb-1"><i data-lucide="${it.icon}" class="w-4 h-4 text-gold-500 flex-shrink-0"></i> ${it.title}</h4>
+      <p class="text-sm text-navy-500 leading-relaxed">${it.text}</p>
+    </div>
+  `).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// ===== DECISION TOOLS & CALCULATORS =====
+const _n = (id) => parseFloat($(id) && $(id).value) || 0;
+
+// Prefill the calculator inputs from the plan (and any saved tool inputs), then
+// compute. Saved overrides live in state.tools keyed by element id.
+function renderDecisionTools(isRet) {
+  const s = state;
+  const t = s.tools || {};
+  const rg = getRankGrade(s.rank);
+  const basePayEl = $('payBasePay');
+  const basePay = (basePayEl && parseFloat(basePayEl.value)) || getBasePay2026(rg, s.yos) || 0;
+  const retMonthly = isRet ? computeRetirementPay({ basePay, yos: s.yos, system: s.payRetSystem || 'high3' }).monthly : 0;
+
+  $('dtCrRating').innerHTML = [0,10,20,30,40,50,60,70,80,90,100].map(r => `<option value="${r}">${r}%</option>`).join('');
+
+  const setv = (id, dflt) => { const el = $(id); if (el) el.value = (t[id] != null && t[id] !== '') ? t[id] : dflt; };
+  const setc = (id, dflt) => { const el = $(id); if (el) el.checked = (t[id] != null) ? !!t[id] : dflt; };
+
+  setv('dtSbpBase', Math.round(retMonthly));
+  setv('dtSbpRetAge', s.tspRetAge || 45);
+  setv('dtSbpSpouseAge', '');
+  setv('dtCrGross', Math.round(retMonthly));
+  setv('dtCrRating', String(s.selectedVARating || 0));
+  setv('dtCrCombat', 0);
+  setv('dtCrBracket', '0.22');
+  setv('dtHcGroup', 'A');
+  setv('dtHcCoverage', (s.hasDependents || s.married) ? 'family' : 'individual');
+  setv('dtHcRx', 0);
+  setv('dtHcFedvip', 0);
+  setv('dtPsVisits', 'moderate');
+  setc('dtPsLowCost', true);
+  setc('dtPsFlex', false);
+  setv('dtStPay', Math.round(retMonthly * 12));
+  setv('dtStStates', parseStateFromLocation(s.postLocation) || '');
+  setv('dtPpmGcc', '');
+  setv('dtPpmExpenses', 0);
+  setv('dtTspAge', s.tspRetAge || 45);
+  setv('dtTspTrad', s.tspBalance || 0);
+  setv('dtTspRoth', 0);
+  setv('dtTspAdvFee', 1.0);
+  setv('dtTspYears', 20);
+
+  recalcAllTools();
+}
+
+function persistTools() {
+  if (!state || !state.firstName) return;
+  const ids = ['dtSbpBase','dtSbpRetAge','dtSbpSpouseAge','dtCrGross','dtCrRating','dtCrCombat','dtCrBracket','dtHcGroup','dtHcCoverage','dtHcRx','dtHcFedvip','dtPsVisits','dtStPay','dtStStates','dtPpmGcc','dtPpmExpenses','dtTspAge','dtTspTrad','dtTspRoth','dtTspAdvFee','dtTspYears'];
+  const t = {};
+  ids.forEach(id => { const el = $(id); if (el) t[id] = el.value; });
+  t.dtPsLowCost = $('dtPsLowCost').checked;
+  t.dtPsFlex = $('dtPsFlex').checked;
+  state.tools = t;
+  saveState(state);
+}
+
+function recalcAllTools() {
+  recalcSBP(); recalcCRSC(); recalcHealthcare(); recalcPrimeSelect(); recalcBestState(); recalcPPM(); recalcTSPRoll();
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function recalcSBP() {
+  const r = computeSBP({ baseAmount: _n('dtSbpBase'), retireeAge: _n('dtSbpRetAge') || 45, spouseAge: $('dtSbpSpouseAge').value ? _n('dtSbpSpouseAge') : null });
+  $('dtSbpResult').innerHTML = r.monthlyPremium > 0 ? `
+    <div class="grid grid-cols-2 gap-3">
+      <div><p class="text-xs text-navy-400">Premium</p><p class="text-lg font-bold tabular-nums" style="color:#c9a227;">${fmtCurrencyWhole(r.monthlyPremium)}/mo</p><p class="text-xs text-navy-400">${fmtCurrencyWhole(r.annualPremium)}/yr (pre-tax)</p></div>
+      <div><p class="text-xs text-navy-400">Survivor annuity</p><p class="text-lg font-bold tabular-nums text-navy-700">${fmtCurrencyWhole(r.survivorMonthly)}/mo</p><p class="text-xs text-navy-400">55% of base, for life</p></div>
+    </div>
+    <div class="mt-3 pt-3 border-t" style="border-color:rgba(26,39,68,0.1);">
+      <p class="text-xs text-navy-500">Premiums until paid-up (later of 360 payments or age 70): <strong>${r.paidUpPayments} payments ≈ ${fmtCurrencyWhole(r.totalPremiums)}</strong>.</p>
+      <p class="text-xs text-navy-500 mt-1">A survivor would recoup total premiums in ≈ <strong>${r.breakEvenYears} years</strong> of annuity — and SBP then continues for life with COLA.</p>
+    </div>` : '<p class="text-navy-400">Enter an SBP base amount to estimate cost and survivor value.</p>';
+}
+
+function recalcCRSC() {
+  const r = compareConcurrentReceipt({ grossRetiredPay: _n('dtCrGross'), vaRating: _n('dtCrRating'), combatRelatedPct: _n('dtCrCombat'), marginalRate: parseFloat($('dtCrBracket').value) || 0.22, yos: state.yos || 20 });
+  if (r.vaComp <= 0) { $('dtCrResult').innerHTML = '<p class="text-navy-400">Select a VA rating above 0% to compare.</p>'; return; }
+  const label = { baseline:'No restoration (offset applies)', crdp:'CRDP', crsc:'CRSC' }[r.recommend];
+  const row = (name, val, note) => `<div class="flex items-center justify-between"><span class="text-navy-500">${name}</span><span class="font-semibold tabular-nums text-navy-700">${fmtCurrencyWhole(val)}/mo${note?` <span class='text-xs text-navy-400'>${note}</span>`:''}</span></div>`;
+  $('dtCrResult').innerHTML = `
+    <p class="text-xs text-navy-500 mb-2">VA comp ${fmtCurrencyWhole(r.vaComp)}/mo offsets ${fmtCurrencyWhole(r.waived)}/mo of retired pay (residual ${fmtCurrencyWhole(r.residualRetired)}/mo, taxable).</p>
+    <div class="space-y-1">
+      ${row('Net w/o CRDP/CRSC (after tax)', r.baselineNet)}
+      ${r.crdpEligible ? row('Net with CRDP (taxable)', r.crdpNet) : '<div class="flex items-center justify-between"><span class="text-navy-500">CRDP</span><span class="text-xs text-navy-400">Not eligible (needs 20yr + 50%+)</span></div>'}
+      ${r.crscAmount > 0 ? row('Net with CRSC (tax-free)', r.crscNet, `+${fmtCurrencyWhole(r.crscAmount)} tax-free`) : ''}
+    </div>
+    <p class="text-xs mt-2 rounded-lg px-3 py-2" style="background:#d1fae5; color:#047857;">Best net take-home: <strong>${label}</strong>. You may receive only one — choose the higher net pay, not the higher gross.</p>`;
+}
+
+function recalcHealthcare() {
+  const r = estimateRetireeHealthcareCost({ group: $('dtHcGroup').value, coverage: $('dtHcCoverage').value, annualRx: _n('dtHcRx'), fedvipMonthly: _n('dtHcFedvip') });
+  $('dtHcResult').innerHTML = `
+    <div class="flex items-center justify-between"><span class="text-navy-500">TRICARE Select enrollment fee</span><span class="font-semibold tabular-nums text-navy-700">${fmtCurrencyWhole(r.enrollmentFee)}/yr</span></div>
+    <div class="flex items-center justify-between"><span class="text-navy-500">Pharmacy (est.)</span><span class="font-semibold tabular-nums text-navy-700">${fmtCurrencyWhole(r.annualRx)}/yr</span></div>
+    <div class="flex items-center justify-between"><span class="text-navy-500">FEDVIP dental/vision</span><span class="font-semibold tabular-nums text-navy-700">${fmtCurrencyWhole(r.annualFedvip)}/yr</span></div>
+    <div class="flex items-center justify-between mt-2 pt-2 border-t" style="border-color:rgba(26,39,68,0.1);"><span class="font-semibold text-navy-700">Estimated total</span><span class="font-bold tabular-nums" style="color:#c9a227;">${fmtCurrencyWhole(r.totalAnnual)}/yr (${fmtCurrencyWhole(r.monthlyEquivalent)}/mo)</span></div>`;
+}
+
+function recalcPrimeSelect() {
+  const r = compareTricarePrimeSelect({ expectedVisits: $('dtPsVisits').value, valuesLowCost: $('dtPsLowCost').checked, needsFlexibility: $('dtPsFlex').checked });
+  const recLabel = r.recommendation === 'either' ? 'Either could fit' : (r.recommendation === 'prime' ? 'Leans TRICARE Prime' : 'Leans TRICARE Select');
+  const list = (arr) => arr.map(x => `<li>${x}</li>`).join('');
+  $('dtPsResult').innerHTML = `
+    <p class="text-sm font-semibold mb-2" style="color:#c9a227;">${recLabel}</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-navy-500">
+      <div><p class="font-semibold text-navy-600 mb-1">Prime</p><ul class="list-disc pl-4 space-y-0.5">${list(r.primePros)}${list(r.primeCons)}</ul></div>
+      <div><p class="font-semibold text-navy-600 mb-1">Select</p><ul class="list-disc pl-4 space-y-0.5">${list(r.selectPros)}${list(r.selectCons)}</ul></div>
+    </div>`;
+}
+
+function recalcBestState() {
+  const raw = $('dtStStates').value || '';
+  const codes = raw.split(',').map(x => parseStateFromLocation(x.trim())).filter(Boolean);
+  if (!codes.length) { $('dtStResult').innerHTML = '<p class="text-navy-400">Enter candidate states (e.g., TX, CA, VA) to compare lifetime tax on your pension.</p>'; return; }
+  const ranked = compareStates([...new Set(codes)], _n('dtStPay'));
+  const statusLabel = { exempt:'No / exempt', partial:'Partial', taxed:'Taxed' };
+  $('dtStResult').innerHTML = `
+    <table class="w-full text-xs">
+      <thead><tr class="text-navy-400 text-left"><th class="py-1">State</th><th>Treatment</th><th class="text-right">Est. tax/yr</th></tr></thead>
+      <tbody>${ranked.map((st,i) => `<tr class="${i===0?'font-semibold text-navy-700':'text-navy-500'}"><td class="py-1">${st.name}${i===0?' 🏆':''}</td><td>${statusLabel[st.status]||st.status}</td><td class="text-right tabular-nums">${fmtCurrencyWhole(st.estAnnualTax)}</td></tr>`).join('')}</tbody>
+    </table>
+    <p class="text-xs text-navy-400 mt-2">${ranked[0].name}: ${ranked[0].note}</p>`;
+}
+
+function recalcPPM() {
+  const r = estimatePPM({ gcc: _n('dtPpmGcc'), expenses: _n('dtPpmExpenses') });
+  $('dtPpmResult').innerHTML = r.incentive > 0 ? `
+    <div class="flex items-center justify-between"><span class="text-navy-500">Incentive (100% of GCC)</span><span class="font-semibold tabular-nums text-navy-700">${fmtCurrencyWhole(r.incentive)}</span></div>
+    <div class="flex items-center justify-between"><span class="text-navy-500">Less your expenses</span><span class="font-semibold tabular-nums text-navy-700">−${fmtCurrencyWhole(r.expenses)}</span></div>
+    <div class="flex items-center justify-between"><span class="text-navy-500">Taxable profit</span><span class="font-semibold tabular-nums text-navy-700">${fmtCurrencyWhole(r.profit)}</span></div>
+    <div class="flex items-center justify-between"><span class="text-navy-500">Est. 22% withholding</span><span class="font-semibold tabular-nums text-navy-700">−${fmtCurrencyWhole(r.taxWithheld)}</span></div>
+    <div class="flex items-center justify-between mt-2 pt-2 border-t" style="border-color:rgba(26,39,68,0.1);"><span class="font-semibold text-navy-700">Estimated net to you</span><span class="font-bold tabular-nums" style="color:#c9a227;">${fmtCurrencyWhole(r.netProfit)}</span></div>` : '<p class="text-navy-400">Enter your Government Constructed Cost (GCC) to estimate PPM profit.</p>';
+}
+
+function recalcTSPRoll() {
+  const advFee = _n('dtTspAdvFee') || 1.0;
+  const r = tspKeepVsRoll({ ageAtSeparation: _n('dtTspAge') || 45, tradBalance: _n('dtTspTrad'), rothBalance: _n('dtTspRoth'), advisoryFeePct: advFee, years: _n('dtTspYears') || 20 });
+  $('dtTspResult').innerHTML = `
+    <ul class="list-disc pl-4 space-y-1 text-xs text-navy-500">${r.flags.map(f => `<li>${f}</li>`).join('')}</ul>
+    ${r.total > 0 ? `<p class="text-xs mt-3 pt-2 border-t" style="border-color:rgba(26,39,68,0.1);">Over ${r.years} years, a ~${advFee}%/yr advisory fee vs. the TSP's ~0.05% could cost roughly <strong style="color:#c9a227;">${fmtCurrencyWhole(r.feeDrag)}</strong> in foregone growth (assuming ~6% returns).</p>` : ''}`;
 }
 
 // ===== INIT =====
@@ -2074,6 +2613,11 @@ function applyLoadedPlan(plan) {
   toggles.sb = state.sb;
   toggles.giBill = state.giBill || false;
   toggles.vaClaim = state.vaClaim || false;
+  toggles.married = state.married || false;
+  toggles.homeowner = state.homeowner || false;
+  toggles.clearance = state.clearance || false;
+  toggles.federalJob = state.federalJob || false;
+  toggles.oconus = state.oconus || false;
   rankCat = state.rankCat;
   transType = state.transType;
   payRetSystem = state.payRetSystem || 'high3';
@@ -2081,6 +2625,7 @@ function applyLoadedPlan(plan) {
   hasDependents = state.hasDependents || false;
   tspWithdrawalMethod = state.tspWithdrawalMethod || 'fixed';
   tspContribMode = state.tspContribMode || 'fixed';
+  state.checks = migrateChecks(state.checks, state);
   showResults();
   renderPlanLink();
 }
@@ -2093,6 +2638,11 @@ async function init() {
   initToggle('sbToggle', 'sb', 'Taking SkillBridge?');
   initToggle('giBillToggle', 'giBill', 'Planning to use GI Bill?');
   initToggle('vaClaimToggle', 'vaClaim', 'Planning to file VA disability?');
+  initToggle('marriedToggle', 'married', 'Married / have a spouse?');
+  initToggle('homeownerToggle', 'homeowner', 'Own (or buying) a home?');
+  initToggle('clearanceToggle', 'clearance', 'Hold a security clearance?');
+  initToggle('federalJobToggle', 'federalJob', 'Pursuing federal employment?');
+  initToggle('oconusToggle', 'oconus', 'Retiring from an OCONUS station?');
 
   initRadioGroup('rankCatGroup', val => { rankCat = val; populateRanks(); });
   initRadioGroup('transTypeGroup', val => { transType = val; });
@@ -2175,11 +2725,18 @@ async function init() {
     toggles.vaClaim = !!state.vaClaim;
     $('vaClaimToggle').classList.toggle('active', toggles.vaClaim);
     $('vaClaimToggle').setAttribute('aria-checked', String(toggles.vaClaim));
+    [['married','marriedToggle'],['homeowner','homeownerToggle'],['clearance','clearanceToggle'],['federalJob','federalJobToggle'],['oconus','oconusToggle']].forEach(([key, id]) => {
+      toggles[key] = state[key] || false;
+      const el = $(id);
+      if (el) { el.classList.toggle('active', toggles[key]); el.setAttribute('aria-checked', String(toggles[key])); }
+    });
   });
 
   $('printBtn').addEventListener('click', () => {
     document.querySelectorAll('.phase-content').forEach(c => c.classList.add('open'));
     $('payEstimatorContent').classList.add('open');
+    $('decisionToolsContent').classList.add('open');
+    $('thinkAboutContent').classList.add('open');
     setTimeout(() => window.print(), 200);
   });
 
@@ -2256,6 +2813,23 @@ async function init() {
     const content = $('payEstimatorContent');
     content.classList.toggle('open');
     $('payChevron').style.transform = content.classList.contains('open') ? 'rotate(180deg)' : '';
+  });
+
+  // Decision tools: collapse + live recompute on any input change
+  $('decisionToolsHeader').addEventListener('click', () => {
+    const content = $('decisionToolsContent');
+    content.classList.toggle('open');
+    $('decisionToolsChevron').style.transform = content.classList.contains('open') ? 'rotate(180deg)' : '';
+  });
+  const dtRecalc = () => { recalcAllTools(); persistTools(); };
+  $('decisionToolsContent').addEventListener('input', dtRecalc);
+  $('decisionToolsContent').addEventListener('change', dtRecalc);
+
+  // Things to think about: collapse
+  $('thinkAboutHeader').addEventListener('click', () => {
+    const content = $('thinkAboutContent');
+    content.classList.toggle('open');
+    $('thinkChevron').style.transform = content.classList.contains('open') ? 'rotate(180deg)' : '';
   });
 
   $('jumpToPayBtn').addEventListener('click', () => {

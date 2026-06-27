@@ -272,6 +272,158 @@ export function decodeState(str) {
   }
 }
 
+// ===== DECISION-AID CALCULATORS (added for the retirement-depth expansion) =====
+// All pure: given inputs, return numbers/flags. The UI owns formatting + disclaimers.
+// Figures are fact-checked as of 2026 against DFAS / VA / TRICARE / TSP sources.
+
+// --- Survivor Benefit Plan (SBP) ---
+// Spouse premium is 6.5% of the elected base amount; survivor annuity is 55% of
+// the base amount; coverage is "paid-up" only after 360 payments AND age 70.
+export const SBP_PARAMS = { premiumRate: 0.065, annuityRate: 0.55, paidUpPayments: 360, paidUpAge: 70 };
+
+export function computeSBP({ baseAmount, retireeAge = 45, spouseAge = null, hasChildren = false }) {
+  baseAmount = Math.max(0, Number(baseAmount) || 0);
+  retireeAge = Number(retireeAge) || 0;
+  const monthlyPremium = baseAmount * SBP_PARAMS.premiumRate;
+  const survivorMonthly = baseAmount * SBP_PARAMS.annuityRate;
+  // Premiums stop at the later of 360 payments or reaching age 70.
+  const paymentsByAge = Math.round(Math.max(0, SBP_PARAMS.paidUpAge - retireeAge) * 12);
+  const paidUpPayments = Math.max(SBP_PARAMS.paidUpPayments, paymentsByAge);
+  const totalPremiums = monthlyPremium * paidUpPayments;
+  const breakEvenMonths = survivorMonthly > 0 ? Math.ceil(totalPremiums / survivorMonthly) : 0;
+  return {
+    monthlyPremium, annualPremium: monthlyPremium * 12,
+    survivorMonthly, survivorAnnual: survivorMonthly * 12,
+    paidUpPayments, totalPremiums,
+    breakEvenMonths, breakEvenYears: +(breakEvenMonths / 12).toFixed(1),
+    hasChildren: !!hasChildren, spouseAge,
+  };
+}
+
+// --- CRDP vs CRSC (concurrent receipt) ---
+// VA compensation offsets retired pay dollar-for-dollar (the "VA waiver"). CRDP
+// (auto at 20yr + 50%+, TAXABLE) restores the full waiver; CRSC (combat-related,
+// TAX-FREE, requires DD 2860) restores the combat-related portion of the waiver.
+export function compareConcurrentReceipt({ grossRetiredPay, vaRating = 0, combatRelatedPct = 0, marginalRate = 0.22, yos = 20 }) {
+  grossRetiredPay = Math.max(0, Number(grossRetiredPay) || 0);
+  const vaComp = VA_RATES_2025[vaRating] || 0;
+  const waived = Math.min(grossRetiredPay, vaComp);
+  const residualRetired = grossRetiredPay - waived;
+  combatRelatedPct = clamp(Number(combatRelatedPct) || 0, 0, 100);
+  marginalRate = clamp(Number(marginalRate) || 0, 0, 0.5);
+  const crdpEligible = (Number(yos) >= 20) && (Number(vaRating) >= 50);
+  // Net (after-tax) take-home under each path. VA comp is always tax-free.
+  const baselineNet = residualRetired * (1 - marginalRate) + vaComp;
+  const crdpNet = grossRetiredPay * (1 - marginalRate) + vaComp; // full retired pay restored (taxable)
+  const crscAmount = waived * (combatRelatedPct / 100);          // tax-free
+  const crscNet = residualRetired * (1 - marginalRate) + vaComp + crscAmount;
+  const candidates = [{ key: 'baseline', net: baselineNet }];
+  if (crdpEligible) candidates.push({ key: 'crdp', net: crdpNet });
+  if (crscAmount > 0) candidates.push({ key: 'crsc', net: crscNet });
+  candidates.sort((a, b) => b.net - a.net);
+  return {
+    vaComp, waived, residualRetired, crdpEligible,
+    baselineNet, crdpNet, crscAmount, crscNet,
+    recommend: candidates[0].key,
+  };
+}
+
+// --- TRICARE retiree fees (CY2026) + healthcare cost estimate ---
+export const TRICARE_FEES_2026 = {
+  select: {
+    groupA: { individual: 186.96, family: 375 },
+    groupB: { individual: 594.96, family: 1191 },
+  },
+  note: 'CY2026 TRICARE Select retiree annual enrollment fees. Medically retired members/families and survivors of active-duty sponsors (Group A) pay $0. Group A = sponsor initial enlistment or appointment before Jan 1, 2018; Group B = on/after that date.',
+};
+
+export function estimateRetireeHealthcareCost({ group = 'A', coverage = 'family', annualRx = 0, fedvipMonthly = 0 }) {
+  const g = group === 'B' ? 'groupB' : 'groupA';
+  const cov = coverage === 'individual' ? 'individual' : 'family';
+  const enrollmentFee = TRICARE_FEES_2026.select[g][cov];
+  annualRx = Math.max(0, Number(annualRx) || 0);
+  const annualFedvip = Math.max(0, (Number(fedvipMonthly) || 0) * 12);
+  const totalAnnual = enrollmentFee + annualRx + annualFedvip;
+  return { enrollmentFee, annualRx, annualFedvip, totalAnnual, monthlyEquivalent: totalAnnual / 12 };
+}
+
+// --- TRICARE Prime vs Select decision aid (qualitative scoring) ---
+export function compareTricarePrimeSelect({ expectedVisits = 'low', valuesLowCost = true, needsFlexibility = false }) {
+  let prime = 0, select = 0;
+  if (valuesLowCost) prime += 2;
+  if (needsFlexibility) select += 2;
+  if (expectedVisits === 'high') prime += 1;       // predictable copays favor Prime
+  else if (expectedVisits === 'low') select += 1;  // light users avoid Prime's PCM friction
+  const recommendation = prime === select ? 'either' : (prime > select ? 'prime' : 'select');
+  return {
+    recommendation,
+    primePros: ['Lowest out-of-pocket costs', 'Predictable copays', 'Care coordinated by a Primary Care Manager'],
+    primeCons: ['Must use a PCM and get referrals for specialists', 'Less provider choice', 'Only where Prime is offered'],
+    selectPros: ['See any TRICARE-authorized provider', 'No referrals needed', 'Available everywhere'],
+    selectCons: ['Higher cost-shares and deductibles', 'Annual enrollment fee for retirees (Group A & B)'],
+  };
+}
+
+// --- Best state of residence (domicile) tax comparison ---
+// Reuses STATE_TAX_DATA. 'taxed' uses the top marginal rate as an upper-bound
+// estimate; 'partial' applies a rough 50% reduction (real exemptions vary widely).
+export function estimateStateTaxOnRetiredPay(code, annualRetiredPay) {
+  const d = STATE_TAX_DATA[code];
+  if (!d) return null;
+  annualRetiredPay = Math.max(0, Number(annualRetiredPay) || 0);
+  let estAnnualTax = 0;
+  if (d.militaryRetirementTax === 'taxed') estAnnualTax = annualRetiredPay * (d.topRate / 100);
+  else if (d.militaryRetirementTax === 'partial') estAnnualTax = annualRetiredPay * (d.topRate / 100) * 0.5;
+  return {
+    code, name: d.name, status: d.militaryRetirementTax, topRate: d.topRate, note: d.note,
+    estAnnualTax: Math.round(estAnnualTax),
+  };
+}
+
+export function compareStates(codes, annualRetiredPay) {
+  return (codes || [])
+    .map(c => estimateStateTaxOnRetiredPay(c, annualRetiredPay))
+    .filter(Boolean)
+    .sort((a, b) => a.estAnnualTax - b.estAnnualTax);
+}
+
+// --- PPM/DITY move incentive estimate ---
+// Incentive is 100% of the Government Constructed Cost (GCC) for moves in 2025+;
+// profit (incentive minus documented expenses) is taxable, withheld at ~22%.
+export function estimatePPM({ gcc, expenses = 0, withholdingRate = 0.22 }) {
+  gcc = Math.max(0, Number(gcc) || 0);
+  expenses = Math.max(0, Number(expenses) || 0);
+  const incentive = gcc;
+  const profit = Math.max(0, incentive - expenses);
+  const taxWithheld = profit * withholdingRate;
+  return { incentive, expenses, profit, taxWithheld, netProfit: profit - taxWithheld };
+}
+
+// --- TSP keep-in vs roll-out checker (rules + fee-drag projection) ---
+export function tspKeepVsRoll({ ageAtSeparation = 45, tradBalance = 0, rothBalance = 0, advisoryFeePct = 1.0, tspFeePct = 0.05, years = 20, growthPct = 6 }) {
+  const total = (Number(tradBalance) || 0) + (Number(rothBalance) || 0);
+  const flags = [];
+  if (Number(ageAtSeparation) >= 55) {
+    flags.push('You are separating in or after the year you turn 55: money LEFT IN the TSP can be withdrawn penalty-free now. Rolling to an IRA re-imposes the 10% early-withdrawal penalty until age 59½.');
+  } else {
+    flags.push('Under 55 at separation: the 10% early-withdrawal penalty generally applies before age 59½ in both the TSP and an IRA (limited exceptions).');
+  }
+  flags.push('The age-50 public-safety early-withdrawal exception does NOT apply to military retired pay or the TSP.');
+  if ((Number(rothBalance) || 0) > 0) flags.push('Roth TSP qualified (tax-free) withdrawals require BOTH the 5-year rule and age 59½.');
+  flags.push('Traditional TSP required minimum distributions (RMDs) begin at age 73 (75 if born in 1960 or later). Roth TSP has no lifetime RMDs.');
+  const g = (Number(growthPct) || 0) / 100;
+  const yrs = Math.max(0, Number(years) || 0);
+  const endValue = (feePct) => total * Math.pow(1 + g - ((Number(feePct) || 0) / 100), yrs);
+  const tspEnd = endValue(tspFeePct);
+  const advisoryEnd = endValue(advisoryFeePct);
+  return {
+    total, years: yrs, flags,
+    tspEnd: Math.round(tspEnd),
+    advisoryEnd: Math.round(advisoryEnd),
+    feeDrag: Math.round(Math.max(0, tspEnd - advisoryEnd)),
+  };
+}
+
 export const VALID_BRANCHES = ['Army', 'Navy', 'Air Force', 'Marine Corps', 'Space Force', 'Coast Guard'];
 
 // Allow-list validation for untrusted plans (imported files / shared links). This is
