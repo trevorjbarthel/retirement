@@ -6,6 +6,11 @@ import apiRoutes from "./routes/plan";
 
 const app = new Hono<AppContext>();
 
+app.onError((err, c) => {
+  console.error(err);
+  return c.json({ error: "internal_error" }, 500);
+});
+
 // CSRF guard on every state-changing API request.
 app.use("/api/*", csrfGuard);
 

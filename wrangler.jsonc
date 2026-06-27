@@ -2,8 +2,11 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "military-transition-calc",
   "main": "src/index.ts",
-  "compatibility_date": "2025-06-01",
+  "compatibility_date": "2025-09-06",
   "compatibility_flags": ["nodejs_compat"],
+  "routes": [
+    { "pattern": "retirement.airforcehub.com", "custom_domain": true }
+  ],
 
   // Serve the front-end (public/) via Workers Static Assets.
   // run_worker_first ensures /api/* always invokes the Worker before asset matching;
@@ -19,8 +22,7 @@
     {
       "binding": "DB",
       "database_name": "mtc-db",
-      // Replace after running:  npx wrangler d1 create mtc-db
-      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      "database_id": "21441f9b-b130-4190-bc7d-3ae8477b9f33",
       "migrations_dir": "migrations"
     }
   ],
@@ -28,7 +30,7 @@
   "vars": {
     "APP_ENV": "production",
     // PBKDF2 work factor — surfaced as a var so it can be raised without a code change.
-    "PBKDF2_ITERATIONS": "210000",
+    "PBKDF2_ITERATIONS": "50000",
     // Session lifetime: 14 days.
     "SESSION_TTL_SECONDS": "1209600"
   }
