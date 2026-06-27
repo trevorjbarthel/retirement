@@ -22,8 +22,24 @@ function schemaVersionOf(body: any): number {
   return Number.isInteger(raw) && raw >= 1 && raw <= 1000 ? raw : 1;
 }
 
+// Best-effort per-IP throttle on plan creation. No-op when CREATE_LIMITER isn't bound
+// (local dev / tests / unprovisioned deploy); never blocks on a limiter failure.
+async function createThrottled(c: any): Promise<boolean> {
+  if (c.env.APP_ENV === "development") return false; // skip in local dev / tests
+  const limiter = c.env.CREATE_LIMITER;
+  if (!limiter) return false;
+  const ip = c.req.header("cf-connecting-ip") ?? "ip-unknown";
+  try {
+    const { success } = await limiter.limit({ key: `create:${ip}` });
+    return !success;
+  } catch {
+    return false;
+  }
+}
+
 // Create a new plan → returns its public id and the secret edit key (shown once).
 api.post("/p", async (c) => {
+  if (await createThrottled(c)) return jsonError(c, "rate_limited", 429, "Too many new plans from your network. Please wait a moment.");
   const len = Number(c.req.header("content-length"));
   if (Number.isFinite(len) && len > MAX_PLAN_BYTES * 2) return jsonError(c, "too_large", 413, "Plan is too large.");
   let body: any;

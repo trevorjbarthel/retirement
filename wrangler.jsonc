@@ -27,5 +27,18 @@
 
   "vars": {
     "APP_ENV": "production"
+  },
+
+  // Per-IP throttle on plan creation (POST /api/p) to blunt bulk creation.
+  // Active only when APP_ENV != "development" (so local dev / tests skip it).
+  "unsafe": {
+    "bindings": [
+      {
+        "name": "CREATE_LIMITER",
+        "type": "ratelimit",
+        "namespace_id": "1001",
+        "simple": { "limit": 20, "period": 60 }
+      }
+    ]
   }
 }

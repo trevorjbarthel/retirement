@@ -116,9 +116,10 @@ the official DFAS pages**. The committed data lives in `public/data/pay-tables.j
 - **No accounts by design.** A plan's edit link is a bearer capability: anyone with it
   can edit, a leaked link exposes the plan's (planning‑only) data, and a lost link can't
   be recovered. Mitigations in place: the edit key is 128‑bit random and rides in the URL
-  hash (off server logs/`Referer`), only its hash is stored, and the read‑only `/p/<id>`
-  link is offered separately for sharing. A `POST /api/p` rate‑limit (Cloudflare Rate
-  Limiting binding) is a reasonable follow‑up to blunt bulk plan creation.
+  hash (off server logs/`Referer`), only its hash is stored, the read‑only `/p/<id>` link
+  is offered separately for sharing, and `POST /api/p` is rate‑limited per IP
+  (`CREATE_LIMITER`, 20/min) to blunt bulk creation. The limiter is skipped when
+  `APP_ENV="development"` (local dev / tests); tune the `limit`/`period` in `wrangler.jsonc`.
 - **VA disability rates** in `calc.js` (`VA_RATES_2025`) are the veteran‑alone
   (no‑dependents) amounts on the Dec 1 2024 COLA vintage. Refresh them as a set
   (not per‑bracket) when a new COLA lands, and update `DATA_VINTAGE.vaRates` in
