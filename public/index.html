@@ -989,7 +989,6 @@ import {
   compareTricarePrimeSelect, compareStates, estimatePPM, tspKeepVsRoll
 } from '/js/calc.js';
 import * as store from '/js/store.js';
-import { initAuthUI } from '/js/auth-ui.js';
 // ===== DATA =====
 const STORAGE_KEY = 'military-transition-calc-v5';
 
@@ -2202,7 +2201,7 @@ function renderPhases(today, sep, termStart, ptdyStart, ptdyEnd, sbStart, sbEnd,
       ].filter(Boolean) },
     s.sb ? { id:'p3', name:'Phase 3: SkillBridge Prep', range:`${fmtDateShort(sbPrepStart)} — ${fmtDateShort(subDays(sbStart, 1))}`,
       tasks:[
-        T('sb-research','Research SkillBridge employers at skillbridge.defense.gov'),
+        T('sb-research','Research SkillBridge employers at skillbridge.osd.mil'),
         T('sb-top3','Identify top 3 SkillBridge program choices'),
         T('sb-cmd-pkg','Submit commander approval package (60+ days before start)'),
         T('sb-memo','Get SkillBridge approval memo signed'),
