@@ -1478,7 +1478,7 @@ function renderResults() {
   const relDays = (d) => { const n = daysBetween(today, d); return n < 0 ? `Started ${Math.abs(n)} days ago` : (n === 0 ? 'Today' : `${n} days`); };
   const subs = [];
   if (s.sb) subs.push({ label: 'SkillBridge Starts', val: relDays(sbStart), icon: 'briefcase' });
-  subs.push({ label: 'Terminal Leave', val: relDays(termStart), icon: 'palm-tree' });
+  subs.push({ label: 'Terminal Leave', val: relDays(termStart), icon: 'plane' });
   subs.push({ label: 'Freedom Day', val: fmtDateShort(sep), icon: 'flag' });
 
   $('subCounters').innerHTML = subs.map(c => `
@@ -1502,7 +1502,7 @@ function renderResults() {
     milestones.push({ label: 'Permissive TDY Start', date: ptdyStart, icon: 'map-pin' });
     milestones.push({ label: 'Permissive TDY End', date: ptdyEnd, icon: 'map-pin-off' });
   }
-  milestones.push({ label: 'Terminal Leave Begins', date: termStart, icon: 'palm-tree' });
+  milestones.push({ label: 'Terminal Leave Begins', date: termStart, icon: 'plane' });
   milestones.push({ label: `${s.transType} Date`, date: sep, icon: 'flag' });
   if (firstRetPay) milestones.push({ label: 'First Retirement Pay', date: firstRetPay, icon: 'dollar-sign' });
 
