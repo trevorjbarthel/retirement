@@ -1,200 +1,77 @@
-// Typed D1 query helpers. One row per user in `plans` (UNIQUE(user_id)); the
-// schema keeps room for many plans later.
+// Typed D1 query helpers. One row per plan, addressed by its public `id`.
 
-export interface UserRow {
-  id: number;
-  email: string;
-  password_hash: string;
-  password_salt: string;
-  iterations: number;
-  token_version: number;
+export interface PlanRow {
+  id: string;
+  edit_key_hash: string;
+  schema_version: number;
+  plan_json: string;
+  rev: number;
   created_at: number;
   updated_at: number;
 }
 
-export interface PlanRow {
-  id: number;
-  user_id: number;
-  schema_version: number;
-  plan_json: string;
-  updated_at: number;
-  rev: number;
-}
-
-/** Result of a compare-and-set plan write. */
+/** Result of a compare-and-set plan update. */
 export type PlanWriteResult =
   | { ok: true; updated_at: number; rev: number }
-  | { ok: false; current: PlanRow | null };
+  | { ok: false; reason: "not_found" }
+  | { ok: false; reason: "forbidden" }
+  | { ok: false; reason: "conflict"; current: PlanRow };
 
 const nowSeconds = () => Math.floor(Date.now() / 1000);
 
-export async function getUserByEmail(db: D1Database, email: string): Promise<UserRow | null> {
-  return db.prepare("SELECT * FROM users WHERE email = ?").bind(email).first<UserRow>();
+export async function getPlan(db: D1Database, id: string): Promise<PlanRow | null> {
+  return db.prepare("SELECT * FROM plans WHERE id = ?").bind(id).first<PlanRow>();
 }
 
-export async function getUserById(db: D1Database, id: number): Promise<UserRow | null> {
-  return db.prepare("SELECT * FROM users WHERE id = ?").bind(id).first<UserRow>();
-}
-
-export async function createUser(
+/** Insert a new plan. Caller supplies a fresh id + edit-key hash; retried on id collision. */
+export async function createPlan(
   db: D1Database,
-  args: { email: string; hash: string; salt: string; iterations: number },
-): Promise<UserRow> {
-  const now = nowSeconds();
-  const row = await db
-    .prepare(
-      `INSERT INTO users (email, password_hash, password_salt, iterations, token_version, created_at, updated_at)
-       VALUES (?, ?, ?, ?, 1, ?, ?) RETURNING *`,
-    )
-    .bind(args.email, args.hash, args.salt, args.iterations, now, now)
-    .first<UserRow>();
-  if (!row) throw new Error("createUser: insert returned no row");
-  return row;
-}
-
-/** Transparent hash upgrade on login — does NOT change token_version (stays logged in). */
-export async function updateUserHash(
-  db: D1Database,
-  id: number,
-  hash: string,
-  salt: string,
-  iterations: number,
-): Promise<void> {
-  await db
-    .prepare("UPDATE users SET password_hash = ?, password_salt = ?, iterations = ?, updated_at = ? WHERE id = ?")
-    .bind(hash, salt, iterations, nowSeconds(), id)
-    .run();
-}
-
-/** Password change — bumps token_version to invalidate all existing sessions. */
-export async function updateUserPasswordAndRevoke(
-  db: D1Database,
-  id: number,
-  hash: string,
-  salt: string,
-  iterations: number,
-): Promise<void> {
-  await db
-    .prepare(
-      `UPDATE users
-       SET password_hash = ?, password_salt = ?, iterations = ?, token_version = token_version + 1, updated_at = ?
-       WHERE id = ?`,
-    )
-    .bind(hash, salt, iterations, nowSeconds(), id)
-    .run();
-}
-
-export async function deleteUser(db: D1Database, id: number): Promise<void> {
-  // Explicit plan delete in addition to ON DELETE CASCADE, for safety across runtimes.
-  await db.batch([
-    db.prepare("DELETE FROM plans WHERE user_id = ?").bind(id),
-    db.prepare("DELETE FROM users WHERE id = ?").bind(id),
-  ]);
-}
-
-// ----- password resets -----
-export interface PasswordResetRow {
-  id: number;
-  user_id: number;
-  token_hash: string;
-  expires_at: number;
-  used_at: number | null;
-  created_at: number;
-}
-
-export async function createPasswordReset(
-  db: D1Database,
-  userId: number,
-  tokenHash: string,
-  expiresAt: number,
-): Promise<void> {
-  await db
-    .prepare("INSERT INTO password_resets (user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?)")
-    .bind(userId, tokenHash, expiresAt, nowSeconds())
-    .run();
-}
-
-/** Invalidate any outstanding (unused) reset tokens for a user — one live token at a time. */
-export async function invalidateUserResets(db: D1Database, userId: number): Promise<void> {
-  await db
-    .prepare("UPDATE password_resets SET used_at = ? WHERE user_id = ? AND used_at IS NULL")
-    .bind(nowSeconds(), userId)
-    .run();
-}
-
-export async function findValidReset(db: D1Database, tokenHash: string, now: number): Promise<PasswordResetRow | null> {
-  return db
-    .prepare("SELECT * FROM password_resets WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?")
-    .bind(tokenHash, now)
-    .first<PasswordResetRow>();
-}
-
-export async function markResetUsed(db: D1Database, id: number): Promise<void> {
-  await db.prepare("UPDATE password_resets SET used_at = ? WHERE id = ?").bind(nowSeconds(), id).run();
-}
-
-export async function getPlan(db: D1Database, userId: number): Promise<PlanRow | null> {
-  return db.prepare("SELECT * FROM plans WHERE user_id = ?").bind(userId).first<PlanRow>();
-}
-
-/** Unconditional upsert (legacy / no optimistic-concurrency token). Advances rev. */
-export async function upsertPlan(
-  db: D1Database,
-  userId: number,
-  planJson: string,
-  schemaVersion: number,
+  args: { id: string; editKeyHash: string; planJson: string; schemaVersion: number },
 ): Promise<{ updated_at: number; rev: number }> {
   const now = nowSeconds();
-  const row = await db
+  await db
     .prepare(
-      `INSERT INTO plans (user_id, schema_version, plan_json, updated_at, rev)
-       VALUES (?, ?, ?, ?, 1)
-       ON CONFLICT(user_id) DO UPDATE SET
-         plan_json = excluded.plan_json,
-         schema_version = excluded.schema_version,
-         updated_at = excluded.updated_at,
-         rev = plans.rev + 1
-       RETURNING updated_at, rev`,
+      `INSERT INTO plans (id, edit_key_hash, schema_version, plan_json, rev, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 1, ?, ?)`,
     )
-    .bind(userId, schemaVersion, planJson, now)
-    .first<{ updated_at: number; rev: number }>();
-  if (!row) throw new Error("upsertPlan: upsert returned no row");
-  return row;
+    .bind(args.id, args.editKeyHash, args.schemaVersion, args.planJson, now, now)
+    .run();
+  return { updated_at: now, rev: 1 };
 }
 
 /**
- * Compare-and-set write. expectedRev <= 0 means "create only" (succeeds only when no
- * plan exists yet); expectedRev >= 1 means "update only if the stored rev matches".
- * On a stale token the write is rejected and the server's current row is returned so the
- * caller can reconcile. Each conditional statement is atomic, so no transaction is needed.
+ * Update a plan if the caller proves the edit key and (optionally) holds the current rev.
+ * `editKeyHash` is the SHA-256 the caller's key hashes to; we compare it to the stored hash.
+ * expectedRev >= 1 enforces optimistic concurrency; <= 0 means "unconditional".
  */
-export async function upsertPlanCAS(
+export async function updatePlanCAS(
   db: D1Database,
-  userId: number,
+  id: string,
+  editKeyHash: string,
   planJson: string,
   schemaVersion: number,
   expectedRev: number,
 ): Promise<PlanWriteResult> {
+  const current = await getPlan(db, id);
+  if (!current) return { ok: false, reason: "not_found" };
+  if (current.edit_key_hash !== editKeyHash) return { ok: false, reason: "forbidden" };
+
   const now = nowSeconds();
-  if (expectedRev <= 0) {
+  if (expectedRev >= 1) {
     const res = await db
       .prepare(
-        `INSERT INTO plans (user_id, schema_version, plan_json, updated_at, rev)
-         VALUES (?, ?, ?, ?, 1)
-         ON CONFLICT(user_id) DO NOTHING`,
+        `UPDATE plans SET plan_json = ?, schema_version = ?, updated_at = ?, rev = rev + 1
+         WHERE id = ? AND rev = ?`,
       )
-      .bind(userId, schemaVersion, planJson, now)
+      .bind(planJson, schemaVersion, now, id, expectedRev)
       .run();
-    if (res.meta.changes === 1) return { ok: true, updated_at: now, rev: 1 };
-    return { ok: false, current: await getPlan(db, userId) };
+    if (res.meta.changes === 1) return { ok: true, updated_at: now, rev: expectedRev + 1 };
+    const fresh = await getPlan(db, id);
+    return fresh ? { ok: false, reason: "conflict", current: fresh } : { ok: false, reason: "not_found" };
   }
-  const res = await db
-    .prepare(
-      `UPDATE plans SET plan_json = ?, schema_version = ?, updated_at = ?, rev = rev + 1
-       WHERE user_id = ? AND rev = ?`,
-    )
-    .bind(planJson, schemaVersion, now, userId, expectedRev)
+  await db
+    .prepare("UPDATE plans SET plan_json = ?, schema_version = ?, updated_at = ?, rev = rev + 1 WHERE id = ?")
+    .bind(planJson, schemaVersion, now, id)
     .run();
-  if (res.meta.changes === 1) return { ok: true, updated_at: now, rev: expectedRev + 1 };
-  return { ok: false, current: await getPlan(db, userId) };
+  return { ok: true, updated_at: now, rev: current.rev + 1 };
 }

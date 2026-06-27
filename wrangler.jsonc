@@ -26,12 +26,6 @@
   ],
 
   "vars": {
-    "APP_ENV": "production",
-    // PBKDF2 work factor — surfaced as a var so it can be raised without a code change.
-    "PBKDF2_ITERATIONS": "210000",
-    // Session lifetime: 14 days.
-    "SESSION_TTL_SECONDS": "1209600"
+    "APP_ENV": "production"
   }
-  // SESSION_SECRET is NOT stored here. Set it with:  npx wrangler secret put SESSION_SECRET
-  // For local dev, put it in .dev.vars (gitignored).
 }

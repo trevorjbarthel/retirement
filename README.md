@@ -4,9 +4,10 @@ A planning tool for U.S. service members leaving active duty: a transition
 **timeline** (countdown, milestone grid, horizontal timeline, pre‑transition
 breakdown, 6‑phase checklist) plus **pay/TSP/VA/state‑tax estimators**.
 
-Originally a single static HTML file, it now runs on **Cloudflare Workers + D1**
-with optional **email + password accounts** so a user's plan syncs across
-devices. Guests still work fully offline (data stays in `localStorage`).
+Originally a single static HTML file, it now runs on **Cloudflare Workers + D1**.
+There are **no accounts** — when you build a plan it's saved at a private, unguessable
+URL. Bookmark that link to return and edit; share the read‑only version with others.
+A copy is also kept in `localStorage` so the same browser can recover.
 
 > ⚠️ Estimates only — not financial, tax, or legal advice. Verify all figures
 > with DFAS, the VA, and a qualified professional.
@@ -15,16 +16,19 @@ devices. Guests still work fully offline (data stays in `localStorage`).
 
 | Layer | What |
 |------|------|
-| Front‑end | `public/index.html` (vanilla JS, Tailwind/Lucide via CDN) + ES modules `public/js/{calc,store,auth-ui}.js` |
-| Worker API | `src/` — [Hono](https://hono.dev) app: `/api/auth/*`, `/api/me`, `/api/plan`, `/api/account` |
-| Auth | Self‑contained email+password. PBKDF2‑HMAC‑SHA‑256 (Web Crypto), HMAC‑signed `HttpOnly` session cookies, `token_version` revocation. No external services. |
-| Data | D1 (`migrations/0001_init.sql`): `users` + one `plans` row per user (plan JSON incl. checklist) |
-| Static serving | Workers Static Assets (`public/`), `run_worker_first: ["/api/*"]` |
+| Front‑end | `public/index.html` (vanilla JS, Tailwind/Lucide via CDN) + ES modules `public/js/{calc,store}.js` |
+| Worker API | `src/` — [Hono](https://hono.dev) app: `POST /api/p`, `GET /api/p/:id`, `PUT /api/p/:id` |
+| Access model | **Capability URLs, no accounts.** A plan's public `id` (the `/p/<id>` path) is a read‑only token; a separate secret `edit_key` (the `#k=<key>` hash) is required to write. Only the SHA‑256 of the edit key is stored. |
+| Data | D1 (`migrations/0001_init.sql`): one `plans` row, keyed by `id`, holding the plan JSON + `edit_key_hash` + a monotonic `rev`. |
+| Static serving | Workers Static Assets (`public/`), `run_worker_first: ["/api/*"]`, SPA fallback so `/p/<id>` serves the app |
 
 - `public/js/calc.js` holds the **pure** data + calculation logic and is imported
   by both the browser and the test suite (one source of truth).
-- `public/js/store.js` is the persistence seam: API when signed in, `localStorage`
-  for guests; the page's `saveState`/`loadState` route through it.
+- `public/js/store.js` is the persistence seam: it creates a plan on first save,
+  loads `/p/<id>`, and PUTs edits with the edit key (debounced); it also mirrors a
+  copy to `localStorage` for same‑browser recovery.
+- **Trade‑off:** anyone with a plan's edit link can edit it, and there's no recovery
+  if the link is lost (no email, no reset) — the link *is* the credential.
 
 ## Prerequisites
 
@@ -41,10 +45,9 @@ npx wrangler d1 create mtc-db
 
 # Apply the schema locally (and later remotely)
 npx wrangler d1 migrations apply mtc-db --local
-
-# Local secret for `wrangler dev` (already gitignored)
-echo 'SESSION_SECRET=dev-only-change-me' > .dev.vars
 ```
+
+No secrets are required — there's no auth.
 
 ## Develop
 
@@ -66,34 +69,25 @@ Cloudflare account or network needed.
 
 ```bash
 npx wrangler d1 migrations apply mtc-db --remote
-npx wrangler secret put SESSION_SECRET    # a long random value, e.g. `openssl rand -base64 48`
-npx wrangler secret put RESEND_API_KEY    # optional — enables password-reset emails (else the link is logged)
 npx wrangler deploy
 ```
 
 ## API
 
-| Method | Path | Auth | Body | Returns |
-|---|---|---|---|---|
-| POST | `/api/auth/register` | – | `{email,password}` | `201 {user}` + cookie |
-| POST | `/api/auth/login` | – | `{email,password}` | `200 {user}` + cookie |
-| POST | `/api/auth/logout` | – | – | `204` |
-| POST | `/api/auth/change-password` | ✓ | `{current,next}` | `204` |
-| POST | `/api/auth/forgot` | – | `{email}` | `204` (always; emails a link if the account exists) |
-| POST | `/api/auth/reset` | – | `{token,password}` | `200 {user}` + cookie, or `400` |
-| GET | `/api/me` | opt | – | `{user|null}` |
-| GET | `/api/plan` | ✓ | – | `{plan, schema_version, updated_at, rev}` |
-| PUT | `/api/plan` | ✓ | `{plan, schema_version, base_rev?}` | `{updated_at, rev}` or `409 {error:"conflict", current}` |
-| DELETE | `/api/account` | ✓ | – | `204` (cascades plan) |
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| POST | `/api/p` | `{plan, schema_version}` | `201 {id, edit_key, rev, ...}` — mints a new plan |
+| GET | `/api/p/:id` | – | `{plan, schema_version, updated_at, rev}` or `404` (read‑only; no key) |
+| PUT | `/api/p/:id` | `{plan, schema_version, edit_key, base_rev?}` | `{updated_at, rev}`, `403` (wrong/no key), `404`, or `409 {error:"conflict", current}` |
 
-`PUT /api/plan` uses optimistic concurrency: send `base_rev` (the `rev` you last loaded;
-`0` to create) and the write is rejected with `409` + the server's `current` plan if a
-newer revision exists, instead of silently overwriting it. Omitting `base_rev` keeps the
-legacy unconditional upsert. Every successful write returns the new monotonic `rev`.
-
-State‑changing requests require an `X-Requested-With: fetch` header (the CSRF guard);
-request bodies, when present, are parsed as JSON. (`Content-Type` itself is not
-separately enforced — the custom header is what a cross‑site form cannot set.)
+- The `id` is the public/read token (appears in the `/p/<id>` URL); the `edit_key` —
+  returned once on create — is required to write and travels only in the URL hash
+  (`#k=<key>`), so it stays out of server logs and `Referer`.
+- **Optimistic concurrency:** `PUT` sends `base_rev` (the `rev` you last loaded). A stale
+  token is rejected with `409` + the server's `current` plan instead of silently
+  overwriting a newer edit. Every successful write returns the new monotonic `rev`.
+- No sessions/cookies and no CSRF token are needed: an attacker can't forge an unguessable
+  capability, so there's nothing to ride a cross‑site request.
 
 ## Pay tables (auto‑refresh)
 
@@ -119,18 +113,12 @@ the official DFAS pages**. The committed data lives in `public/data/pay-tables.j
 - Tailwind/Lucide load from CDNs; for production consider self‑hosting/building
   CSS and adding security headers (CSP) — static assets are served edge‑direct,
   so header injection would need a Worker pass.
-- **Auth rate limiting** is wired but inactive by default. `src/routes/auth.ts`
-  calls an optional `AUTH_LIMITER` binding on `/login`, `/register`, and
-  `/change-password`; when the binding is absent (local dev, tests, an
-  un‑provisioned deploy) it's a no‑op. To activate, add a Cloudflare
-  [Rate Limiting binding](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/)
-  to `wrangler.jsonc`, e.g.:
-  ```jsonc
-  "unsafe": { "bindings": [
-    { "name": "AUTH_LIMITER", "type": "ratelimit", "namespace_id": "1001",
-      "simple": { "limit": 20, "period": 60 } }
-  ] }
-  ```
+- **No accounts by design.** A plan's edit link is a bearer capability: anyone with it
+  can edit, a leaked link exposes the plan's (planning‑only) data, and a lost link can't
+  be recovered. Mitigations in place: the edit key is 128‑bit random and rides in the URL
+  hash (off server logs/`Referer`), only its hash is stored, and the read‑only `/p/<id>`
+  link is offered separately for sharing. A `POST /api/p` rate‑limit (Cloudflare Rate
+  Limiting binding) is a reasonable follow‑up to blunt bulk plan creation.
 - **VA disability rates** in `calc.js` (`VA_RATES_2025`) are the veteran‑alone
   (no‑dependents) amounts on the Dec 1 2024 COLA vintage. Refresh them as a set
   (not per‑bracket) when a new COLA lands, and update `DATA_VINTAGE.vaRates` in
@@ -138,15 +126,8 @@ the official DFAS pages**. The committed data lives in `public/data/pay-tables.j
 - **State tax** figures are damped‑effective‑rate *upper‑bound* estimates from a
   single top‑marginal rate per state, not bracket‑accurate; the UI labels them as
   approximate. For real accuracy, store a per‑state bracket schedule.
-- **Password reset** is implemented (`/api/auth/forgot` + `/api/auth/reset`, single‑use
-  hashed tokens in `password_resets`, migration `0003`; design in
-  [`docs/PASSWORD_RESET.md`](docs/PASSWORD_RESET.md)). It needs a transactional email
-  sender: set the `RESEND_API_KEY` secret (and optionally `RESET_EMAIL_FROM` for a
-  verified domain). **Without that key the reset link is logged by the Worker instead of
-  emailed** — fine for local dev, not for production. The link host defaults to the request
-  origin; override with the `APP_BASE_URL` var if needed.
 - **Multi‑tab / concurrent edits** are guarded by optimistic concurrency on a monotonic
-  `plans.rev` counter (migration `0002`). The client sends the last‑seen `rev` as
-  `base_rev`; a stale write returns `409` with the server's current plan, and the front‑end
-  prompts to keep this tab's version (overwrite) or load the other one. A counter is used
-  rather than `updated_at` because the latter is only second‑precision.
+  `plans.rev` counter. The client sends the last‑seen `rev` as `base_rev`; a stale write
+  returns `409` with the server's current plan, and the front‑end prompts to keep this
+  tab's version (overwrite) or load the other one. A counter is used rather than
+  `updated_at` because the latter is only second‑precision.

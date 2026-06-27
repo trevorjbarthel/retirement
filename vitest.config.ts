@@ -16,10 +16,7 @@ export default defineWorkersConfig({
           // Migrations are handed to the setup file via this binding.
           bindings: {
             TEST_MIGRATIONS: migrations,
-            SESSION_SECRET: "test-secret-0123456789abcdef0123456789",
             APP_ENV: "development",
-            PBKDF2_ITERATIONS: "1000", // low for fast tests
-            SESSION_TTL_SECONDS: "3600",
           },
         },
       },

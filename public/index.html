@@ -183,8 +183,6 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 <!-- ===== SETUP SCREEN ===== -->
 <div id="setup-screen" class="flex-1 flex items-start justify-center py-8 px-4 md:px-6">
 <div class="w-full max-w-2xl">
-<!-- Account control (sign in before building a plan) -->
-<div class="flex justify-end mb-2 min-h-[34px]"><div id="accountAreaSetup" class="flex items-center gap-2 flex-wrap"></div></div>
 <!-- Hero -->
 <div class="text-center mb-8 fade-in">
   <div class="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4" style="background: linear-gradient(135deg, #1a2744 0%, #2e3f66 100%);">
@@ -400,7 +398,9 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
       <span id="rankBadge" class="text-xs font-medium text-navy-400 hidden md:inline"></span>
     </div>
     <div class="flex items-center gap-2 flex-wrap">
-      <div id="accountArea" class="flex items-center gap-2 flex-wrap"></div>
+      <button id="headerLinkBtn" class="no-print hidden items-center gap-1.5 text-sm font-medium text-gold-600 hover:text-gold-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-gold-50" title="Copy your plan's edit link">
+        <i data-lucide="link" class="w-4 h-4"></i> Copy link
+      </button>
       <button id="jumpToPayBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-gold-600 hover:text-gold-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-gold-50">
         <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Pay Estimator
       </button>
@@ -422,6 +422,31 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 </div>
 
 <div class="max-w-6xl mx-auto px-4 md:px-6 py-6 space-y-6">
+
+<!-- PLAN LINK BANNER (editable) -->
+<div id="planLinkBanner" class="no-print hidden section-card" style="background:#fdf9ed; border:1px solid #f0d266;">
+  <div class="flex items-start gap-3 flex-wrap">
+    <i data-lucide="bookmark" class="w-5 h-5 mt-0.5 flex-shrink-0" style="color:#a6841e;"></i>
+    <div class="flex-1 min-w-[220px]">
+      <p class="text-sm font-semibold text-navy-700">Your plan is saved at a private link</p>
+      <p class="text-xs text-navy-500 mt-0.5">Bookmark it to come back and edit later — there's no login. Anyone with this link can edit, so only share it with people you trust.</p>
+      <input id="planLinkInput" type="text" readonly class="input-field mt-2 text-xs" style="font-family:monospace;" />
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      <button id="copyEditLinkBtn" class="text-sm font-semibold text-white px-3 py-2 rounded-lg" style="background:#a6841e;"><i data-lucide="copy" class="w-4 h-4 inline align-[-2px]"></i> Copy edit link</button>
+      <button id="copyViewLinkBtn" class="text-sm font-medium text-navy-600 px-3 py-2 rounded-lg hover:bg-navy-50" title="A read-only link others can't edit">Copy read-only link</button>
+    </div>
+  </div>
+</div>
+
+<!-- READ-ONLY BANNER (viewing someone else's link) -->
+<div id="readOnlyBanner" class="no-print hidden section-card" style="background:#dbeafe; border:1px solid #93c5fd;">
+  <div class="flex items-center gap-3 flex-wrap">
+    <i data-lucide="eye" class="w-5 h-5 flex-shrink-0" style="color:#1e40af;"></i>
+    <p class="flex-1 text-sm text-navy-700 min-w-[220px]">You're viewing a shared plan (read-only). Changes you make here won't be saved.</p>
+    <button id="makeCopyBtn" class="text-sm font-semibold text-white px-3 py-2 rounded-lg" style="background:#1e40af;"><i data-lucide="copy-plus" class="w-4 h-4 inline align-[-2px]"></i> Make my own copy</button>
+  </div>
+</div>
 
 <!-- A. COUNTDOWN HERO -->
 <div id="countdownHero" class="section-card text-center fade-in-up" style="background: linear-gradient(135deg, #1a2744 0%, #2e3f66 100%); color: white;">
@@ -792,7 +817,7 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
   <p class="text-sm text-navy-500">Built for the military community — by someone who served 🇺🇸</p>
   <p class="text-xs text-navy-400 mt-1">Share this tool with your fellow service members</p>
   <button id="copyLinkBtn" class="no-print mt-3 inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl transition-all hover:shadow" style="background: #1a2744; color: #c9a227;">
-    <i data-lucide="link" class="w-4 h-4"></i> Copy Shareable Link
+    <i data-lucide="link" class="w-4 h-4"></i> Copy read-only link
   </button>
   <p id="dataVintage" class="text-xs text-navy-400 mt-4"></p>
   <p class="text-xs text-navy-400 mt-1">Made by Copilot</p>
@@ -805,11 +830,10 @@ import {
   SKILLBRIDGE_LIMITS, BASE_PAY_2026, getBasePay2026, VA_RATES_2025, STATE_TAX_DATA,
   parseStateFromLocation, ANNUITY_FACTORS, interpolateAnnuityFactor, getLifeExpDistributionPeriod,
   subDays, addDays, daysBetween, firstOfNextMonth, clamp, getRankGrade, getSkillbridgeAuthorizedMax,
-  computeRetirementPay, milestoneStatus, buildICS, encodeState, decodeState, isValidState,
+  computeRetirementPay, milestoneStatus, buildICS, isValidState,
   DATA_VINTAGE, FLAG_OFFICER_GRADES
-} from './js/calc.js';
-import * as store from './js/store.js';
-import { initAuthUI, openResetFlow } from './js/auth-ui.js';
+} from '/js/calc.js';
+import * as store from '/js/store.js';
 // ===== DATA =====
 const STORAGE_KEY = 'military-transition-calc-v5';
 
@@ -868,7 +892,7 @@ function fmtDateShort(d) { return d.toLocaleDateString('en-US', { month:'short',
 function fmtCurrency(val) { return val.toLocaleString('en-US', { style:'currency', currency:'USD' }); }
 function fmtCurrencyWhole(val) { return val.toLocaleString('en-US', { style:'currency', currency:'USD', maximumFractionDigits:0 }); }
 // Escape untrusted/plan-derived strings before they enter an innerHTML template.
-// Plans can arrive from a shared #state= link or an imported backup, so any free-text
+// Plans can arrive from a shared /p/<id> link or an imported backup, so any free-text
 // field (e.g. postLocation) must be escaped at the sink to prevent DOM XSS.
 const ESC_MAP = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (ch) => ESC_MAP[ch]); }
@@ -1174,14 +1198,36 @@ function buildState() {
 }
 
 // ===== SAVE / LOAD =====
-// Persistence routes through store.js: D1-backed API when signed in, localStorage for guests.
+// Persistence routes through store.js: a plan lives at /p/<id> in D1, cached in localStorage.
 function saveState(s) { store.savePlan(s); }
-async function loadState() { return await store.loadPlan(); }
-function clearState() { store.lsClear(); }
 
-// Checklist state now travels inside the plan (state.checks), persisted via saveState.
+// Checklist state travels inside the plan (state.checks), persisted via saveState.
 function loadChecks() { return (state && state.checks) || {}; }
 function saveChecks(checks) { if (state) { state.checks = checks; saveState(state); } }
+
+// Reflect the current plan's link/read-only state in the header + banners.
+function renderPlanLink() {
+  const banner = $('planLinkBanner');
+  const ro = $('readOnlyBanner');
+  const headerBtn = $('headerLinkBtn');
+  const editUrl = store.getEditUrl();
+  if (store.isReadOnly()) {
+    ro.classList.remove('hidden');
+    banner.classList.add('hidden');
+    headerBtn.classList.add('hidden');
+  } else if (editUrl) {
+    ro.classList.add('hidden');
+    banner.classList.remove('hidden');
+    $('planLinkInput').value = editUrl;
+    headerBtn.classList.remove('hidden');
+    headerBtn.classList.add('flex');
+  } else {
+    banner.classList.add('hidden');
+    ro.classList.add('hidden');
+    headerBtn.classList.add('hidden');
+  }
+  if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') lucide.createIcons();
+}
 
 // ===== SHOW RESULTS =====
 function showResults() {
@@ -2036,6 +2082,7 @@ function applyLoadedPlan(plan) {
   tspWithdrawalMethod = state.tspWithdrawalMethod || 'fixed';
   tspContribMode = state.tspContribMode || 'fixed';
   showResults();
+  renderPlanLink();
 }
 
 async function init() {
@@ -2054,7 +2101,7 @@ async function init() {
   $('rank').addEventListener('change', () => { updateSkillbridgeLimit(); });
   $('sbDays').addEventListener('input', () => { updateSbEditFeedback(); });
 
-  $('setup-form').addEventListener('submit', e => {
+  $('setup-form').addEventListener('submit', async e => {
     e.preventDefault();
     if (!validate()) {
       const invalid = document.querySelectorAll('[aria-invalid="true"]');
@@ -2068,8 +2115,19 @@ async function init() {
     const prevChecks = (state && state.checks) || {};
     state = buildState();
     state.checks = prevChecks; // keep checklist progress across edits
-    saveState(state);
     showResults();
+    if (store.isReadOnly()) {
+      renderPlanLink(); // viewing a shared plan — local edits only, can't save
+    } else if (store.hasPlan()) {
+      saveState(state); // editing an existing plan → update it
+      renderPlanLink();
+    } else {
+      // Brand-new plan → create it server-side to mint the shareable link.
+      const created = await store.createPlan(state);
+      history.replaceState(null, '', created ? `/p/${created.id}#k=${created.editKey}` : (location.pathname + location.search));
+      renderPlanLink();
+      showToast(created ? 'Plan saved — bookmark your link to come back' : 'Saved in this browser — couldn\'t create an online link');
+    }
   });
 
   $('editBtn').addEventListener('click', () => {
@@ -2137,12 +2195,22 @@ async function init() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  // Shareable link encodes the plan into the URL hash (client-only; no server round-trip).
-  $('copyLinkBtn').addEventListener('click', () => {
-    try {
-      const url = location.origin + location.pathname + '#state=' + encodeState(state);
-      navigator.clipboard.writeText(url).then(() => showToast('Shareable link copied!')).catch(() => showToast('Could not copy link'));
-    } catch { showToast('Could not create link'); }
+  // ----- plan links: edit (private) vs read-only (safe to share) -----
+  function copyText(text, okMsg) {
+    if (!text) { showToast('Build your plan first'); return; }
+    navigator.clipboard.writeText(text).then(() => showToast(okMsg)).catch(() => showToast('Could not copy link'));
+  }
+  const copyEditLink = () => copyText(store.getEditUrl(), 'Edit link copied — keep it private');
+  const copyViewLink = () => copyText(store.getViewUrl(), 'Read-only link copied');
+  $('copyEditLinkBtn').addEventListener('click', copyEditLink);
+  $('headerLinkBtn').addEventListener('click', copyEditLink);
+  $('copyViewLinkBtn').addEventListener('click', copyViewLink);
+  $('copyLinkBtn').addEventListener('click', copyViewLink); // footer button shares the read-only link
+  $('makeCopyBtn').addEventListener('click', async () => {
+    if (!state.firstName) { showToast('Nothing to copy yet'); return; }
+    const created = await store.createPlan(state);
+    if (created) location.href = `/p/${created.id}#k=${created.editKey}`; // reload into your own editable copy
+    else showToast('Could not create a copy — check your connection');
   });
 
   // Calendar (.ics) export of every milestone.
@@ -2160,21 +2228,26 @@ async function init() {
     showToast('Backup downloaded');
   });
   $('importBtn').addEventListener('click', () => $('importInput').click());
-  $('importInput').addEventListener('change', (e) => {
+  $('importInput').addEventListener('change', async (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const obj = JSON.parse(reader.result);
-        if (!isValidState(obj)) { showToast('Invalid backup file'); return; }
-        saveState(obj);
-        applyLoadedPlan(obj);
-        showToast('Plan restored');
-      } catch { showToast('Could not read backup'); }
-      $('importInput').value = '';
-    };
-    reader.readAsText(file);
+    let obj = null;
+    try { obj = JSON.parse(await file.text()); } catch { showToast('Could not read backup'); $('importInput').value = ''; return; }
+    $('importInput').value = '';
+    if (!isValidState(obj)) { showToast('Invalid backup file'); return; }
+    applyLoadedPlan(obj);
+    // Mirror the submit flow: overwrite the current plan, or mint a new link for a fresh one.
+    if (store.isReadOnly()) {
+      renderPlanLink();
+    } else if (store.hasPlan()) {
+      saveState(obj);
+      renderPlanLink();
+    } else {
+      const created = await store.createPlan(obj);
+      history.replaceState(null, '', created ? `/p/${created.id}#k=${created.editKey}` : (location.pathname + location.search));
+      renderPlanLink();
+    }
+    showToast('Plan restored');
   });
 
 
@@ -2279,13 +2352,6 @@ async function init() {
     }
   });
 
-  // Plan source priority: a shared link (#state=) wins, then the account (D1)
-  // when signed in, else localStorage.
-  let hashPlan = null;
-  if (location.hash.startsWith('#state=')) {
-    const decoded = decodeState(location.hash.slice(7));
-    if (decoded && isValidState(decoded)) hashPlan = decoded;
-  }
   // Concurrent-edit (multi-tab / multi-device) conflict resolution.
   store.onConflict(async (serverPlan) => {
     const keepMine = confirm(
@@ -2301,32 +2367,35 @@ async function init() {
     return 'theirs';
   });
 
-  await store.bootAuth();
-  initAuthUI({
-    getCurrentState: () => state,
-    onPlanLoaded: applyLoadedPlan,
-    onSyncFailed: () => showToast('Saved on this device — could not sync to your account'),
-  });
-  if (hashPlan) {
-    // A shared link is "view this plan", not "replace my saved plan". For a signed-in
-    // user, only display it (never PUT it over their account); guests may cache locally.
-    if (!store.isAuthed()) saveState(hashPlan);
-    applyLoadedPlan(hashPlan);
-    // Clear the hash so a reload doesn't re-apply (and, for guests, re-save) the link.
-    history.replaceState(null, '', location.pathname + location.search);
+  // Resolve which plan to load: from the URL (/p/<id> + #k=<key>), or — at the root path —
+  // from this browser's cached link so a returning visitor lands back on their plan.
+  let id = null, key = null, fromCache = false;
+  const pathMatch = location.pathname.match(/^\/p\/([A-Za-z0-9_-]+)\/?$/);
+  if (pathMatch) {
+    id = pathMatch[1];
+    const km = location.hash.match(/[#&]k=([A-Za-z0-9_-]+)/);
+    key = km ? km[1] : null;
   } else {
-    const saved = await loadState();
-    if (saved && saved.firstName && saved.sepDate) applyLoadedPlan(saved);
+    const cached = store.getCached();
+    if (cached && cached.id) { id = cached.id; key = cached.editKey || null; fromCache = true; }
   }
 
-  // Password-reset link (?reset=<token>): open the set-new-password form, then scrub the
-  // token from the URL so it isn't left in history / sent as a referrer.
-  const resetToken = new URLSearchParams(location.search).get('reset');
-  if (resetToken) {
-    const url = new URL(location.href);
-    url.searchParams.delete('reset');
-    history.replaceState(null, '', url.pathname + (url.search || '') + url.hash);
-    openResetFlow(resetToken);
+  if (id) {
+    store.configure({ id, key });
+    if (fromCache) history.replaceState(null, '', `/p/${id}${key ? '#k=' + key : ''}`);
+    const plan = await store.loadRemote();
+    if (plan && plan.firstName && plan.sepDate) {
+      applyLoadedPlan(plan);
+    } else if (plan === null) {
+      // 404 or offline — fall back to the cache only if it's the SAME plan.
+      const cached = store.getCached();
+      if (cached && cached.id === id && cached.plan && cached.plan.firstName && cached.plan.sepDate) applyLoadedPlan(cached.plan);
+      else if (!fromCache) showToast('That plan link could not be found.');
+    }
+  } else {
+    // No id anywhere — recover a cached plan that was never saved online (create had failed).
+    const cached = store.getCached();
+    if (cached && cached.plan && cached.plan.firstName && cached.plan.sepDate) applyLoadedPlan(cached.plan);
   }
 
   updateSkillbridgeLimit();
