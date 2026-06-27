@@ -1,0 +1,32 @@
+name: Deploy to Cloudflare
+
+# Manual deploy (Actions tab → "Run workflow"). Runners deploy with your Cloudflare
+# token from repo secrets — nothing sensitive lives in the repo.
+#
+# One-time setup before the first run:
+#   1. Create the D1 database (Cloudflare dashboard → D1 → create "mtc-db", or once from a
+#      machine you can `wrangler login` on: `npx wrangler d1 create mtc-db`).
+#   2. Paste its database_id into wrangler.jsonc (replace REPLACE_WITH_D1_DATABASE_ID) and commit.
+#   3. Add repo secrets (Settings → Secrets and variables → Actions):
+#        CLOUDFLARE_API_TOKEN   — a token with Workers Scripts:Edit + D1:Edit + Workers Routes/KV as needed
+#        CLOUDFLARE_ACCOUNT_ID  — your account id
+on:
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm test            # gate the deploy on the test suite
+      - name: Apply D1 migrations + deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx wrangler d1 migrations apply mtc-db --remote
+          npx wrangler deploy

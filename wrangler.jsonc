@@ -5,6 +5,13 @@
   "compatibility_date": "2025-06-01",
   "compatibility_flags": ["nodejs_compat"],
 
+  // Serve on the custom domain (airforcehub.com must be a zone in this Cloudflare account).
+  // The front-end builds plan links from location.origin, so they'll be
+  // https://retirement.airforcehub.com/p/<id>#k=<key> automatically.
+  "routes": [
+    { "pattern": "retirement.airforcehub.com", "custom_domain": true }
+  ],
+
   // Serve the front-end (public/) via Workers Static Assets.
   // run_worker_first ensures /api/* always invokes the Worker before asset matching;
   // every other path is served edge-direct from public/ (fast, no Worker cost).
