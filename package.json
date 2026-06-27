@@ -8,11 +8,13 @@
   },
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "build:css": "tailwindcss -c tailwind.config.cjs -i ./src/styles/tailwind.css -o ./public/css/tailwind.css --minify",
+    "deploy": "npm run build:css && wrangler deploy",
     "test": "vitest run && npm run test:scripts",
     "test:scripts": "node --test test/parse-pay-tables.nodetest.mjs",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.calc.json",
+    "check:html-js": "node scripts/check-index-script.mjs",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.calc.json && npm run check:html-js",
     "update-pay-tables": "node scripts/update-pay-tables.mjs",
     "cf-typegen": "wrangler types",
     "db:migrate:local": "wrangler d1 migrations apply mtc-db --local",
@@ -25,6 +27,7 @@
     "@cloudflare/vitest-pool-workers": "^0.8.71",
     "@cloudflare/workers-types": "^4.20260625.1",
     "node-html-parser": "^8.0.3",
+    "tailwindcss": "^3.4.19",
     "typescript": "^6.0.3",
     "vitest": "^3.2.6",
     "wrangler": "^4.105.0"

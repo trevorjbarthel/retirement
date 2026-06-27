@@ -9,31 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/css/tailwind.css" />
 <script src="https://unpkg.com/lucide@latest" defer></script>
-<script>
-tailwind.config = {
-  theme: {
-    extend: {
-      colors: {
-        navy: { 50:'#f0f2f6', 100:'#d9dde8', 200:'#b3bbcf', 300:'#8d99b7', 400:'#67779e', 500:'#415586', 600:'#2e3f66', 700:'#1a2744', 800:'#131c32', 900:'#0c1220' },
-        gold: { 50:'#fdf9ed', 100:'#faf0cc', 200:'#f5e199', 300:'#f0d266', 400:'#e0be33', 500:'#c9a227', 600:'#a6841e', 700:'#836616', 800:'#5f490e', 900:'#3b2d06' },
-        base: { 50:'#ffffff', 100:'#f8f9fa', 200:'#e9ecef', 300:'#dee2e6', 400:'#ced4da', 500:'#adb5bd' },
-        success: { 100:'#d1fae5', 500:'#10b981', 700:'#047857' },
-        warning: { 100:'#fef3c7', 500:'#f59e0b', 700:'#b45309' },
-        danger: { 100:'#fee2e2', 500:'#ef4444', 700:'#b91c1c' },
-      },
-      fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-      },
-      borderRadius: {
-        '3xl': '1.25rem',
-        '4xl': '1.5rem',
-      },
-    },
-  },
-};
-</script>
 <style>
 :root {
   --navy: #1a2744;
@@ -2212,7 +2189,7 @@ function renderPhases(today, sep, termStart, ptdyStart, ptdyEnd, sbStart, sbEnd,
         T('cert-research','Research professional certifications in target field'),
         T('sb-network','Network with SkillBridge alumni in your career field'),
         s.vaClaim ? T('vre','Research and apply for VR&E (Chapter 31, VA Form 28-1900) — separate from the GI Bill') : null,
-        s.federalJob ? T('vow-cert','Request a VOW Act certification of expected discharge to claim Veterans' Preference before your DD-214') : null,
+        s.federalJob ? T('vow-cert',"Request a VOW Act certification of expected discharge to claim Veterans' Preference before your DD-214") : null,
         s.federalJob ? T('fed-packet','Assemble your federal-hiring packet — SF-15, VA rating letter, DD-214; identify your path (VEOA, VRA, 30%, Schedule A)') : null,
         s.vaClaim ? T('fdc-evidence','Prepare an FDC-style evidence package — completed DBQs and, where causation is contested, a nexus letter') : null,
       ].filter(Boolean) }
