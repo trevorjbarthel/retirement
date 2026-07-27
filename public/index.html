@@ -467,6 +467,7 @@ a.sr-only:focus, a.sr-only:focus-visible {
       <h1 id="resultTitle" class="text-lg md:text-xl font-bold text-navy-700" tabindex="-1"></h1>
       <span id="branchBadge" class="branch-badge text-xs"></span>
       <span id="rankBadge" class="text-xs font-medium text-navy-400 hidden md:inline"></span>
+      <span id="saveStatus" class="no-print text-xs font-medium text-navy-400 flex items-center gap-1" aria-live="polite"></span>
     </div>
     <div class="flex items-center gap-2 flex-wrap">
       <button id="headerLinkBtn" class="no-print hidden items-center gap-1.5 text-sm font-medium text-gold-700 hover:text-gold-800 transition-colors px-3 py-1.5 rounded-lg hover:bg-gold-50" title="Copy your plan's edit link">
@@ -3307,6 +3308,24 @@ async function init() {
     } else {
       if (dorBox) dorBox.classList.add('hidden');
     }
+  });
+
+  // Surfaces store.js's save state instead of leaving a failed save completely
+  // silent — the plan is always safe in localStorage either way, but the visitor
+  // should know when the SERVER copy (the one the shareable link points at) is stale.
+  store.onChange((s) => {
+    const el = $('saveStatus');
+    if (!el || s.readOnly || !s.planId) { if (el) el.textContent = ''; return; }
+    const labels = {
+      pending: '<i data-lucide="loader-circle" class="w-3.5 h-3.5 animate-spin"></i> Saving…',
+      saving: '<i data-lucide="loader-circle" class="w-3.5 h-3.5 animate-spin"></i> Saving…',
+      saved: '<i data-lucide="check" class="w-3.5 h-3.5" style="color:#10b981;"></i> Saved',
+      conflict: '<i data-lucide="alert-triangle" class="w-3.5 h-3.5" style="color:#f59e0b;"></i> Resolving conflict…',
+      error: '<i data-lucide="cloud-off" class="w-3.5 h-3.5" style="color:#ef4444;"></i> Couldn\'t save — kept in this browser',
+    };
+    el.innerHTML = labels[s.saveState] || '';
+    el.classList.toggle('text-danger-500', s.saveState === 'error');
+    if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') lucide.createIcons();
   });
 
   // Concurrent-edit (multi-tab / multi-device) conflict resolution.

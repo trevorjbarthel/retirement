@@ -14,6 +14,11 @@ let readOnly = false;
 let lastSavedAt = null;
 let saveTimer = null;
 let conflictHandler = null; // async (serverPlan) => "mine" | "theirs"
+// 'idle' | 'pending' (debounce running) | 'saving' (request in flight) | 'saved' |
+// 'error' (network/server failure — the edit is still safe in localStorage) |
+// 'conflict' (409, being routed to conflictHandler). Exists so the UI can show a
+// Saving.../Saved/Couldn't save indicator instead of failing completely silently.
+let saveState = "idle";
 const listeners = new Set();
 
 function emit() {
@@ -22,7 +27,7 @@ function emit() {
 }
 export function onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 export function onConflict(fn) { conflictHandler = fn; }
-export function getStatus() { return { planId, editKey, readOnly, lastSavedAt }; }
+export function getStatus() { return { planId, editKey, readOnly, lastSavedAt, saveState }; }
 export function isReadOnly() { return readOnly; }
 export function hasPlan() { return !!planId; }
 export function getEditUrl() { return planId && editKey ? `${location.origin}/p/${planId}#k=${editKey}` : null; }
@@ -89,6 +94,7 @@ export async function createPlan(plan) {
 export function savePlan(plan) {
   cacheSave(plan);
   if (readOnly || !planId || !editKey) { lastSavedAt = readOnly ? lastSavedAt : Date.now(); emit(); return; }
+  saveState = "pending"; emit();
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => { pushPlan(plan); }, 800);
 }
@@ -97,22 +103,26 @@ export function savePlan(plan) {
 export async function pushPlan(plan) {
   cacheSave(plan);
   if (readOnly || !planId || !editKey) return false;
+  saveState = "saving"; emit();
   const res = await apiFetch(`/api/p/${planId}`, {
     method: "PUT",
     body: { plan, schema_version: SCHEMA_VERSION, edit_key: editKey, base_rev: rev },
   });
   if (res.ok && res.data) {
     if (typeof res.data.rev === "number") rev = res.data.rev;
-    lastSavedAt = Date.now(); emit(); return true;
+    lastSavedAt = Date.now(); saveState = "saved"; emit(); return true;
   }
   if (res.status === 409) {
     const current = res.data && res.data.current;
     if (current && typeof current.rev === "number") rev = current.rev; // adopt server rev for a retry
+    saveState = "conflict"; emit();
     if (conflictHandler) {
       const choice = await conflictHandler(current ? current.plan : null);
       if (choice === "mine") return pushPlan(plan);
     }
+    saveState = "error"; emit();
     return false;
   }
+  saveState = "error"; emit();
   return false; // network / 403 / etc. — local cache already kept the edit
 }

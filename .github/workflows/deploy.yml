@@ -33,6 +33,7 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
+      - run: npm run typecheck
       - run: npm test
       - name: Apply D1 migrations
         env:
