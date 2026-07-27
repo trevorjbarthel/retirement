@@ -19,7 +19,10 @@ export const SKILLBRIDGE_LIMITS = {
 
 // Veteran-alone (no dependents) monthly rates, effective Dec 1, 2024 COLA (the "2025" rates).
 // Verified against VA published figures — keep the whole table on one vintage.
-export const VA_RATES_2025 = { 0:0, 10:175.51, 20:346.95, 30:537.42, 40:774.16, 50:1102.04, 60:1395.93, 70:1759.19, 80:2044.89, 90:2297.96, 100:3831.30 };
+// Veteran-alone (no dependents) monthly rates, effective Dec 1, 2025 COLA (the "2026" rates).
+// Verified against VA published figures (va.gov/disability/compensation-rates/veteran-rates)
+// — keep the whole table on one vintage, and update DATA_VINTAGE.vaRates in the same change.
+export const VA_RATES_2025 = { 0:0, 10:180.42, 20:356.66, 30:552.47, 40:795.84, 50:1132.90, 60:1435.02, 70:1808.45, 80:2102.15, 90:2362.30, 100:3938.58 };
 
 export const STATE_TAX_DATA = {
   'AL': { name:'Alabama', militaryRetirementTax:'exempt', topRate:5.0, note:'Military retirement pay is fully exempt from Alabama income tax.' },
@@ -170,10 +173,10 @@ export function getSkillbridgeAuthorizedMax(branch, rankGrade) {
 
 // Data provenance — surfaced in the UI so future updates are obvious.
 export const DATA_VINTAGE = {
-  asOf: 'January 2026',
+  asOf: 'July 2026',
   basePay: '2026 DFAS Basic Pay Tables (3.8% raise, effective Jan 1 2026)',
-  vaRates: '2025 VA disability compensation rates (Dec 1 2024 COLA)',
-  stateTax: '2025 enacted state tax law',
+  vaRates: 'VA disability compensation rates (Dec 1 2025 COLA)',
+  stateTax: '2026 enacted state tax law',
   tsp: 'TSP/IRS life-expectancy & annuity factors (approximate)',
 };
 
@@ -365,17 +368,34 @@ export function compareTricarePrimeSelect({ expectedVisits = 'low', valuesLowCos
 }
 
 // --- Best state of residence (domicile) tax comparison ---
-// Reuses STATE_TAX_DATA. 'taxed' uses the top marginal rate as an upper-bound
-// estimate; 'partial' applies a rough 50% reduction (real exemptions vary widely).
+// Reuses STATE_TAX_DATA. topRate is the state's TOP marginal rate; a military pension
+// sits well below the top bracket in graduated states, so the raw top rate badly
+// overstates the real liability. Damp it toward an effective rate (~0.55x) — 'partial'
+// exemptions further halve it on top of that (real exemptions vary widely by state).
+// This is the single source of truth for the state-tax estimate: both the "State Tax
+// Impact" panel and the "Best State of Residence" comparison tool call this function,
+// so the two never disagree with each other on the same numbers.
+const STATE_TAX_EFFECTIVE_FACTOR = 0.55;
 export function estimateStateTaxOnRetiredPay(code, annualRetiredPay) {
   const d = STATE_TAX_DATA[code];
   if (!d) return null;
   annualRetiredPay = Math.max(0, Number(annualRetiredPay) || 0);
   let estAnnualTax = 0;
-  if (d.militaryRetirementTax === 'taxed') estAnnualTax = annualRetiredPay * (d.topRate / 100);
-  else if (d.militaryRetirementTax === 'partial') estAnnualTax = annualRetiredPay * (d.topRate / 100) * 0.5;
+  let note = d.note;
+  if (d.militaryRetirementTax === 'exempt') {
+    estAnnualTax = 0;
+    note = 'Fully exempt';
+  } else if (d.militaryRetirementTax === 'taxed') {
+    estAnnualTax = annualRetiredPay * (d.topRate / 100) * STATE_TAX_EFFECTIVE_FACTOR;
+    note = `Approx. ~$${Math.round(estAnnualTax).toLocaleString('en-US')}/yr (effective estimate; ${d.topRate}% top marginal rate — your actual rate is lower in graduated brackets)`;
+  } else {
+    // partial — effective-rate estimate, further halved for the partial exemption
+    estAnnualTax = annualRetiredPay * (d.topRate / 100) * STATE_TAX_EFFECTIVE_FACTOR * 0.5;
+    note = `Partial exemption — approx. ~$${Math.round(estAnnualTax).toLocaleString('en-US')}/yr (varies by age/income)`;
+  }
   return {
-    code, name: d.name, status: d.militaryRetirementTax, topRate: d.topRate, note: d.note,
+    code, name: d.name, status: d.militaryRetirementTax, topRate: d.topRate,
+    note: annualRetiredPay > 0 ? note : d.note,
     estAnnualTax: Math.round(estAnnualTax),
   };
 }
@@ -440,7 +460,7 @@ export function isValidState(obj) {
   if (!VALID_BRANCHES.includes(obj.branch)) return false;
   // Optional fields, when present, must be the right (safe) type and within range.
   const okNum = (v, lo, hi) => v === undefined || (typeof v === 'number' && isFinite(v) && v >= lo && v <= hi);
-  if (!okNum(obj.sbDays, 0, 180) || !okNum(obj.ptdyDays, 0, 20) || !okNum(obj.leaveDays, 0, 120)) return false;
+  if (!okNum(obj.sbDays, 0, 180) || !okNum(obj.ptdyDays, 0, 30) || !okNum(obj.leaveDays, 0, 120)) return false;
   // TSP numeric fields, when present, must be in the range the pay/withdrawal UI assumes.
   if (!okNum(obj.tspRetAge, 38, 70) || !okNum(obj.tspBalance, 0, 1e9) || !okNum(obj.tspFixedAmount, 0, 1e7) || !okNum(obj.tspRate, 0, 20)) return false;
   const okStr = (v, max) => v === undefined || (typeof v === 'string' && v.length <= max);

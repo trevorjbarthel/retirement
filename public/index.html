@@ -164,8 +164,11 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 .cal-event { padding: 1px 4px; border-radius: 3px; color: #fff; font-size: 9px; font-weight: 600; line-height: 1.4; }
 
 @media print {
-  .timeline-scroll { overflow: visible !important; }
-  .timeline-track { min-width: 0 !important; }
+  /* The horizontal timeline packs ~20+ milestones into a fixed-width proportional
+     axis; collapsing its min-width for print only makes markers overlap worse. The
+     Key Milestone Dates card grid above it already covers the same information in a
+     print-friendly layout, so just omit the timeline on paper. */
+  .timeline-scroll { display: none !important; }
   body { background: white !important; color: black !important; font-size: 11px; }
   .no-print { display: none !important; }
   .phase-content { max-height: none !important; overflow: visible !important; }
@@ -174,6 +177,14 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
   .section-card { page-break-inside: avoid; }
   h2 { page-break-after: avoid; }
   footer { page-break-before: always; }
+  /* Colored chips/bars/badges carry their contrast from a background color set via an
+     inline style or a color utility class; browsers omit backgrounds from print output
+     by default, which turns e.g. white chip text invisible on a plain page. */
+  .cal-event, #preBar > div, #countdownHero, .branch-badge, .status-dot, .tl-dot,
+  .day-meter-fill, .day-meter-item-color {
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .cal-month-card { break-inside: avoid; }
 }
 </style>
 </head>
@@ -270,8 +281,9 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
     </div>
     <div>
       <label class="block text-sm font-medium text-navy-600 mb-1">Years of Service <span class="text-danger-500">*</span></label>
-      <input type="number" id="yos" class="input-field" min="1" max="40" placeholder="e.g., 20" required aria-describedby="err-yos" />
+      <input type="number" id="yos" class="input-field" min="1" max="40" placeholder="e.g., 20" required aria-describedby="err-yos err-yos-retirement" />
       <div class="error-msg" id="err-yos">Enter years between 1 and 40.</div>
+      <div class="error-msg" id="err-yos-retirement">Retirement requires 20+ years of service. Choose Separation, or update your years of service.</div>
     </div>
   </div>
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
@@ -334,11 +346,11 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
       <label class="text-sm font-medium text-navy-600">Taking Permissive TDY?</label>
       <div class="toggle-track active" id="ptdyToggle"><div class="toggle-thumb"></div></div>
     </div>
-    <p class="helper-text">Per DAFI 36-3003 / service equivalent, members may be authorized up to 20 days for house and job hunting.</p>
+    <p class="helper-text">Per DAFI 36-3003 / service equivalent, retirees may be authorized up to 20 days CONUS (30 OCONUS) for house and job hunting; separatees are generally limited to around 10 days — confirm your authorized days with your career counselor.</p>
     <div id="ptdyFields" class="mt-3">
       <label class="block text-sm font-medium text-navy-600 mb-1">Days of Permissive TDY</label>
-      <input type="number" id="ptdyDays" class="input-field" min="1" max="20" value="20" />
-      <p class="helper-text">Max 20 days per regulation.</p>
+      <input type="number" id="ptdyDays" class="input-field" min="1" max="30" value="20" />
+      <p class="helper-text">Up to 20 days CONUS / 30 days OCONUS for retirees; separations are typically capped lower (~10 days). Max 30 days.</p>
     </div>
   </div>
   <div>
@@ -422,7 +434,7 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 <button type="submit" id="submitBtn" class="w-full py-3.5 rounded-xl font-semibold text-white text-base transition-all hover:shadow-lg active:scale-[0.98]" style="background: linear-gradient(135deg, #c9a227 0%, #a6841e 100%);">
   Build My Transition Plan →
 </button>
-<p class="text-center text-xs text-navy-400 mt-3 mb-6"><i data-lucide="lock" class="w-3 h-3 inline-block mr-1 align-[-2px]"></i> Your data is private. As a guest it stays in this browser; create a free account to securely sync your plan.</p>
+<p class="text-center text-xs text-navy-400 mt-3 mb-6"><i data-lucide="lock" class="w-3 h-3 inline-block mr-1 align-[-2px]"></i> There are no accounts. Your plan is saved at a private link only you have — bookmark it to come back and edit later.</p>
 </form>
 </div>
 </div>
@@ -530,7 +542,7 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
 
   <div id="dayMeter" class="day-meter-container">
     <div class="day-meter-header">
-      <span class="day-meter-label">180-Day Maximum</span>
+      <span class="day-meter-label" id="dayMeterLabel">180-Day Maximum</span>
       <span class="day-meter-value"><span id="dayMeterCurrent">0</span>/180</span>
     </div>
     <div class="day-meter-bar"><div id="dayMeterFill" class="day-meter-fill" style="width:0%;"></div></div>
@@ -561,7 +573,7 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
     </div>
     <div id="calendarContent" class="pay-section-inner">
       <div class="px-6 pb-6">
-        <div class="flex items-center justify-between mb-4 gap-2">
+        <div class="no-print flex items-center justify-between mb-4 gap-2">
           <button type="button" id="calPrevBtn" class="p-2 rounded-lg hover:bg-navy-50 text-navy-500 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent" aria-label="Previous month"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
           <div class="flex flex-col items-center">
             <span id="calMonthLabel" class="text-base font-bold text-navy-700"></span>
@@ -648,7 +660,7 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
             <p id="payRetFormula" class="text-xs text-navy-400 text-center"></p>
             <p id="payBrsNote" class="text-xs text-gold-600 text-center mt-1 hidden">With BRS, you also receive up to 5% TSP matching from DoD during service.</p>
           </div>
-          <p class="text-xs text-navy-400 mt-2 italic">Based on 2026 DFAS Basic Pay Tables, effective January 1, 2026. Source: dfas.mil. Your High-3 average may differ. Contact DFAS for your official figure.</p>
+          <p class="text-xs text-navy-400 mt-2 italic">Based on 2026 DFAS Basic Pay Tables, effective January 1, 2026. Source: dfas.mil. This uses your <em>current</em> base pay rate — the real High-3 calculation averages your highest 36 months of basic pay, which is typically lower if you've had a recent promotion or longevity step. This estimate is likely a few percent above your actual entitlement. Contact DFAS for your official figure.</p>
         </div>
 
         <div class="border-t" style="border-color:rgba(26,39,68,0.08);"></div>
@@ -667,13 +679,13 @@ select.input-field { appearance: none; background-image: url("data:image/svg+xml
               <p class="text-xs text-navy-400 mt-1">Tax-free income</p>
             </div>
           </div>
-          <p class="text-xs text-navy-400 italic">Rates shown are for a Veteran with no dependents, effective Dec 1, 2024 (most current VA COLA adjustment). Rates increase with dependents (spouse, children, parents).</p>
+          <p class="text-xs text-navy-400 italic">Rates shown are for a Veteran with no dependents, effective Dec 1, 2025 COLA adjustment. Rates increase with dependents (spouse, children, parents).</p>
           <div class="mt-3 flex items-center justify-between">
             <label class="text-sm font-medium text-navy-600">I have dependents</label>
             <div class="toggle-track" id="depToggle"><div class="toggle-thumb"></div></div>
           </div>
           <div id="depNote" class="hidden mt-2 rounded-lg p-3 text-xs" style="background:#fef3c7; color:#b45309; border:1px solid #fcd34d;">
-            With dependents, your VA compensation increases. For 30%+ ratings with a spouse, add approximately $50–$150/month depending on rating and number of dependents. Visit va.gov/disability/compensation-rates for exact amounts with your dependent status.
+            With dependents, your VA compensation increases. For a spouse alone, add roughly $65/month at 30% up to about $220/month at 100% (Dec 1 2025 rates); children or dependent parents add more on top. Visit va.gov/disability/compensation-rates for exact amounts with your dependent status.
           </div>
         </div>
 
@@ -1057,7 +1069,7 @@ import {
   computeRetirementPay, milestoneStatus, buildICS, encodeState, decodeState, isValidState,
   DATA_VINTAGE, FLAG_OFFICER_GRADES,
   computeSBP, compareConcurrentReceipt, TRICARE_FEES_2026, estimateRetireeHealthcareCost,
-  compareTricarePrimeSelect, compareStates, estimatePPM, tspKeepVsRoll
+  compareTricarePrimeSelect, compareStates, estimateStateTaxOnRetiredPay, estimatePPM, tspKeepVsRoll
 } from '/js/calc.js';
 import * as store from '/js/store.js';
 // ===== DATA =====
@@ -1354,7 +1366,9 @@ function showErr(id, show) {
   const el = $(id);
   if (el) el.classList.toggle('show', show);
   // Mirror the visual error onto the associated control so AT announces invalid state.
-  const ctrl = document.querySelector('[aria-describedby="' + id + '"]');
+  // ~= matches one token in a space-separated aria-describedby list (a control can
+  // reference more than one error message, e.g. #yos references two distinct errors).
+  const ctrl = document.querySelector('[aria-describedby~="' + id + '"]');
   if (ctrl) ctrl.setAttribute('aria-invalid', String(show));
 }
 
@@ -1366,13 +1380,25 @@ function validate() {
   if (!rankCat) { showErr('err-rankCat', true); ok = false; } else { showErr('err-rankCat', false); }
   if (!$('rank').value) { showErr('err-rank', true); ok = false; } else { showErr('err-rank', false); }
   const yos = parseInt($('yos').value);
-  if (!yos || yos < 1 || yos > 40) { showErr('err-yos', true); $('yos').classList.add('error'); ok = false; } else { showErr('err-yos', false); $('yos').classList.remove('error'); }
+  const yosInRange = !!yos && yos >= 1 && yos <= 40;
+  if (!yosInRange) { showErr('err-yos', true); $('yos').classList.add('error'); ok = false; } else { showErr('err-yos', false); $('yos').classList.remove('error'); }
   if (!transType) { showErr('err-transType', true); ok = false; } else { showErr('err-transType', false); }
-  if (transType === 'Retirement' && yos < 20) { showErr('err-yos', true); $('yos').classList.add('error'); ok = false; }
+  // A distinct message from the 1-40 range check above — "12" is a perfectly valid
+  // answer to "years of service," it's just too few for Retirement specifically.
+  const yosBelowRetirementFloor = yosInRange && transType === 'Retirement' && yos < 20;
+  if (yosBelowRetirementFloor) { showErr('err-yos-retirement', true); $('yos').classList.add('error'); ok = false; } else { showErr('err-yos-retirement', false); }
   const sd = $('sepDate').value;
   let today = new Date(($('todayDate').value || todayLocalStr()) + 'T00:00:00');
   if (isNaN(today)) today = new Date();
-  if (!sd || new Date(sd + 'T00:00:00') <= today) { showErr('err-sepDate', true); $('sepDate').classList.add('error'); ok = false; } else { showErr('err-sepDate', false); $('sepDate').classList.remove('error'); }
+  // A past date is almost certainly a typo when creating a brand-new plan, so keep
+  // rejecting it there — but once a plan already exists, its date can legitimately
+  // pass while the visitor is still editing other fields, and hard-blocking every
+  // future save (this field is required, so there's no way to "leave it alone")
+  // would permanently lock them out of their own plan. The results screen already
+  // handles a past date gracefully ("Days Since Retirement"), so just allow it here.
+  const isExistingPlan = !!(state && state.firstName && state.sepDate);
+  const sepDateValid = !!sd && (isExistingPlan || new Date(sd + 'T00:00:00') > today);
+  if (!sepDateValid) { showErr('err-sepDate', true); $('sepDate').classList.add('error'); ok = false; } else { showErr('err-sepDate', false); $('sepDate').classList.remove('error'); }
   // Date of Rank sanity: not in the future, not after separation.
   const dor = $('dateOfRank').value;
   if (dor) {
@@ -1402,7 +1428,7 @@ function buildState() {
   s.todayDate = $('todayDate').value;
   s.leaveDays = clamp(numOr(parseInt($('leaveDays').value), 60), 0, 120);
   s.ptdy = toggles.ptdy;
-  s.ptdyDays = toggles.ptdy ? clamp(parseInt($('ptdyDays').value) || 20, 1, 20) : 0;
+  s.ptdyDays = toggles.ptdy ? clamp(parseInt($('ptdyDays').value) || 20, 1, 30) : 0;
   s.sb = toggles.sb;
   // Preserve a deliberate 0 (e.g. E-1 "not eligible"); only default to 90 on a blank/NaN field.
   const sbN = parseInt($('sbDays').value, 10);
@@ -1535,12 +1561,22 @@ function renderTimeline(milestones, today, sep) {
 }
 
 // ===== 180-DAY METER =====
-function renderDayMeter(segments, totalDays) {
+// There is no single DoD rule capping "SkillBridge + PTDY + terminal leave" combined
+// at 180 days. The real constraints are separate: SkillBridge itself is capped at 180
+// days AND may not start earlier than 180 days before separation (DoDI 1322.29); PTDY
+// is a much smaller, separately-limited benefit; terminal leave is bounded by accrued
+// leave, not by SkillBridge's policy. Because this app chains SkillBridge -> PTDY ->
+// terminal leave immediately back-to-back into separation, the combined total IS a
+// faithful proxy for "how many days before separation does SkillBridge start" — but
+// only when SkillBridge is actually in use. With SkillBridge off, nothing here is
+// capped at 180, so the meter shouldn't imply a limit that doesn't apply.
+function renderDayMeter(segments, totalDays, sbActive) {
   const container = $('dayMeter');
   const fill = $('dayMeterFill');
   const msg = $('dayMeterMessage');
   const msgText = $('dayMeterMessageText');
   const msgIcon = $('dayMeterMessageIcon');
+  const label = $('dayMeterLabel');
 
   $('dayMeterCurrent').textContent = totalDays;
   $('dayMeterBreakdown').innerHTML = segments.map(seg => `
@@ -1556,25 +1592,33 @@ function renderDayMeter(segments, totalDays) {
   container.classList.remove('warning', 'danger');
   fill.classList.remove('warning', 'danger');
   msg.classList.remove('success', 'warning', 'danger');
+  if (label) label.textContent = sbActive ? 'SkillBridge Start Window (180-Day Max)' : 'Pre-Transition Period';
 
-  if (totalDays > 180) {
+  if (!sbActive) {
+    // No combined cap applies — PTDY and terminal leave are governed by their own,
+    // much smaller limits (see the Leave & Time Off section for each).
+    msg.classList.add('success');
+    msgIcon.setAttribute('data-lucide', 'info');
+    msgText.innerHTML = `<strong>${totalDays} days planned:</strong> No combined-day cap applies here since SkillBridge isn't in use — PTDY and terminal leave are each governed by their own, separate limits.`;
+    msg.style.display = 'flex';
+  } else if (totalDays > 180) {
     container.classList.add('danger');
     fill.classList.add('danger');
     msg.classList.add('danger');
     msgIcon.setAttribute('data-lucide', 'alert-triangle');
-    msgText.innerHTML = `<strong>Exceeds limit:</strong> ${totalDays} days planned — combined SkillBridge, PTDY, and terminal leave cannot exceed 180 days. Reduce your leave plan.`;
+    msgText.innerHTML = `<strong>Exceeds SkillBridge's window:</strong> ${totalDays} days planned before separation — SkillBridge (DoDI 1322.29) may not start more than 180 days out. Reduce your leave plan.`;
     msg.style.display = 'flex';
   } else if (totalDays > 150) {
     container.classList.add('warning');
     fill.classList.add('warning');
     msg.classList.add('warning');
     msgIcon.setAttribute('data-lucide', 'info');
-    msgText.innerHTML = `<strong>Approaching limit:</strong> Using ${totalDays}/180 days (${180 - totalDays} remaining).`;
+    msgText.innerHTML = `<strong>Approaching the limit:</strong> Your SkillBridge start is ${totalDays} days before separation (${180 - totalDays} of the 180-day window remaining).`;
     msg.style.display = 'flex';
   } else {
     msg.classList.add('success');
     msgIcon.setAttribute('data-lucide', 'check-circle');
-    msgText.innerHTML = `<strong>Within limits:</strong> Your pre-transition period of ${totalDays} days is within the 180-day policy maximum.`;
+    msgText.innerHTML = `<strong>Within limits:</strong> Your SkillBridge start is ${totalDays} days before separation, within the 180-day window DoDI 1322.29 allows.`;
     msg.style.display = 'flex';
   }
   if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') lucide.createIcons();
@@ -1636,6 +1680,25 @@ function calJumpToToday() {
   if (d > rangeEnd) d = new Date(rangeEnd);
   calView = { year: d.getFullYear(), month: d.getMonth() };
   renderCalendarPage();
+}
+
+// Printing needs every month in range, not just the one page currently on screen —
+// call this before window.print() and call renderCalendarPage() again afterward to
+// restore the single-month view (see the printBtn handler).
+function printAllCalendarMonths() {
+  const container = $('calendarMonthsContainer');
+  if (!container || !calCtx) return;
+  const { today, sep, s, sbStart, sbEnd, ptdyStart, ptdyEnd, termStart, rangeStart, rangeEnd } = calCtx;
+  let html = '';
+  let current = new Date(rangeStart);
+  let guard = 0;
+  while (current <= rangeEnd && guard < 36) {
+    html += renderCalMonth(current.getFullYear(), current.getMonth(), today, sep, s, sbStart, sbEnd, ptdyStart, ptdyEnd, termStart);
+    current.setMonth(current.getMonth() + 1);
+    guard++;
+  }
+  container.innerHTML = html;
+  if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') lucide.createIcons();
 }
 
 function renderCalMonth(year, month, today, sep, s, sbStart, sbEnd, ptdyStart, ptdyEnd, termStart) {
@@ -1702,10 +1765,16 @@ function renderResults() {
   const ptdyStart = subDays(termStart, s.ptdyDays);
   const sbEnd = s.ptdy ? ptdyStart : termStart;
   const sbStart = subDays(sbEnd, s.sbDays);
-  const tapDeadline = subDays(sep, isRet ? 365 : 90);
+  // 10 U.S.C. 1142(a)(3): pre-separation/TAP counseling must begin no later than 365
+  // days before separation for ALL separations, not just retirement — a 90-day figure
+  // here understated the deadline for separatees by 275 days.
+  const tapDeadline = subDays(sep, 365);
   const cmdApproval = s.sb ? subDays(sbStart, 60) : null;
   const firstRetPay = isRet ? firstOfNextMonth(sep) : null;
-  const tricareDeadline = subDays(sep, 90);
+  // TRICARE's 90-day enrollment window OPENS at separation (a QLE) and runs forward —
+  // it is not a pre-separation deadline. Missing it allows a retroactive request up to
+  // 12 months, but coverage should be requested inside the 90-day window if possible.
+  const tricareDeadline = addDays(sep, 90);
   const vaClaimBy = subDays(sep, 365);
 
   // Relative-day label that reads sanely when the date is today or already past
@@ -1728,7 +1797,7 @@ function renderResults() {
   milestones.push({ label: 'TAP Must Begin By', date: tapDeadline, icon: 'book-open' });
   if (s.vaClaim) milestones.push({ label: 'VA Claim Recommended By', date: vaClaimBy, icon: 'file-text' });
   if (s.sb && cmdApproval) milestones.push({ label: 'Commander Approval Needed', date: cmdApproval, icon: 'shield-check' });
-  milestones.push({ label: 'TRICARE Enrollment Window', date: tricareDeadline, icon: 'heart-pulse' });
+  milestones.push({ label: 'TRICARE Enrollment Window Closes', date: tricareDeadline, icon: 'heart-pulse' });
   if (s.sb) {
     milestones.push({ label: 'SkillBridge Start', date: sbStart, icon: 'briefcase' });
     milestones.push({ label: 'SkillBridge End', date: sbEnd, icon: 'check-circle' });
@@ -1743,7 +1812,12 @@ function renderResults() {
 
   // ----- Decision / benefit deadlines (retirement-depth expansion) -----
   if (s.vaClaim) milestones.push({ label: 'BDD Filing Window Closes', date: subDays(sep, 90), icon: 'file-clock' });
-  if (s.giBill) milestones.push({ label: 'GI Bill Transfer (TEB) Approved By', date: sep, icon: 'graduation-cap' });
+  // TEB requires the transfer be APPROVED while the member has fewer than 16 years of
+  // total service and can commit to 4 more years — it is not available at separation
+  // itself. Someone at 16+ years (true of essentially every Retirement plan, which
+  // requires 20+) is categorically ineligible; showing this as an upcoming deadline
+  // to them was actively wrong. Only surface it for members still under that window.
+  if (s.giBill && s.yos < 16) milestones.push({ label: 'GI Bill Transfer (TEB) — Approve Before 16 Years of Service', date: sep, icon: 'graduation-cap' });
   milestones.push({ label: 'FEDVIP Dental/Vision Enrollment Closes', date: addDays(sep, 60), icon: 'smile' });
   if (s.married || s.hasDependents) milestones.push({ label: 'FSGLI Spouse Conversion Deadline', date: addDays(sep, 120), icon: 'heart-handshake' });
   milestones.push({ label: 'VGLI: No Health Questions Deadline', date: addDays(sep, 240), icon: 'shield-plus' });
@@ -1758,16 +1832,18 @@ function renderResults() {
     milestones.push({ label: 'SBP Withdrawal Window Closes', date: sbpClose, icon: 'calendar-x' });
   }
   if (isRet && s.vaClaim) {
+    // DFAS runs CRDP/CRSC open season Jan 1-31 each year (not Dec-Jan).
     let osYear = today.getFullYear();
-    if (today > new Date(osYear, 11, 1)) osYear += 1;
-    milestones.push({ label: 'CRDP/CRSC Open Season (Dec–Jan)', date: new Date(osYear, 11, 1), icon: 'repeat' });
+    if (today > new Date(osYear, 0, 31)) osYear += 1;
+    milestones.push({ label: 'CRDP/CRSC Open Season (Jan 1–31)', date: new Date(osYear, 0, 1), icon: 'repeat' });
   }
 
-  // Final move entitlements: HHG shipment/storage runs ~1 year (180 days for
-  // short separations); retirees also get Home-of-Selection travel up to 3 years.
-  const hhgDeadline = isRet ? addDays(sep, 365) : addDays(sep, 182);
-  milestones.push({ label: isRet ? 'HHG Shipment/Storage Deadline (~1 yr)' : 'HHG Shipment Deadline (180 days)', date: hhgDeadline, icon: 'truck' });
-  if (isRet) milestones.push({ label: 'Home-of-Selection Travel Deadline (3 yrs)', date: addDays(sep, 3 * 365), icon: 'map' });
+  // Final move entitlements. These are two DIFFERENT constraints, not one: the 1-year
+  // figure is the free-storage cap; the actual move/shipment deadline for retirees is
+  // 3 years (extendable to 6) per MAP 68-24, effective for terminations on/after
+  // June 24, 2022. Separatees get 180 days for shipment, no equivalent 3-year benefit.
+  milestones.push({ label: 'HHG Free Storage Deadline (1 yr)', date: addDays(sep, 365), icon: 'archive' });
+  milestones.push({ label: isRet ? 'Final Move / HHG Shipment Deadline (3 yrs)' : 'HHG Shipment Deadline (180 days)', date: isRet ? addDays(sep, 3 * 365) : addDays(sep, 180), icon: 'truck' });
 
   milestones.sort((a, b) => a.date - b.date);
 
@@ -1842,7 +1918,7 @@ function renderResults() {
     `<span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm inline-block" style="background:${seg.color};"></span>${seg.label}</span>`
   ).join('');
 
-  renderDayMeter(segments, totalPre);
+  renderDayMeter(segments, totalPre, s.sb);
   renderTimelineCalendar(today, sep, s, sbStart, sbEnd, ptdyStart, ptdyEnd, termStart);
 
   renderPayEstimator(isRet);
@@ -2007,6 +2083,13 @@ function recalcPayEstimator(persist = true) {
 
   // State tax panel
   renderStateTaxPanel(monthlyRet, isRet);
+
+  // Decision Tools prefills (SBP base, CRDP gross pay, etc.) are derived from pay/VA
+  // rating and otherwise only computed once from renderResults — without this, editing
+  // base pay or VA rating here left those tools showing stale, pre-edit numbers.
+  // renderDecisionTools defers to any value the visitor already customized there (via
+  // state.tools), so this only refreshes fields nobody has touched yet.
+  renderDecisionTools(isRet);
 
   state.payRetSystem = payRetSystem;
   state.selectedVARating = selectedVARating;
@@ -2302,24 +2385,10 @@ function renderStateTaxPanel(monthlyRet, isRet) {
   const annualRet = isRet ? monthlyRet * 12 : 0;
   const annualVA = (VA_RATES_2025[selectedVARating] || 0) * 12;
 
-  // Estimated state tax on retirement pay
-  let retTaxAnnual = 0;
-  let retTaxNote = '';
-  // topRate is the state's TOP marginal rate. A military pension sits well below the top
-  // bracket in graduated states, so the full top rate badly overstates the real liability.
-  // Damp it toward an effective rate (~0.55x) and label every figure as an upper bound.
-  const EFFECTIVE_FACTOR = 0.55;
-  if (td.militaryRetirementTax === 'exempt') {
-    retTaxAnnual = 0;
-    retTaxNote = 'Fully exempt';
-  } else if (td.militaryRetirementTax === 'taxed') {
-    retTaxAnnual = isRet ? annualRet * (td.topRate / 100) * EFFECTIVE_FACTOR : 0;
-    retTaxNote = `Approx. ~${fmtCurrencyWhole(retTaxAnnual)}/yr (effective estimate; ${td.topRate}% top marginal rate — your actual rate is lower in graduated brackets)`;
-  } else {
-    // partial — effective-rate estimate, further halved for the partial exemption
-    retTaxAnnual = isRet ? annualRet * (td.topRate / 100) * EFFECTIVE_FACTOR * 0.5 : 0;
-    retTaxNote = `Partial exemption — approx. ~${fmtCurrencyWhole(retTaxAnnual)}/yr (varies by age/income)`;
-  }
+  // Single source of truth for the state-tax estimate — shared with the "Best State of
+  // Residence" comparison tool (calc.js estimateStateTaxOnRetiredPay) so the two never
+  // show disagreeing numbers for the same state.
+  const retTaxAnnual = estimateStateTaxOnRetiredPay(stateCode, annualRet).estAnnualTax;
 
   const afterTaxMonthly = isRet ? ((annualRet - retTaxAnnual) / 12) : 0;
   const noTaxLabel = td.topRate === 0 ? '🏖️ No state income tax' : '';
@@ -2844,7 +2913,7 @@ function applyLoadedPlan(plan) {
   // can never reach an innerHTML sink as a string (see escapeHtml + isValidState).
   const toInt = (v, dflt, lo, hi) => { const n = Math.trunc(Number(v)); return Number.isFinite(n) ? clamp(n, lo, hi) : dflt; };
   state.sbDays = toInt(state.sbDays, 0, 0, 180);
-  state.ptdyDays = toInt(state.ptdyDays, 0, 0, 20);
+  state.ptdyDays = toInt(state.ptdyDays, 0, 0, 30);
   state.leaveDays = toInt(state.leaveDays, 60, 0, 120);
   state.payBasePay = Number.isFinite(+state.payBasePay) ? Math.max(0, +state.payBasePay) : 0;
   toggles.ptdy = state.ptdy;
@@ -2970,12 +3039,39 @@ async function init() {
     });
   });
 
+  // Remember which collapsibles were actually open before printing forces them all
+  // open, so `afterprint` can put the screen back the way the visitor left it instead
+  // of just slamming everything shut.
+  let printPrevOpen = null;
   $('printBtn').addEventListener('click', () => {
-    document.querySelectorAll('.phase-content').forEach(c => c.classList.add('open'));
-    $('payEstimatorContent').classList.add('open');
-    $('decisionToolsContent').classList.add('open');
-    $('thinkAboutContent').classList.add('open');
+    const collapsibles = [...document.querySelectorAll('.phase-content, .pay-section-inner')];
+    printPrevOpen = collapsibles.map(el => el.classList.contains('open'));
+    collapsibles.forEach(el => el.classList.add('open'));
+    printAllCalendarMonths();
     setTimeout(() => window.print(), 200);
+  });
+
+  function syncChevron(chevId, contentId) {
+    const chev = $(chevId), content = $(contentId);
+    if (chev && content) chev.style.transform = content.classList.contains('open') ? 'rotate(180deg)' : '';
+  }
+
+  window.addEventListener('afterprint', () => {
+    if (printPrevOpen) {
+      const collapsibles = [...document.querySelectorAll('.phase-content, .pay-section-inner')];
+      collapsibles.forEach((el, i) => { if (!printPrevOpen[i]) el.classList.remove('open'); });
+      printPrevOpen = null;
+    }
+    syncChevron('payChevron', 'payEstimatorContent');
+    syncChevron('calendarChevron', 'calendarContent');
+    syncChevron('decisionToolsChevron', 'decisionToolsContent');
+    syncChevron('thinkChevron', 'thinkAboutContent');
+    document.querySelectorAll('.phase-header').forEach(h => {
+      const content = $('content-' + h.dataset.phase);
+      const chev = h.querySelector('.phase-chevron');
+      if (chev && content) chev.style.transform = content.classList.contains('open') ? 'rotate(180deg)' : '';
+    });
+    renderCalendarPage(); // restore the single-month view the print export bypassed
   });
 
   // Data provenance line in the footer.

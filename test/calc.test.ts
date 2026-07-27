@@ -23,10 +23,10 @@ describe("computeRetirementPay", () => {
 });
 
 describe("data tables", () => {
-  it("VA rates are on the 2025 (Dec 1 2024 COLA) vintage", () => {
-    expect(calc.VA_RATES_2025[100]).toBe(3831.30);
-    expect(calc.VA_RATES_2025[30]).toBe(537.42); // pins a mid-bracket so vintage drift is caught
-    expect(calc.VA_RATES_2025[10]).toBe(175.51);
+  it("VA rates are on the Dec 1 2025 COLA vintage", () => {
+    expect(calc.VA_RATES_2025[100]).toBe(3938.58);
+    expect(calc.VA_RATES_2025[30]).toBe(552.47); // pins a mid-bracket so vintage drift is caught
+    expect(calc.VA_RATES_2025[10]).toBe(180.42);
   });
   it("SkillBridge cap lookup", () => {
     expect(calc.getSkillbridgeAuthorizedMax("Army", "E-5")).toBe(120);
