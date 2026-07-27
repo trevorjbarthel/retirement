@@ -202,6 +202,90 @@ export function milestoneStatus(diffDays) {
   return 'future';
 }
 
+// The full transition deadline engine: every milestone/deadline date the app surfaces,
+// derived purely from the plan and today's date. Extracted from the inline script so
+// it's unit-testable — this had zero test coverage despite being the app's core
+// domain logic (every date on the milestone grid, the horizontal timeline, and the
+// calendar comes from here). No DOM access; the caller renders the returned data.
+//
+// Returns { milestones, termStart, ptdyStart, ptdyEnd, sbStart, sbEnd, tapDeadline,
+// firstRetPay } — the non-milestones fields are also consumed directly by the
+// calendar and phase-checklist renderers.
+export function computeMilestones(s, today, sep) {
+  const isRet = s.transType === 'Retirement';
+
+  const termStart = subDays(sep, s.leaveDays);
+  const ptdyEnd = termStart;
+  const ptdyStart = subDays(termStart, s.ptdyDays);
+  const sbEnd = s.ptdy ? ptdyStart : termStart;
+  const sbStart = subDays(sbEnd, s.sbDays);
+  // 10 U.S.C. 1142(a)(3): pre-separation/TAP counseling must begin no later than 365
+  // days before separation for ALL separations, not just retirement.
+  const tapDeadline = subDays(sep, 365);
+  const cmdApproval = s.sb ? subDays(sbStart, 60) : null;
+  const firstRetPay = isRet ? firstOfNextMonth(sep) : null;
+  // TRICARE's 90-day enrollment window OPENS at separation (a QLE) and runs forward —
+  // it is not a pre-separation deadline.
+  const tricareDeadline = addDays(sep, 90);
+  const vaClaimBy = subDays(sep, 365);
+
+  const milestones = [];
+  milestones.push({ label: 'Today', date: today, icon: 'calendar-check' });
+  milestones.push({ label: 'TAP Must Begin By', date: tapDeadline, icon: 'book-open' });
+  if (s.vaClaim) milestones.push({ label: 'VA Claim Recommended By', date: vaClaimBy, icon: 'file-text' });
+  if (s.sb && cmdApproval) milestones.push({ label: 'Commander Approval Needed', date: cmdApproval, icon: 'shield-check' });
+  milestones.push({ label: 'TRICARE Enrollment Window Closes', date: tricareDeadline, icon: 'heart-pulse' });
+  if (s.sb) {
+    milestones.push({ label: 'SkillBridge Start', date: sbStart, icon: 'briefcase' });
+    milestones.push({ label: 'SkillBridge End', date: sbEnd, icon: 'check-circle' });
+  }
+  if (s.ptdy) {
+    milestones.push({ label: 'Permissive TDY Start', date: ptdyStart, icon: 'map-pin' });
+    milestones.push({ label: 'Permissive TDY End', date: ptdyEnd, icon: 'map-pin-off' });
+  }
+  milestones.push({ label: 'Terminal Leave Begins', date: termStart, icon: 'plane' });
+  milestones.push({ label: `${s.transType} Date`, date: sep, icon: 'flag' });
+  if (firstRetPay) milestones.push({ label: 'First Retirement Pay', date: firstRetPay, icon: 'dollar-sign' });
+
+  // ----- Decision / benefit deadlines (retirement-depth expansion) -----
+  if (s.vaClaim) milestones.push({ label: 'BDD Filing Window Closes', date: subDays(sep, 90), icon: 'file-clock' });
+  // TEB requires the transfer be APPROVED while the member has fewer than 16 years of
+  // total service and can commit to 4 more years — it is not available at separation
+  // itself. Someone at 16+ years (true of essentially every Retirement plan, which
+  // requires 20+) is categorically ineligible.
+  if (s.giBill && s.yos < 16) milestones.push({ label: 'GI Bill Transfer (TEB) — Approve Before 16 Years of Service', date: sep, icon: 'graduation-cap' });
+  milestones.push({ label: 'FEDVIP Dental/Vision Enrollment Closes', date: addDays(sep, 60), icon: 'smile' });
+  if (s.married || s.hasDependents) milestones.push({ label: 'FSGLI Spouse Conversion Deadline', date: addDays(sep, 120), icon: 'heart-handshake' });
+  milestones.push({ label: 'VGLI: No Health Questions Deadline', date: addDays(sep, 240), icon: 'shield-plus' });
+  milestones.push({ label: 'VGLI Final Application Deadline', date: addDays(sep, 485), icon: 'shield-alert' });
+  milestones.push({ label: 'Military OneSource Eligibility Ends', date: addDays(sep, 365), icon: 'life-buoy' });
+  if (s.married || s.hasDependents) milestones.push({ label: 'MIC3 School-Compact Protection Ends', date: addDays(sep, 365), icon: 'school' });
+  if (s.clearance) milestones.push({ label: 'Clearance Reinstatement Window Closes', date: addDays(sep, 730), icon: 'lock' });
+  if (isRet && firstRetPay) {
+    const sbpOpen = new Date(firstRetPay.getFullYear(), firstRetPay.getMonth() + 25, 1);
+    const sbpClose = new Date(firstRetPay.getFullYear(), firstRetPay.getMonth() + 36, 1);
+    milestones.push({ label: 'SBP Withdrawal Window Opens', date: sbpOpen, icon: 'calendar-clock' });
+    milestones.push({ label: 'SBP Withdrawal Window Closes', date: sbpClose, icon: 'calendar-x' });
+  }
+  if (isRet && s.vaClaim) {
+    // DFAS runs CRDP/CRSC open season Jan 1-31 each year (not Dec-Jan).
+    let osYear = today.getFullYear();
+    if (today > new Date(osYear, 0, 31)) osYear += 1;
+    milestones.push({ label: 'CRDP/CRSC Open Season (Jan 1–31)', date: new Date(osYear, 0, 1), icon: 'repeat' });
+  }
+
+  // Final move entitlements. These are two DIFFERENT constraints, not one: the 1-year
+  // figure is the free-storage cap; the actual move/shipment deadline for retirees is
+  // 3 years (extendable to 6) per MAP 68-24, effective for terminations on/after
+  // June 24, 2022. Separatees get 180 days for shipment, no equivalent 3-year benefit.
+  milestones.push({ label: 'HHG Free Storage Deadline (1 yr)', date: addDays(sep, 365), icon: 'archive' });
+  milestones.push({ label: isRet ? 'Final Move / HHG Shipment Deadline (3 yrs)' : 'HHG Shipment Deadline (180 days)', date: isRet ? addDays(sep, 3 * 365) : addDays(sep, 180), icon: 'truck' });
+
+  milestones.sort((a, b) => a.date - b.date);
+
+  return { milestones, termStart, ptdyStart, ptdyEnd, sbStart, sbEnd, tapDeadline, firstRetPay };
+}
+
 function icsEscape(text) {
   return String(text)
     .replace(/\\/g, '\\\\')
@@ -398,6 +482,32 @@ export function estimateStateTaxOnRetiredPay(code, annualRetiredPay) {
     note: annualRetiredPay > 0 ? note : d.note,
     estAnnualTax: Math.round(estAnnualTax),
   };
+}
+
+// --- 180-day meter classification ---
+// There is no single DoD rule capping "SkillBridge + PTDY + terminal leave" combined
+// at 180 days — see the caller for the full explanation. This is a faithful proxy for
+// "how many days before separation does SkillBridge start" (DoDI 1322.29's actual
+// 180-day rule) ONLY when SkillBridge is in use; with it off, no combined cap applies
+// at all. Pure classification logic, split out from the DOM-writing renderer so the
+// three threshold boundaries (0/150/180) are covered by tests instead of only ever
+// being exercised by manually adjusting sliders in the browser.
+export function classifyDayMeter(totalDays, sbActive) {
+  const pct = Math.min((totalDays / 180) * 100, 100);
+  if (!sbActive) {
+    return { level: 'none', pct, icon: 'info', title: `${totalDays} days planned`,
+      detail: "No combined-day cap applies here since SkillBridge isn't in use — PTDY and terminal leave are each governed by their own, separate limits." };
+  }
+  if (totalDays > 180) {
+    return { level: 'danger', pct, icon: 'alert-triangle', title: "Exceeds SkillBridge's window",
+      detail: `${totalDays} days planned before separation — SkillBridge (DoDI 1322.29) may not start more than 180 days out. Reduce your leave plan.` };
+  }
+  if (totalDays > 150) {
+    return { level: 'warning', pct, icon: 'info', title: 'Approaching the limit',
+      detail: `Your SkillBridge start is ${totalDays} days before separation (${180 - totalDays} of the 180-day window remaining).` };
+  }
+  return { level: 'success', pct, icon: 'check-circle', title: 'Within limits',
+    detail: `Your SkillBridge start is ${totalDays} days before separation, within the 180-day window DoDI 1322.29 allows.` };
 }
 
 export function compareStates(codes, annualRetiredPay) {

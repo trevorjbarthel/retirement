@@ -1082,7 +1082,7 @@ import {
   SKILLBRIDGE_LIMITS, BASE_PAY_2026, getBasePay2026, VA_RATES_2025, STATE_TAX_DATA,
   parseStateFromLocation, ANNUITY_FACTORS, interpolateAnnuityFactor, getLifeExpDistributionPeriod,
   subDays, addDays, daysBetween, firstOfNextMonth, clamp, getRankGrade, getSkillbridgeAuthorizedMax,
-  computeRetirementPay, milestoneStatus, buildICS, encodeState, decodeState, isValidState,
+  computeRetirementPay, milestoneStatus, computeMilestones, classifyDayMeter, buildICS, encodeState, decodeState, isValidState,
   DATA_VINTAGE, FLAG_OFFICER_GRADES,
   computeSBP, compareConcurrentReceipt, TRICARE_FEES_2026, estimateRetireeHealthcareCost,
   compareTricarePrimeSelect, compareStates, estimateStateTaxOnRetiredPay, estimatePPM, tspKeepVsRoll
@@ -1625,41 +1625,25 @@ function renderDayMeter(segments, totalDays, sbActive) {
       <div class="day-meter-item-color" style="background:${seg.color};"></div>
     </div>`).join('');
 
-  const pct = Math.min((totalDays / 180) * 100, 100);
-  fill.style.width = pct + '%';
+  // Classification (which threshold band, the message copy) lives in calc.js
+  // (classifyDayMeter) so its 0/150/180 boundaries are unit-tested; this function
+  // just applies the resulting classification to the DOM.
+  const cls = classifyDayMeter(totalDays, sbActive);
+  fill.style.width = cls.pct + '%';
 
   container.classList.remove('warning', 'danger');
   fill.classList.remove('warning', 'danger');
   msg.classList.remove('success', 'warning', 'danger');
   if (label) label.textContent = sbActive ? 'SkillBridge Start Window (180-Day Max)' : 'Pre-Transition Period';
 
-  if (!sbActive) {
-    // No combined cap applies — PTDY and terminal leave are governed by their own,
-    // much smaller limits (see the Leave & Time Off section for each).
-    msg.classList.add('success');
-    msgIcon.setAttribute('data-lucide', 'info');
-    msgText.innerHTML = `<strong>${totalDays} days planned:</strong> No combined-day cap applies here since SkillBridge isn't in use — PTDY and terminal leave are each governed by their own, separate limits.`;
-    msg.style.display = 'flex';
-  } else if (totalDays > 180) {
-    container.classList.add('danger');
-    fill.classList.add('danger');
-    msg.classList.add('danger');
-    msgIcon.setAttribute('data-lucide', 'alert-triangle');
-    msgText.innerHTML = `<strong>Exceeds SkillBridge's window:</strong> ${totalDays} days planned before separation — SkillBridge (DoDI 1322.29) may not start more than 180 days out. Reduce your leave plan.`;
-    msg.style.display = 'flex';
-  } else if (totalDays > 150) {
-    container.classList.add('warning');
-    fill.classList.add('warning');
-    msg.classList.add('warning');
-    msgIcon.setAttribute('data-lucide', 'info');
-    msgText.innerHTML = `<strong>Approaching the limit:</strong> Your SkillBridge start is ${totalDays} days before separation (${180 - totalDays} of the 180-day window remaining).`;
-    msg.style.display = 'flex';
-  } else {
-    msg.classList.add('success');
-    msgIcon.setAttribute('data-lucide', 'check-circle');
-    msgText.innerHTML = `<strong>Within limits:</strong> Your SkillBridge start is ${totalDays} days before separation, within the 180-day window DoDI 1322.29 allows.`;
-    msg.style.display = 'flex';
+  if (cls.level === 'danger' || cls.level === 'warning') {
+    container.classList.add(cls.level);
+    fill.classList.add(cls.level);
   }
+  msg.classList.add(cls.level === 'none' ? 'success' : cls.level);
+  msgIcon.setAttribute('data-lucide', cls.icon);
+  msgText.innerHTML = `<strong>${escapeHtml(cls.title)}:</strong> ${escapeHtml(cls.detail)}`;
+  msg.style.display = 'flex';
   if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') lucide.createIcons();
 }
 
@@ -1799,22 +1783,9 @@ function renderResults() {
     : (today < twoYearStart ? `2-Year Window Opens: ${fmtDateShort(twoYearStart)}` : `${pct}% through 2-year window`);
   setTimeout(() => { $('progressBar').style.width = pct + '%'; }, 200);
 
-  const termStart = subDays(sep, s.leaveDays);
-  const ptdyEnd = termStart;
-  const ptdyStart = subDays(termStart, s.ptdyDays);
-  const sbEnd = s.ptdy ? ptdyStart : termStart;
-  const sbStart = subDays(sbEnd, s.sbDays);
-  // 10 U.S.C. 1142(a)(3): pre-separation/TAP counseling must begin no later than 365
-  // days before separation for ALL separations, not just retirement — a 90-day figure
-  // here understated the deadline for separatees by 275 days.
-  const tapDeadline = subDays(sep, 365);
-  const cmdApproval = s.sb ? subDays(sbStart, 60) : null;
-  const firstRetPay = isRet ? firstOfNextMonth(sep) : null;
-  // TRICARE's 90-day enrollment window OPENS at separation (a QLE) and runs forward —
-  // it is not a pre-separation deadline. Missing it allows a retroactive request up to
-  // 12 months, but coverage should be requested inside the 90-day window if possible.
-  const tricareDeadline = addDays(sep, 90);
-  const vaClaimBy = subDays(sep, 365);
+  // The full deadline engine lives in calc.js (computeMilestones) so it's covered by
+  // unit tests instead of only ever being exercised by clicking through the UI.
+  const { milestones, termStart, ptdyStart, ptdyEnd, sbStart, sbEnd, tapDeadline, firstRetPay } = computeMilestones(s, today, sep);
 
   // Relative-day label that reads sanely when the date is today or already past
   // (a near-term sepDate pushes SkillBridge/terminal-leave starts before "today").
@@ -1830,61 +1801,6 @@ function renderResults() {
       <p class="text-lg font-bold tabular-nums" style="color:#f5e199;">${c.val}</p>
     </div>
   `).join('');
-
-  const milestones = [];
-  milestones.push({ label: 'Today', date: today, icon: 'calendar-check' });
-  milestones.push({ label: 'TAP Must Begin By', date: tapDeadline, icon: 'book-open' });
-  if (s.vaClaim) milestones.push({ label: 'VA Claim Recommended By', date: vaClaimBy, icon: 'file-text' });
-  if (s.sb && cmdApproval) milestones.push({ label: 'Commander Approval Needed', date: cmdApproval, icon: 'shield-check' });
-  milestones.push({ label: 'TRICARE Enrollment Window Closes', date: tricareDeadline, icon: 'heart-pulse' });
-  if (s.sb) {
-    milestones.push({ label: 'SkillBridge Start', date: sbStart, icon: 'briefcase' });
-    milestones.push({ label: 'SkillBridge End', date: sbEnd, icon: 'check-circle' });
-  }
-  if (s.ptdy) {
-    milestones.push({ label: 'Permissive TDY Start', date: ptdyStart, icon: 'map-pin' });
-    milestones.push({ label: 'Permissive TDY End', date: ptdyEnd, icon: 'map-pin-off' });
-  }
-  milestones.push({ label: 'Terminal Leave Begins', date: termStart, icon: 'plane' });
-  milestones.push({ label: `${s.transType} Date`, date: sep, icon: 'flag' });
-  if (firstRetPay) milestones.push({ label: 'First Retirement Pay', date: firstRetPay, icon: 'dollar-sign' });
-
-  // ----- Decision / benefit deadlines (retirement-depth expansion) -----
-  if (s.vaClaim) milestones.push({ label: 'BDD Filing Window Closes', date: subDays(sep, 90), icon: 'file-clock' });
-  // TEB requires the transfer be APPROVED while the member has fewer than 16 years of
-  // total service and can commit to 4 more years — it is not available at separation
-  // itself. Someone at 16+ years (true of essentially every Retirement plan, which
-  // requires 20+) is categorically ineligible; showing this as an upcoming deadline
-  // to them was actively wrong. Only surface it for members still under that window.
-  if (s.giBill && s.yos < 16) milestones.push({ label: 'GI Bill Transfer (TEB) — Approve Before 16 Years of Service', date: sep, icon: 'graduation-cap' });
-  milestones.push({ label: 'FEDVIP Dental/Vision Enrollment Closes', date: addDays(sep, 60), icon: 'smile' });
-  if (s.married || s.hasDependents) milestones.push({ label: 'FSGLI Spouse Conversion Deadline', date: addDays(sep, 120), icon: 'heart-handshake' });
-  milestones.push({ label: 'VGLI: No Health Questions Deadline', date: addDays(sep, 240), icon: 'shield-plus' });
-  milestones.push({ label: 'VGLI Final Application Deadline', date: addDays(sep, 485), icon: 'shield-alert' });
-  milestones.push({ label: 'Military OneSource Eligibility Ends', date: addDays(sep, 365), icon: 'life-buoy' });
-  if (s.married || s.hasDependents) milestones.push({ label: 'MIC3 School-Compact Protection Ends', date: addDays(sep, 365), icon: 'school' });
-  if (s.clearance) milestones.push({ label: 'Clearance Reinstatement Window Closes', date: addDays(sep, 730), icon: 'lock' });
-  if (isRet && firstRetPay) {
-    const sbpOpen = new Date(firstRetPay.getFullYear(), firstRetPay.getMonth() + 25, 1);
-    const sbpClose = new Date(firstRetPay.getFullYear(), firstRetPay.getMonth() + 36, 1);
-    milestones.push({ label: 'SBP Withdrawal Window Opens', date: sbpOpen, icon: 'calendar-clock' });
-    milestones.push({ label: 'SBP Withdrawal Window Closes', date: sbpClose, icon: 'calendar-x' });
-  }
-  if (isRet && s.vaClaim) {
-    // DFAS runs CRDP/CRSC open season Jan 1-31 each year (not Dec-Jan).
-    let osYear = today.getFullYear();
-    if (today > new Date(osYear, 0, 31)) osYear += 1;
-    milestones.push({ label: 'CRDP/CRSC Open Season (Jan 1–31)', date: new Date(osYear, 0, 1), icon: 'repeat' });
-  }
-
-  // Final move entitlements. These are two DIFFERENT constraints, not one: the 1-year
-  // figure is the free-storage cap; the actual move/shipment deadline for retirees is
-  // 3 years (extendable to 6) per MAP 68-24, effective for terminations on/after
-  // June 24, 2022. Separatees get 180 days for shipment, no equivalent 3-year benefit.
-  milestones.push({ label: 'HHG Free Storage Deadline (1 yr)', date: addDays(sep, 365), icon: 'archive' });
-  milestones.push({ label: isRet ? 'Final Move / HHG Shipment Deadline (3 yrs)' : 'HHG Shipment Deadline (180 days)', date: isRet ? addDays(sep, 3 * 365) : addDays(sep, 180), icon: 'truck' });
-
-  milestones.sort((a, b) => a.date - b.date);
 
   $('milestoneGrid').innerHTML = milestones.map((m, i) => {
     const diff = daysBetween(today, m.date);

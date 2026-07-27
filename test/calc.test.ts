@@ -239,3 +239,116 @@ describe("isValidState", () => {
     expect(calc.isValidState({ ...good, tspRetAge: 50, tspBalance: 85000 })).toBe(true);
   });
 });
+
+describe("computeMilestones", () => {
+  const today = new Date("2026-07-26T00:00:00");
+  const sep = new Date("2027-06-30T00:00:00");
+  const basePlan = {
+    transType: "Retirement",
+    yos: 20,
+    leaveDays: 60,
+    ptdy: true,
+    ptdyDays: 20,
+    sb: true,
+    sbDays: 90,
+    vaClaim: false,
+    giBill: false,
+    married: false,
+    hasDependents: false,
+    clearance: false,
+  };
+  const byLabel = (milestones: any[], label: string) => milestones.find((m) => m.label === label);
+
+  it("chains SkillBridge -> PTDY -> terminal leave back-to-back into separation", () => {
+    const r = calc.computeMilestones(basePlan, today, sep);
+    expect(calc.daysBetween(r.termStart, sep)).toBe(basePlan.leaveDays);
+    expect(calc.daysBetween(r.ptdyStart, r.ptdyEnd)).toBe(basePlan.ptdyDays);
+    expect(calc.daysBetween(r.sbStart, r.sbEnd)).toBe(basePlan.sbDays);
+    expect(r.ptdyEnd).toEqual(r.termStart); // PTDY runs right up to terminal leave
+    expect(r.sbEnd).toEqual(r.ptdyStart); // SkillBridge runs right up to PTDY
+  });
+
+  it("TAP deadline is 365 days before separation for BOTH retirement and separation (10 U.S.C. 1142)", () => {
+    const ret = calc.computeMilestones(basePlan, today, sep);
+    const sep2 = calc.computeMilestones({ ...basePlan, transType: "Separation", yos: 8 }, today, sep);
+    expect(calc.daysBetween(byLabel(ret.milestones, "TAP Must Begin By").date, sep)).toBe(365);
+    expect(calc.daysBetween(byLabel(sep2.milestones, "TAP Must Begin By").date, sep)).toBe(365);
+  });
+
+  it("TRICARE enrollment window closes 90 days AFTER separation, not before", () => {
+    const r = calc.computeMilestones(basePlan, today, sep);
+    const m = byLabel(r.milestones, "TRICARE Enrollment Window Closes");
+    expect(calc.daysBetween(sep, m.date)).toBe(90); // positive => after sep, not before
+  });
+
+  it("only produces retirement-only milestones (First Retirement Pay, SBP window) when transType is Retirement", () => {
+    const ret = calc.computeMilestones(basePlan, today, sep);
+    const sep2 = calc.computeMilestones({ ...basePlan, transType: "Separation", yos: 8 }, today, sep);
+    expect(byLabel(ret.milestones, "First Retirement Pay")).toBeTruthy();
+    expect(byLabel(sep2.milestones, "First Retirement Pay")).toBeFalsy();
+    expect(byLabel(ret.milestones, "SBP Withdrawal Window Opens")).toBeTruthy();
+    expect(byLabel(sep2.milestones, "SBP Withdrawal Window Closes")).toBeFalsy();
+  });
+
+  it("GI Bill TEB milestone only appears under 16 YOS — a 20-YOS retiree is categorically ineligible to transfer", () => {
+    const ineligible = calc.computeMilestones({ ...basePlan, giBill: true, yos: 20 }, today, sep);
+    const eligible = calc.computeMilestones({ ...basePlan, giBill: true, yos: 12, transType: "Separation" }, today, sep);
+    expect(byLabel(ineligible.milestones, "GI Bill Transfer (TEB) — Approve Before 16 Years of Service")).toBeFalsy();
+    expect(byLabel(eligible.milestones, "GI Bill Transfer (TEB) — Approve Before 16 Years of Service")).toBeTruthy();
+  });
+
+  it("CRDP/CRSC open season only appears for Retirement + a VA claim, dated Jan 1 (not Dec 1)", () => {
+    const r = calc.computeMilestones({ ...basePlan, vaClaim: true }, today, sep);
+    const noClaim = calc.computeMilestones(basePlan, today, sep);
+    const m = byLabel(r.milestones, "CRDP/CRSC Open Season (Jan 1–31)");
+    expect(m).toBeTruthy();
+    expect(m.date.getMonth()).toBe(0); // January, not December
+    expect(m.date.getDate()).toBe(1);
+    expect(byLabel(noClaim.milestones, "CRDP/CRSC Open Season (Jan 1–31)")).toBeFalsy();
+  });
+
+  it("CRDP/CRSC open season rolls to next year once this year's Jan 31 window has passed", () => {
+    const lateInYear = new Date("2026-03-01T00:00:00"); // already past this year's Jan 31 window
+    const r = calc.computeMilestones({ ...basePlan, vaClaim: true }, lateInYear, sep);
+    const m = byLabel(r.milestones, "CRDP/CRSC Open Season (Jan 1–31)");
+    expect(m.date.getFullYear()).toBe(2027);
+  });
+
+  it("retirees get a 3-year final-move deadline plus a separate 1-year free-storage deadline; separatees get neither, only a 180-day shipment deadline", () => {
+    const ret = calc.computeMilestones(basePlan, today, sep);
+    const sep2 = calc.computeMilestones({ ...basePlan, transType: "Separation", yos: 8 }, today, sep);
+    expect(calc.daysBetween(sep, byLabel(ret.milestones, "HHG Free Storage Deadline (1 yr)").date)).toBe(365);
+    expect(calc.daysBetween(sep, byLabel(ret.milestones, "Final Move / HHG Shipment Deadline (3 yrs)").date)).toBe(3 * 365);
+    expect(byLabel(sep2.milestones, "Final Move / HHG Shipment Deadline (3 yrs)")).toBeFalsy();
+    expect(calc.daysBetween(sep, byLabel(sep2.milestones, "HHG Shipment Deadline (180 days)").date)).toBe(180);
+  });
+
+  it("returns milestones sorted chronologically", () => {
+    const r = calc.computeMilestones({ ...basePlan, vaClaim: true, giBill: true, married: true, clearance: true }, today, sep);
+    for (let i = 1; i < r.milestones.length; i++) {
+      expect(r.milestones[i].date.getTime()).toBeGreaterThanOrEqual(r.milestones[i - 1].date.getTime());
+    }
+  });
+});
+
+describe("classifyDayMeter", () => {
+  it("reports no combined cap at all when SkillBridge isn't in use, regardless of total", () => {
+    expect(calc.classifyDayMeter(170, false).level).toBe("none");
+    expect(calc.classifyDayMeter(0, false).level).toBe("none");
+  });
+  it("is 'success' at and below 150 days (SkillBridge active)", () => {
+    expect(calc.classifyDayMeter(0, true).level).toBe("success");
+    expect(calc.classifyDayMeter(150, true).level).toBe("success");
+  });
+  it("is 'warning' strictly between 150 and 180 days", () => {
+    expect(calc.classifyDayMeter(151, true).level).toBe("warning");
+    expect(calc.classifyDayMeter(180, true).level).toBe("warning");
+  });
+  it("is 'danger' above 180 days", () => {
+    expect(calc.classifyDayMeter(181, true).level).toBe("danger");
+  });
+  it("caps the progress-bar percentage at 100 even when over the limit", () => {
+    expect(calc.classifyDayMeter(250, true).pct).toBe(100);
+    expect(calc.classifyDayMeter(90, true).pct).toBe(50);
+  });
+});
