@@ -49,7 +49,10 @@ input[type="number"] { -moz-appearance: textfield; }
 .phase-content { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; }
 .phase-content.open { max-height: 3000px; }
 .tooltip-container { position: relative; display: inline-flex; }
-.tooltip-box { display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: var(--navy); color: white; padding: 8px 12px; border-radius: 8px; font-size: 12px; line-height: 1.5; width: 260px; z-index: 50; margin-bottom: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+/* max-width caps the box to the viewport regardless of the width set here or inline
+   on a specific instance (280px/300px on a couple of tooltips) — a fixed width alone
+   overflows off-screen when the trigger sits near a viewport edge on a narrow phone. */
+.tooltip-box { display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: var(--navy); color: white; padding: 8px 12px; border-radius: 8px; font-size: 12px; line-height: 1.5; width: 260px; max-width: calc(100vw - 24px); z-index: 50; margin-bottom: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
 .tooltip-container:hover .tooltip-box, .tooltip-container:focus-within .tooltip-box { display: block; }
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--navy); color: white; padding: 12px 24px; border-radius: 12px; font-size: 14px; font-weight: 500; z-index: 100; transition: transform 0.3s ease, opacity 0.3s ease; opacity: 0; pointer-events: none; }
 .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
@@ -168,7 +171,15 @@ a.sr-only:focus, a.sr-only:focus-visible {
 .cal-day.other-month { background: #f8f9fa; color: #adb5bd; }
 .cal-day.is-today { border-color: #c9a227; border-width: 2px; }
 .cal-day-num { font-size: 12px; font-weight: 600; }
-.cal-event { padding: 1px 4px; border-radius: 3px; color: #fff; font-size: 9px; font-weight: 600; line-height: 1.4; }
+.cal-event { padding: 1px 4px; border-radius: 3px; color: #fff; font-size: 9px; font-weight: 600; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* At narrow widths (7 columns in ~340px), "PTDY"/"Leave" no longer fit their cell —
+   shrink the chrome around them rather than let the grid overflow; the color-coded
+   legend below the calendar still identifies what each chip means even truncated. */
+@media (max-width: 400px) {
+  .cal-day { padding: 3px; min-height: 58px; gap: 2px; }
+  .cal-day-num { font-size: 11px; }
+  .cal-event { font-size: 7px; padding: 1px 2px; }
+}
 
 /* .fade-in/.fade-in-up start at opacity:0 and rely on the animation to reach opacity:1
    — with animations suppressed, that final state never arrives and the content they're
@@ -469,24 +480,24 @@ a.sr-only:focus, a.sr-only:focus-visible {
       <span id="rankBadge" class="text-xs font-medium text-navy-400 hidden md:inline"></span>
       <span id="saveStatus" class="no-print text-xs font-medium text-navy-400 flex items-center gap-1" aria-live="polite"></span>
     </div>
-    <div class="flex items-center gap-2 flex-wrap">
-      <button id="headerLinkBtn" class="no-print hidden items-center gap-1.5 text-sm font-medium text-gold-700 hover:text-gold-800 transition-colors px-3 py-1.5 rounded-lg hover:bg-gold-50" title="Copy your plan's edit link">
-        <i data-lucide="link" class="w-4 h-4"></i> Copy link
+    <div class="flex items-center gap-1 sm:gap-2 flex-wrap">
+      <button id="headerLinkBtn" class="no-print hidden items-center gap-1.5 text-sm font-medium text-gold-700 hover:text-gold-800 transition-colors px-2 sm:px-3 py-1.5 rounded-lg hover:bg-gold-50" title="Copy your plan's edit link" aria-label="Copy your plan's edit link">
+        <i data-lucide="link" class="w-4 h-4"></i> <span class="hidden sm:inline">Copy link</span>
       </button>
-      <button id="jumpToPayBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-gold-700 hover:text-gold-800 transition-colors px-3 py-1.5 rounded-lg hover:bg-gold-50">
-        <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Pay Estimator
+      <button id="jumpToPayBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-gold-700 hover:text-gold-800 transition-colors px-2 sm:px-3 py-1.5 rounded-lg hover:bg-gold-50" title="Pay Estimator" aria-label="Jump to Pay Estimator">
+        <i data-lucide="bar-chart-3" class="w-4 h-4"></i> <span class="hidden sm:inline">Pay Estimator</span>
       </button>
-      <button id="printBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-navy-50">
-        <i data-lucide="printer" class="w-4 h-4"></i> Print Plan
+      <button id="printBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-700 transition-colors px-2 sm:px-3 py-1.5 rounded-lg hover:bg-navy-50" title="Print Plan" aria-label="Print Plan">
+        <i data-lucide="printer" class="w-4 h-4"></i> <span class="hidden sm:inline">Print Plan</span>
       </button>
-      <button id="icsBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-navy-50" title="Download your milestones as a calendar (.ics) file">
-        <i data-lucide="calendar-plus" class="w-4 h-4"></i> Calendar
+      <button id="icsBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-700 transition-colors px-2 sm:px-3 py-1.5 rounded-lg hover:bg-navy-50" title="Download your milestones as a calendar (.ics) file" aria-label="Download calendar file">
+        <i data-lucide="calendar-plus" class="w-4 h-4"></i> <span class="hidden sm:inline">Calendar</span>
       </button>
-      <button id="backupBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-navy-50" title="Download a JSON backup of your plan">
-        <i data-lucide="download" class="w-4 h-4"></i> Backup
+      <button id="backupBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-700 transition-colors px-2 sm:px-3 py-1.5 rounded-lg hover:bg-navy-50" title="Download a JSON backup of your plan" aria-label="Download backup">
+        <i data-lucide="download" class="w-4 h-4"></i> <span class="hidden sm:inline">Backup</span>
       </button>
-      <button id="importBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-navy-50" title="Restore a plan from a JSON backup">
-        <i data-lucide="upload" class="w-4 h-4"></i> Import
+      <button id="importBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-700 transition-colors px-2 sm:px-3 py-1.5 rounded-lg hover:bg-navy-50" title="Restore a plan from a JSON backup" aria-label="Import backup">
+        <i data-lucide="upload" class="w-4 h-4"></i> <span class="hidden sm:inline">Import</span>
       </button>
       <input id="importInput" type="file" accept="application/json,.json" class="hidden" />
     </div>
@@ -1018,7 +1029,7 @@ a.sr-only:focus, a.sr-only:focus-visible {
         <!-- 7. TSP keep vs roll -->
         <div>
           <h3 class="text-base font-semibold text-navy-700 mb-3 flex items-center gap-2"><i data-lucide="landmark" class="w-4 h-4 text-gold-500"></i> TSP: Keep-In vs. Roll-Out</h3>
-          <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 mb-3">
             <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtTspAge">Age at separation</label><input type="number" id="dtTspAge" class="input-field" min="37" max="70" value="45" /></div>
             <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtTspTrad">Traditional ($)</label><input type="number" id="dtTspTrad" class="input-field" min="0" step="1000" /></div>
             <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtTspRoth">Roth ($)</label><input type="number" id="dtTspRoth" class="input-field" min="0" step="1000" value="0" /></div>
@@ -1593,6 +1604,13 @@ function showSetup() {
 function renderTimeline(milestones, today, sep) {
   const track = $('timelineTrack');
   if (!track || !milestones.length) return;
+  // A full plan (retirement + VA claim + married + clearance, etc.) can produce 20+
+  // milestones. A fixed 640px track packs most of them into the "today -> separation"
+  // fraction of the axis (everything after separation — HHG/SBP/final-move deadlines
+  // spanning up to 3 years out — stretches the axis while contributing few markers),
+  // so give the track more room per marker instead of letting them pile on top of
+  // each other; .timeline-scroll already scrolls horizontally.
+  track.style.minWidth = Math.max(640, milestones.length * 90) + 'px';
   const times = milestones.map(m => m.date.getTime());
   const axisStart = Math.min(today.getTime(), ...times);
   const axisEnd = Math.max(sep.getTime(), ...times);
