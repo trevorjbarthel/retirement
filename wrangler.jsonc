@@ -31,8 +31,10 @@
     "APP_ENV": "production"
   },
 
-  // Per-IP throttle on plan creation (POST /api/p) to blunt bulk creation.
-  // Active only when APP_ENV != "development" (so local dev / tests skip it).
+  // Per-IP throttles to blunt abuse. Active only when APP_ENV != "development" (so
+  // local dev / tests skip them). CREATE_LIMITER guards POST /api/p (new plans);
+  // UPDATE_LIMITER guards PUT /api/p/:id (edits) and is more generous since a single
+  // legitimate editing session makes many small debounced saves.
   "unsafe": {
     "bindings": [
       {
@@ -40,6 +42,12 @@
         "type": "ratelimit",
         "namespace_id": "1001",
         "simple": { "limit": 20, "period": 60 }
+      },
+      {
+        "name": "UPDATE_LIMITER",
+        "type": "ratelimit",
+        "namespace_id": "1002",
+        "simple": { "limit": 60, "period": 60 }
       }
     ]
   }

@@ -122,18 +122,32 @@ the official DFAS pages**. The committed data lives in `public/data/pay-tables.j
 
 ## Notes & follow‑ups
 
-- Tailwind/Lucide load from CDNs; for production consider self‑hosting/building
-  CSS and adding security headers (CSP) — static assets are served edge‑direct,
-  so header injection would need a Worker pass.
+- **Security headers.** `public/_headers` sets a CSP, `X-Content-Type-Options`,
+  `Referrer-Policy: no-referrer`, `Permissions-Policy`, and `X-Frame-Options` on every
+  response (Workers Static Assets honors `_headers` the same way Pages does). The CSP's
+  `script-src`/`style-src` still need `'unsafe-inline'` because the front end is one
+  static `index.html` with an inline `<script type="module">` and inline `<style>` —
+  splitting those into external files would let the CSP drop `'unsafe-inline'` entirely.
+  Lucide is pinned to an exact version with a Subresource Integrity hash (was
+  `lucide@latest` with no integrity check) so neither an unpkg compromise nor a
+  surprise upstream release can silently change what executes on the page.
 - **No accounts by design.** A plan's edit link is a bearer capability: anyone with it
   can edit, a leaked link exposes the plan's (planning‑only) data, and a lost link can't
   be recovered. Mitigations in place: the edit key is 128‑bit random and rides in the URL
   hash (off server logs/`Referer`), only its hash is stored, the read‑only `/p/<id>` link
-  is offered separately for sharing, and `POST /api/p` is rate‑limited per IP
-  (`CREATE_LIMITER`, 20/min) to blunt bulk creation. The limiter is skipped when
-  `APP_ENV="development"` (local dev / tests); tune the `limit`/`period` in `wrangler.jsonc`.
+  is offered separately for sharing, `POST /api/p` and `PUT /api/p/:id` are each
+  rate‑limited per IP (`CREATE_LIMITER` 20/min, `UPDATE_LIMITER` 60/min — more generous
+  since one legitimate editing session makes many small debounced saves), and every write
+  is validated server‑side against the same field allow‑list the browser uses
+  (`isValidState` in `calc.js`, imported directly into `src/routes/plan.ts`) — a plan
+  can't reach the database with a field shape the front end wouldn't have produced
+  itself, which is what makes a hostile plan (e.g. `transType` holding a script payload)
+  structurally unable to reach a shared link's page. Both limiters are skipped when
+  `APP_ENV="development"` (local dev / tests); tune `limit`/`period` in `wrangler.jsonc`.
+  Request bodies are also read via a byte-capped stream reader rather than trusting the
+  `Content-Length` header, which chunked transfer-encoding has no header to check.
 - **VA disability rates** in `calc.js` (`VA_RATES_2025`) are the veteran‑alone
-  (no‑dependents) amounts on the Dec 1 2024 COLA vintage. Refresh them as a set
+  (no‑dependents) amounts on the Dec 1 2025 COLA vintage. Refresh them as a set
   (not per‑bracket) when a new COLA lands, and update `DATA_VINTAGE.vaRates` in
   the same change so the label and data never drift apart.
 - **State tax** figures are damped‑effective‑rate *upper‑bound* estimates from a

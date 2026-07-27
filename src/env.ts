@@ -13,6 +13,10 @@ export interface Env {
   APP_ENV: string;
   // Optional per-IP throttle on plan creation. No-op when the binding is absent.
   CREATE_LIMITER?: RateLimiter;
+  // Optional per-IP throttle on plan updates (more generous than CREATE_LIMITER since
+  // a single legitimate editing session makes many small debounced saves). No-op when
+  // the binding is absent.
+  UPDATE_LIMITER?: RateLimiter;
 }
 
 export type AppContext = {

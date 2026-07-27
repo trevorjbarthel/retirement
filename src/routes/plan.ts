@@ -3,17 +3,66 @@ import type { AppContext } from "../env";
 import { jsonError } from "../lib/json";
 import { createPlan, getPlan, updatePlanCAS } from "../db/queries";
 import { randomToken, hashToken } from "../lib/tokens";
+// Reuse the browser's own allow-list validator so the server enforces the exact same
+// shape the client does — this is what makes a hostile plan (e.g. transType/branch set
+// to a script payload) structurally unable to reach the database at all, rather than
+// relying solely on the client to behave.
+import { isValidState } from "../../public/js/calc.js";
 
 const api = new Hono<AppContext>();
 
 const MAX_PLAN_BYTES = 64 * 1024;
+const MAX_BODY_BYTES = MAX_PLAN_BYTES * 2; // plan + schema_version + edit_key + base_rev envelope
 const enc = new TextEncoder();
 
-// Returns the JSON string, null if not a plain object, or "__too_large__" if over budget.
+// Reads and JSON-parses a request body while enforcing maxBytes against the actual
+// bytes read from the stream — unlike a Content-Length header check, this can't be
+// bypassed by chunked transfer-encoding (no Content-Length header at all), which
+// previously let an attacker skip the size check entirely and force a full parse of
+// an arbitrarily large body.
+async function readJsonCapped(request: Request, maxBytes: number): Promise<{ ok: true; body: any } | { ok: false; tooLarge?: boolean }> {
+  const reader = request.body?.getReader();
+  if (!reader) {
+    try {
+      return { ok: true, body: await request.json() };
+    } catch {
+      return { ok: false };
+    }
+  }
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => {});
+      return { ok: false, tooLarge: true };
+    }
+    chunks.push(value);
+  }
+  const buf = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    buf.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  try {
+    return { ok: true, body: JSON.parse(new TextDecoder().decode(buf)) };
+  } catch {
+    return { ok: false };
+  }
+}
+
+// Returns the JSON string, null if not a plain object / fails the shared shape
+// validator, or "__too_large__" if over budget. Size is checked before shape so an
+// oversized payload is always rejected as "too large" regardless of its content,
+// rather than spending cycles deep-validating something we're rejecting anyway.
 function validPlanJson(plan: unknown): string | null {
   if (typeof plan !== "object" || plan === null || Array.isArray(plan)) return null;
   const planJson = JSON.stringify(plan);
   if (enc.encode(planJson).byteLength > MAX_PLAN_BYTES) return "__too_large__";
+  if (!isValidState(plan)) return null;
   return planJson;
 }
 
@@ -22,15 +71,14 @@ function schemaVersionOf(body: any): number {
   return Number.isInteger(raw) && raw >= 1 && raw <= 1000 ? raw : 1;
 }
 
-// Best-effort per-IP throttle on plan creation. No-op when CREATE_LIMITER isn't bound
-// (local dev / tests / unprovisioned deploy); never blocks on a limiter failure.
-async function createThrottled(c: any): Promise<boolean> {
+// Best-effort per-IP throttle. No-op when the given limiter isn't bound (local dev /
+// tests / unprovisioned deploy); never blocks on a limiter failure.
+async function throttled(c: any, limiter: any, keyPrefix: string): Promise<boolean> {
   if (c.env.APP_ENV === "development") return false; // skip in local dev / tests
-  const limiter = c.env.CREATE_LIMITER;
   if (!limiter) return false;
   const ip = c.req.header("cf-connecting-ip") ?? "ip-unknown";
   try {
-    const { success } = await limiter.limit({ key: `create:${ip}` });
+    const { success } = await limiter.limit({ key: `${keyPrefix}:${ip}` });
     return !success;
   } catch {
     return false;
@@ -39,15 +87,12 @@ async function createThrottled(c: any): Promise<boolean> {
 
 // Create a new plan → returns its public id and the secret edit key (shown once).
 api.post("/p", async (c) => {
-  if (await createThrottled(c)) return jsonError(c, "rate_limited", 429, "Too many new plans from your network. Please wait a moment.");
-  const len = Number(c.req.header("content-length"));
-  if (Number.isFinite(len) && len > MAX_PLAN_BYTES * 2) return jsonError(c, "too_large", 413, "Plan is too large.");
-  let body: any;
-  try {
-    body = await c.req.json();
-  } catch {
-    return jsonError(c, "invalid_input", 400);
+  if (await throttled(c, c.env.CREATE_LIMITER, "create")) {
+    return jsonError(c, "rate_limited", 429, "Too many new plans from your network. Please wait a moment.");
   }
+  const read = await readJsonCapped(c.req.raw, MAX_BODY_BYTES);
+  if (!read.ok) return read.tooLarge ? jsonError(c, "too_large", 413, "Plan is too large.") : jsonError(c, "invalid_input", 400);
+  const body = read.body;
   const planJson = validPlanJson(body?.plan);
   if (planJson === null) return jsonError(c, "invalid_input", 400, "plan must be an object.");
   if (planJson === "__too_large__") return jsonError(c, "too_large", 413, "Plan is too large.");
@@ -87,15 +132,13 @@ api.get("/p/:id", async (c) => {
 
 // Update a plan. Requires the edit key; uses optimistic concurrency on rev.
 api.put("/p/:id", async (c) => {
-  const id = c.req.param("id");
-  const len = Number(c.req.header("content-length"));
-  if (Number.isFinite(len) && len > MAX_PLAN_BYTES * 2) return jsonError(c, "too_large", 413, "Plan is too large.");
-  let body: any;
-  try {
-    body = await c.req.json();
-  } catch {
-    return jsonError(c, "invalid_input", 400);
+  if (await throttled(c, c.env.UPDATE_LIMITER, "update")) {
+    return jsonError(c, "rate_limited", 429, "Too many edits from your network. Please wait a moment.");
   }
+  const id = c.req.param("id");
+  const read = await readJsonCapped(c.req.raw, MAX_BODY_BYTES);
+  if (!read.ok) return read.tooLarge ? jsonError(c, "too_large", 413, "Plan is too large.") : jsonError(c, "invalid_input", 400);
+  const body = read.body;
   const planJson = validPlanJson(body?.plan);
   if (planJson === null) return jsonError(c, "invalid_input", 400, "plan must be an object.");
   if (planJson === "__too_large__") return jsonError(c, "too_large", 413, "Plan is too large.");

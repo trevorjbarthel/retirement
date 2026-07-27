@@ -1,0 +1,13 @@
+# Applies to every response served from public/ (Workers Static Assets honors
+# _headers the same way Cloudflare Pages does). The app's front end is a single
+# static index.html with an inline <script type="module"> and inline <style> —
+# splitting those into external files to drop 'unsafe-inline' is tracked separately
+# (see README "Notes & follow-ups"); until then, connect-src/frame-ancestors/etc.
+# still meaningfully limit what an XSS payload (or a compromised third-party script)
+# could do, even though script-src/style-src can't be fully locked down yet.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=(), usb=()
+  X-Frame-Options: DENY
