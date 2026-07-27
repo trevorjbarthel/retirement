@@ -482,7 +482,7 @@ a.sr-only:focus, a.sr-only:focus-visible {
     </div>
     <div class="flex items-center gap-1 sm:gap-2 flex-wrap">
       <button id="headerLinkBtn" class="no-print hidden items-center gap-1.5 text-sm font-medium text-gold-700 hover:text-gold-800 transition-colors px-2 sm:px-3 py-1.5 rounded-lg hover:bg-gold-50" title="Copy your plan's edit link" aria-label="Copy your plan's edit link">
-        <i data-lucide="link" class="w-4 h-4"></i> <span class="hidden sm:inline">Copy link</span>
+        <i data-lucide="link" class="w-4 h-4"></i> <span class="hidden sm:inline">Copy edit link</span>
       </button>
       <button id="jumpToPayBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-gold-700 hover:text-gold-800 transition-colors px-2 sm:px-3 py-1.5 rounded-lg hover:bg-gold-50" title="Pay Estimator" aria-label="Jump to Pay Estimator">
         <i data-lucide="bar-chart-3" class="w-4 h-4"></i> <span class="hidden sm:inline">Pay Estimator</span>
@@ -513,7 +513,10 @@ a.sr-only:focus, a.sr-only:focus-visible {
     <div class="flex-1 min-w-[220px]">
       <p class="text-sm font-semibold text-navy-700">Your plan is saved at a private link</p>
       <p class="text-xs text-navy-500 mt-0.5">Bookmark it to come back and edit later — there's no login. Anyone with this link can edit, so only share it with people you trust.</p>
-      <input id="planLinkInput" type="text" readonly class="input-field mt-2 text-xs" style="font-family:monospace;" />
+      <div class="flex items-center gap-2 mt-2">
+        <input id="planLinkInput" type="text" readonly class="input-field text-xs" style="font-family:monospace;" />
+        <button type="button" id="toggleLinkVisibilityBtn" class="no-print text-xs font-medium text-navy-500 hover:text-navy-700 px-2 py-1 rounded-lg hover:bg-navy-50 flex-shrink-0" aria-label="Show or hide the secret part of your edit link">Show</button>
+      </div>
     </div>
     <div class="flex items-center gap-2 flex-wrap">
       <button id="copyEditLinkBtn" class="text-sm font-semibold text-white px-3 py-2 rounded-lg" style="background:#a6841e;"><i data-lucide="copy" class="w-4 h-4 inline align-[-2px]"></i> Copy edit link</button>
@@ -1552,6 +1555,15 @@ function migrateChecks(checks, s) {
   return out;
 }
 
+// Masks the secret key portion of an edit URL (everything from #k= on) so it isn't
+// sitting in plain text by default — someone glancing at a shared screen, a recording,
+// or a screenshot shouldn't be able to read the credential off it at a glance.
+function maskEditUrl(url) {
+  return url.replace(/(#k=)([^&]+)/, (_, prefix, key) => prefix + '•'.repeat(Math.min(key.length, 24)));
+}
+
+let planLinkVisible = false;
+
 // Reflect the current plan's link/read-only state in the header + banners.
 function renderPlanLink() {
   const banner = $('planLinkBanner');
@@ -1565,7 +1577,7 @@ function renderPlanLink() {
   } else if (editUrl) {
     ro.classList.add('hidden');
     banner.classList.remove('hidden');
-    $('planLinkInput').value = editUrl;
+    $('planLinkInput').value = planLinkVisible ? editUrl : maskEditUrl(editUrl);
     headerBtn.classList.remove('hidden');
     headerBtn.classList.add('flex');
   } else {
@@ -3113,6 +3125,11 @@ async function init() {
   $('headerLinkBtn').addEventListener('click', copyEditLink);
   $('copyViewLinkBtn').addEventListener('click', copyViewLink);
   $('copyLinkBtn').addEventListener('click', copyViewLink); // footer button shares the read-only link
+  $('toggleLinkVisibilityBtn').addEventListener('click', () => {
+    planLinkVisible = !planLinkVisible;
+    $('toggleLinkVisibilityBtn').textContent = planLinkVisible ? 'Hide' : 'Show';
+    renderPlanLink();
+  });
   $('makeCopyBtn').addEventListener('click', async () => {
     if (!state.firstName) { showToast('Nothing to copy yet'); return; }
     const created = await store.createPlan(state);
