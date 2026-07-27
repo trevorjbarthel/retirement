@@ -54,6 +54,10 @@ async function apiFetch(path, opts = {}) {
 // ----- localStorage cache (same-browser recovery) -----
 function cacheLoad() { try { return JSON.parse(localStorage.getItem(LS_KEY)); } catch { return null; } }
 function cacheSave(plan) {
+  // Never overwrite the visitor's own cached plan (and edit key!) while they're viewing
+  // someone else's read-only link, and never cache a null/corrupt plan over a good copy
+  // (a server row that fails to JSON.parse comes back as {plan: null}, not an error).
+  if (readOnly || !plan) return;
   try { localStorage.setItem(LS_KEY, JSON.stringify({ plan, id: planId, editKey, rev })); } catch { /* quota */ }
 }
 export function cacheClear() { try { localStorage.removeItem(LS_KEY); } catch { /* ignore */ } }

@@ -1117,6 +1117,10 @@ function fmtDate(d) { return d.toLocaleDateString('en-US', { year:'numeric', mon
 function fmtDateShort(d) { return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'2-digit' }); }
 function fmtCurrency(val) { return val.toLocaleString('en-US', { style:'currency', currency:'USD' }); }
 function fmtCurrencyWhole(val) { return val.toLocaleString('en-US', { style:'currency', currency:'USD', maximumFractionDigits:0 }); }
+// `parseFloat(x) || dflt` silently discards a deliberate, legitimate 0 (0 leave days,
+// $0/mo TSP contribution, a 0% advisory fee) and replaces it with the fallback default.
+// Use this wherever 0 is a valid answer; reserve `|| dflt` for fields where 0 never is.
+function numOr(n, dflt) { return Number.isFinite(n) ? n : dflt; }
 // Escape untrusted/plan-derived strings before they enter an innerHTML template.
 // Plans can arrive from a shared /p/<id> link or an imported backup, so any free-text
 // field (e.g. postLocation) must be escaped at the sink to prevent DOM XSS.
@@ -1396,7 +1400,7 @@ function buildState() {
   s.transType = transType;
   s.sepDate = $('sepDate').value;
   s.todayDate = $('todayDate').value;
-  s.leaveDays = clamp(parseInt($('leaveDays').value) || 60, 0, 120);
+  s.leaveDays = clamp(numOr(parseInt($('leaveDays').value), 60), 0, 120);
   s.ptdy = toggles.ptdy;
   s.ptdyDays = toggles.ptdy ? clamp(parseInt($('ptdyDays').value) || 20, 1, 20) : 0;
   s.sb = toggles.sb;
@@ -1420,11 +1424,11 @@ function buildState() {
   s.tspYearsToRet = parseFloat($('tspYearsToRet')?.value) || 0;
   s.tspRate = parseFloat($('tspRate')?.value) || 6;
   s.tspContribMode = tspContribMode;
-  s.tspContribution = parseFloat($('tspContribution')?.value) || 200;
+  s.tspContribution = numOr(parseFloat($('tspContribution')?.value), 200);
   s.tspContribPct = parseFloat($('tspContribPct')?.value) || 5;
   s.tspRetAge = parseInt($('tspRetAge')?.value) || 45;
   s.tspWithdrawalMethod = tspWithdrawalMethod;
-  s.tspFixedAmount = parseFloat($('tspFixedAmount')?.value) || 500;
+  s.tspFixedAmount = numOr(parseFloat($('tspFixedAmount')?.value), 500);
   return s;
 }
 
@@ -1779,7 +1783,7 @@ function renderResults() {
       <div class="milestone-card fade-in-up stagger-${Math.min(i+1,12)}">
         <div class="flex items-center gap-2">
           <div class="status-dot ${statusClass}"></div>
-          <span class="text-xs font-medium text-navy-400 uppercase tracking-wide">${m.label}</span>
+          <span class="text-xs font-medium text-navy-400 uppercase tracking-wide">${escapeHtml(m.label)}</span>
         </div>
         <p class="text-base font-semibold text-navy-700 flex items-center gap-2"><i data-lucide="${m.icon}" class="w-4 h-4 text-gold-500"></i> ${fmtDate(m.date)}</p>
         <p class="text-xs tabular-nums" style="color:${statusClass === 'status-red' ? '#ef4444' : statusClass === 'status-gold' ? '#f59e0b' : '#10b981'}">${relText}</p>
@@ -1806,13 +1810,13 @@ function renderResults() {
       const iconColor = matchesMax ? '#10b981' : '#f59e0b';
       const textColor = matchesMax ? '#047857' : '#b45309';
       const bgColor = matchesMax ? '#d1fae5' : '#fef3c7';
-      sbAuthLine.innerHTML = `<div class="flex items-center gap-2 text-sm font-medium rounded-lg px-3 py-2" style="background:${bgColor}; color:${textColor};"><i data-lucide="${iconName}" class="w-4 h-4" style="color:${iconColor};"></i> SkillBridge authorized maximum: <strong>${authMax} days</strong> (${rg}, ${s.branch})${!matchesMax ? ' — you selected ' + s.sbDays + ' days' : ''}</div>`;
+      sbAuthLine.innerHTML = `<div class="flex items-center gap-2 text-sm font-medium rounded-lg px-3 py-2" style="background:${bgColor}; color:${textColor};"><i data-lucide="${iconName}" class="w-4 h-4" style="color:${iconColor};"></i> SkillBridge authorized maximum: <strong>${authMax} days</strong> (${escapeHtml(rg)}, ${escapeHtml(s.branch)})${!matchesMax ? ' — you selected ' + s.sbDays + ' days' : ''}</div>`;
       sbAuthLine.classList.remove('hidden');
     } else if (s.branch === 'Coast Guard') {
       sbAuthLine.innerHTML = '<div class="flex items-center gap-2 text-sm font-medium rounded-lg px-3 py-2" style="background:#dbeafe; color:#1e40af;"><i data-lucide="info" class="w-4 h-4" style="color:#3b82f6;"></i> Coast Guard SkillBridge limit: confirm with your command (using ' + s.sbDays + ' days)</div>';
       sbAuthLine.classList.remove('hidden');
     } else {
-      sbAuthLine.innerHTML = '<div class="flex items-center gap-2 text-sm font-medium rounded-lg px-3 py-2" style="background:#dbeafe; color:#1e40af;"><i data-lucide="info" class="w-4 h-4" style="color:#3b82f6;"></i> SkillBridge days for ' + getRankGrade(s.rank) + ' in the ' + s.branch + ': confirm with your command (using ' + s.sbDays + ' days)</div>';
+      sbAuthLine.innerHTML = '<div class="flex items-center gap-2 text-sm font-medium rounded-lg px-3 py-2" style="background:#dbeafe; color:#1e40af;"><i data-lucide="info" class="w-4 h-4" style="color:#3b82f6;"></i> SkillBridge days for ' + escapeHtml(getRankGrade(s.rank)) + ' in the ' + escapeHtml(s.branch) + ': confirm with your command (using ' + s.sbDays + ' days)</div>';
       sbAuthLine.classList.remove('hidden');
     }
   } else {
@@ -1940,13 +1944,13 @@ function renderPayEstimator(isRet, persist = false) {
   const daysToRet = daysBetween(today, sep);
   const yearsToRet = Math.max(0, (daysToRet / 365.25)).toFixed(1);
 
-  $('tspYearsToRet').value = s.tspYearsToRet || yearsToRet;
-  if (s.tspBalance) $('tspBalance').value = s.tspBalance;
+  $('tspYearsToRet').value = numOr(s.tspYearsToRet, yearsToRet);
+  if (s.tspBalance !== undefined) $('tspBalance').value = s.tspBalance;
   if (s.tspRate) { $('tspRate').value = s.tspRate; $('tspRateDisplay').textContent = s.tspRate + '%'; }
   if (s.tspContribution !== undefined) $('tspContribution').value = s.tspContribution;
   if (s.tspContribPct !== undefined) $('tspContribPct').value = s.tspContribPct;
   if (s.tspRetAge) $('tspRetAge').value = s.tspRetAge;
-  if (s.tspFixedAmount) $('tspFixedAmount').value = s.tspFixedAmount;
+  if (s.tspFixedAmount !== undefined) $('tspFixedAmount').value = s.tspFixedAmount;
 
   // TSP contribution mode
   tspContribMode = s.tspContribMode || 'fixed';
@@ -2011,11 +2015,11 @@ function recalcPayEstimator(persist = true) {
   state.tspYearsToRet = parseFloat($('tspYearsToRet').value) || 0;
   state.tspRate = parseFloat($('tspRate').value) || 6;
   state.tspContribMode = tspContribMode;
-  state.tspContribution = parseFloat($('tspContribution').value) || 200;
+  state.tspContribution = numOr(parseFloat($('tspContribution').value), 200);
   state.tspContribPct = parseFloat($('tspContribPct').value) || 5;
   state.tspRetAge = parseInt($('tspRetAge').value) || 45;
   state.tspWithdrawalMethod = tspWithdrawalMethod;
-  state.tspFixedAmount = parseFloat($('tspFixedAmount').value) || 500;
+  state.tspFixedAmount = numOr(parseFloat($('tspFixedAmount').value), 500);
   // Persist the (possibly manually-entered) base pay so flag-officer entries survive reloads.
   state.payBasePay = parseFloat($('payBasePay').value) || 0;
   if (persist) saveState(state);
@@ -2029,7 +2033,7 @@ function recalcTSP(monthlyRet, isRet, basePay) {
   const yearsToRet = parseFloat($('tspYearsToRet').value) || 0;
   const annualRate = (parseFloat($('tspRate').value) || 6) / 100;
   const retAge = parseInt($('tspRetAge').value) || 45;
-  const fixedAmount = parseFloat($('tspFixedAmount').value) || 500;
+  const fixedAmount = numOr(parseFloat($('tspFixedAmount').value), 500);
 
   // Resolve monthly contribution based on mode
   let monthlyContrib = 0;
@@ -2797,7 +2801,10 @@ function recalcPPM() {
 }
 
 function recalcTSPRoll() {
-  const advFee = _n('dtTspAdvFee') || 1.0;
+  // A 0% advisory fee is a legitimate, meaningful input (self-directed/no-fee) — going
+  // through _n() here would collapse it to the same 0 as an empty field and silently
+  // override it to 1.0%, which inverts the keep-vs-roll recommendation.
+  const advFee = numOr(parseFloat($('dtTspAdvFee')?.value), 1.0);
   const r = tspKeepVsRoll({ ageAtSeparation: _n('dtTspAge') || 45, tradBalance: _n('dtTspTrad'), rothBalance: _n('dtTspRoth'), advisoryFeePct: advFee, years: _n('dtTspYears') || 20 });
   $('dtTspResult').innerHTML = `
     <ul class="list-disc pl-4 space-y-1 text-xs text-navy-500">${r.flags.map(f => `<li>${f}</li>`).join('')}</ul>
@@ -2822,7 +2829,12 @@ function showResumeBanner(id, key) {
 }
 
 function applyLoadedPlan(plan) {
-  if (!plan || !plan.firstName || !plan.sepDate) return;
+  // Plans loaded from a shared /p/<id> link or the local cache are untrusted input —
+  // the server stores whatever JSON it's handed (see src/routes/plan.ts), so a shared
+  // link is a viable XSS delivery path unless every field is allow-listed here before
+  // it ever reaches a render function. Also escapeHtml at every innerHTML sink below
+  // (defense-in-depth) — this check must not be the only thing standing in the way.
+  if (!isValidState(plan)) { showToast('That plan link contains invalid data and was not loaded.'); return; }
   state = plan;
   // The countdown is relative to the viewer's actual "now", not a date frozen into a
   // plan saved on a prior day (or shared by someone else). Refresh it on every load;

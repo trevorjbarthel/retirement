@@ -1,6 +1,16 @@
 -- Production was first initialized with the older account-based schema.
 -- The current app uses capability URLs instead: public id for reads, edit key
 -- hash for writes, and a revision number for optimistic concurrency.
+--
+-- !! DANGER — DO NOT re-run this migration against a database that already holds
+-- real plans. The DROP TABLE below is only safe because `wrangler d1 migrations`
+-- tracks applied migrations in its own `d1_migrations` ledger table and will not
+-- replay a migration id that's already recorded there. There are no accounts and
+-- no password reset in this app — a plan's edit key exists ONLY in its owner's
+-- browser/URL bar, so a table wiped here is permanently unrecoverable, for every
+-- user, all at once. If the `d1_migrations` ledger is ever lost, rebuilt, or
+-- manually edited, back up `plans` (e.g. `wrangler d1 export`) before letting
+-- migrations run again.
 
 DROP TABLE IF EXISTS plans;
 DROP TABLE IF EXISTS users;

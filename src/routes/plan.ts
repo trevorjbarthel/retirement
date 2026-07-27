@@ -74,11 +74,13 @@ api.post("/p", async (c) => {
 api.get("/p/:id", async (c) => {
   const row = await getPlan(c.env.DB, c.req.param("id"));
   if (!row) return jsonError(c, "not_found", 404);
-  let plan: unknown = null;
+  let plan: unknown;
   try {
     plan = JSON.parse(row.plan_json);
   } catch {
-    plan = null;
+    // A row that fails to parse is a server-side data problem, not "plan is null" —
+    // returning 200 here previously let the client cache the null over a good local copy.
+    return jsonError(c, "server_error", 500, "This plan's data could not be read.");
   }
   return c.json({ plan, schema_version: row.schema_version, updated_at: row.updated_at, rev: row.rev });
 });
