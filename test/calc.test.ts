@@ -11,6 +11,15 @@ describe("getBasePay2026", () => {
   it("returns null for an unknown rank", () => {
     expect(calc.getBasePay2026("X-9", 20)).toBeNull();
   });
+  // Pins actual dollar values (verified against the 2026 DFAS chart, 3.8% raise
+  // effective Jan 1 2026) so a bad annual refresh — e.g. scraping stale prior-year
+  // data, or a parser regression — fails a specific assertion instead of just "some
+  // positive number". Update these deliberately, in the same change, whenever the
+  // pay tables are refreshed for a new year.
+  it("pins exact 2026 DFAS values for spot-checked grade/YOS combinations", () => {
+    expect(calc.getBasePay2026("E-9", 20)).toBeCloseTo(8105.1, 2);
+    expect(calc.getBasePay2026("O-5", 20)).toBeCloseTo(12032.7, 2);
+  });
 });
 
 describe("computeRetirementPay", () => {

@@ -12,6 +12,7 @@ import {
   extractGrade,
   buildTables,
   validatePayTable,
+  validateYearOverYear,
 } from "../scripts/parse-pay-tables.mjs";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
@@ -62,4 +63,21 @@ test("validation catches a non-monotonic / out-of-range cell", () => {
   const errors = validatePayTable(bad);
   assert.ok(errors.some((e) => e.includes("not monotonic")));
   assert.ok(errors.some((e) => e.includes("out of plausible range")));
+});
+
+test("year-over-year check flags a table that's suspiciously unchanged from last year", () => {
+  const prev = { "E-5": { 2: 3342.9, 3: 3598.2 }, "O-1": { 2: 4150.2 } };
+  const stale = { "E-5": { 2: 3342.9, 3: 3598.2 }, "O-1": { 2: 4150.2 } }; // identical — looks like a pre-publish scrape
+  const errors = validateYearOverYear(stale, prev);
+  assert.ok(errors.length > 0, "an unchanged table year-over-year should be flagged");
+});
+
+test("year-over-year check passes a table with a real raise applied", () => {
+  const prev = { "E-5": { 2: 3342.9, 3: 3598.2 }, "O-1": { 2: 4150.2 } };
+  const raised = { "E-5": { 2: 3470.9, 3: 3735.0 }, "O-1": { 2: 4308.0 } }; // ~3.8% raise
+  assert.deepEqual(validateYearOverYear(raised, prev), []);
+});
+
+test("year-over-year check is a no-op when there's no prior year to compare", () => {
+  assert.deepEqual(validateYearOverYear({ "E-5": { 2: 3342.9 } }, undefined), []);
 });

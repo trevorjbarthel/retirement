@@ -9,17 +9,18 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { buildTables, validatePayTable } from "./parse-pay-tables.mjs";
+import { buildTables, validatePayTable, validateYearOverYear } from "./parse-pay-tables.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 function parseArgs(argv) {
-  const a = { write: false, fixture: false, strict: false };
+  const a = { write: false, fixture: false, strict: false, allowUnchanged: false };
   for (let i = 0; i < argv.length; i++) {
     const t = argv[i];
     if (t === "--write") a.write = true;
     else if (t === "--fixture" || t === "--from-fixture") a.fixture = true;
     else if (t === "--strict") a.strict = true;
+    else if (t === "--allow-unchanged") a.allowUnchanged = true;
     else if (t === "--year") a.year = argv[++i];
     else if (t.startsWith("--year=")) a.year = t.slice(7);
   }
@@ -66,6 +67,27 @@ if (errors.length) {
   if (args.strict) process.exit(1);
 }
 
+// Load whatever's already committed so we can (a) compare against last year's table
+// and (b) merge this year's result in, whether or not we're actually writing.
+const jsonPath = path.join(ROOT, "public", "data", "pay-tables.json");
+let payTables = {};
+try {
+  payTables = JSON.parse(readFileSync(jsonPath, "utf8"));
+} catch {
+  /* first run */
+}
+
+// Guards against the fetch "succeeding" while DFAS just hasn't published the new
+// year's figures yet — see validateYearOverYear's doc comment.
+const prevYear = String(Number(YEAR) - 1);
+if (!args.fixture && !args.allowUnchanged) {
+  const yoyErrors = validateYearOverYear(table, payTables[prevYear]);
+  if (yoyErrors.length) {
+    console.error(`year-over-year check failed:\n - ${yoyErrors.join("\n - ")}`);
+    if (args.strict) process.exit(1);
+  }
+}
+
 const writing = args.write && !args.fixture; // never overwrite committed data from fixtures
 if (!writing) {
   console.log(args.fixture ? "(fixture mode — dry run)" : "(dry run — pass --write to update committed files)");
@@ -74,13 +96,6 @@ if (!writing) {
 }
 
 const genPath = path.join(ROOT, "public", "js", "pay-tables.generated.js");
-const jsonPath = path.join(ROOT, "public", "data", "pay-tables.json");
-let payTables = {};
-try {
-  payTables = JSON.parse(readFileSync(jsonPath, "utf8"));
-} catch {
-  /* first run */
-}
 payTables[YEAR] = table;
 const latest = Object.keys(payTables).sort().at(-1);
 const banner =

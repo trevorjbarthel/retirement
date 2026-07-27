@@ -105,6 +105,38 @@ function gradeRange(prefix, lo, hi) {
   return out;
 }
 
+// Catches the case where the annual refresh runs before DFAS has actually published
+// the new year's figures: the fetch "succeeds" but silently returns last year's table,
+// which would otherwise get committed and labeled as the new year with no error. A
+// real annual pay raise changes virtually every cell, so if the new table is (almost)
+// byte-identical to the prior year, that's a signal the scrape came back stale, not
+// a legitimate 0% raise. Returns a list of human-readable problems (empty = clean).
+export function validateYearOverYear(table, prevTable) {
+  if (!prevTable || !Object.keys(prevTable).length) return []; // no prior year to compare (first run)
+  let compared = 0;
+  let identical = 0;
+  for (const [grade, cells] of Object.entries(table)) {
+    const prevCells = prevTable[grade];
+    if (!prevCells) continue;
+    for (const [key, value] of Object.entries(cells)) {
+      if (!(key in prevCells)) continue;
+      compared++;
+      if (prevCells[key] === value) identical++;
+    }
+  }
+  if (compared === 0) return []; // no overlapping grade/key pairs to compare — can't say anything
+  const identicalFraction = identical / compared;
+  if (identicalFraction > 0.9) {
+    return [
+      `${identical}/${compared} (${Math.round(identicalFraction * 100)}%) values are byte-identical to the prior ` +
+        `year's table — this almost certainly means the source pages haven't been updated yet (DFAS publishes ` +
+        `new figures effective Jan 1, sometimes after that date), not a genuine 0% pay raise. Re-run once the ` +
+        `official pages reflect the new year, or pass --allow-unchanged if this is intentional.`,
+    ];
+  }
+  return [];
+}
+
 // Returns a list of human-readable problems (empty = clean).
 export function validatePayTable(table) {
   const errors = [];
