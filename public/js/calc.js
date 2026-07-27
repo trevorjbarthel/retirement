@@ -529,6 +529,44 @@ export function estimatePPM({ gcc, expenses = 0, withholdingRate = 0.22 }) {
   return { incentive, expenses, profit, taxWithheld, netProfit: profit - taxWithheld };
 }
 
+// --- Terminal leave vs. selling leave back at separation ---
+// Selling accrued leave pays a one-time lump sum of BASE PAY ONLY for the days sold —
+// no BAH, no BAS — and is taxed as supplemental wages (federal withholding defaults
+// to 22%, same convention used for the PPM incentive above). Taking the same days as
+// terminal leave instead means you're still on active duty (and drawing full pay +
+// BAH + BAS, which is federal-tax-exempt) right up to your actual separation date —
+// it just pushes that date out by the number of days taken. This compares the two
+// purely as take-home dollars for the same block of days; it does NOT capture the
+// often-larger factor of terminal leave letting you start terminal-leave job hunting
+// or a civilian job earlier while still drawing military pay, which sell-back forfeits.
+export function compareLeaveSellBack({ basePay = 0, bah = 0, bas = 0, days = 0, withholdingRate = 0.22 }) {
+  basePay = Math.max(0, Number(basePay) || 0);
+  bah = Math.max(0, Number(bah) || 0);
+  bas = Math.max(0, Number(bas) || 0);
+  days = Math.max(0, Number(days) || 0);
+  const dailyBase = basePay / 30;
+  const dailyBah = bah / 30;
+  const dailyBas = bas / 30;
+
+  const sellBackGross = dailyBase * days;
+  const sellBackTaxWithheld = sellBackGross * withholdingRate;
+  const sellBackNet = sellBackGross - sellBackTaxWithheld;
+
+  // BAH/BAS are federal-tax-exempt, so only the base-pay portion is withheld against.
+  const terminalLeaveGross = (dailyBase + dailyBah + dailyBas) * days;
+  const terminalLeaveTaxWithheld = dailyBase * days * withholdingRate;
+  const terminalLeaveNet = terminalLeaveGross - terminalLeaveTaxWithheld;
+
+  return {
+    days,
+    sellBackGross: Math.round(sellBackGross),
+    sellBackNet: Math.round(sellBackNet),
+    terminalLeaveGross: Math.round(terminalLeaveGross),
+    terminalLeaveNet: Math.round(terminalLeaveNet),
+    netDifference: Math.round(terminalLeaveNet - sellBackNet), // positive => terminal leave nets more
+  };
+}
+
 // --- TSP keep-in vs roll-out checker (rules + fee-drag projection) ---
 export function tspKeepVsRoll({ ageAtSeparation = 45, tradBalance = 0, rothBalance = 0, advisoryFeePct = 1.0, tspFeePct = 0.05, years = 20, growthPct = 6 }) {
   const total = (Number(tradBalance) || 0) + (Number(rothBalance) || 0);

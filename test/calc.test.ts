@@ -188,6 +188,26 @@ describe("estimatePPM", () => {
   });
 });
 
+describe("compareLeaveSellBack", () => {
+  it("sell-back pays base pay only (no BAH/BAS), terminal leave pays all three", () => {
+    const r = calc.compareLeaveSellBack({ basePay: 6000, bah: 1800, bas: 460, days: 30 });
+    expect(r.sellBackGross).toBe(6000); // basePay/30 * 30 days = basePay
+    expect(r.terminalLeaveGross).toBe(6000 + 1800 + 460);
+  });
+  it("BAH/BAS are federal-tax-exempt — only the base-pay portion is withheld against", () => {
+    const r = calc.compareLeaveSellBack({ basePay: 3000, bah: 1500, bas: 500, days: 30, withholdingRate: 0.22 });
+    expect(r.terminalLeaveNet).toBe(r.terminalLeaveGross - Math.round(3000 * 0.22));
+  });
+  it("terminal leave nets more than sell-back whenever BAH/BAS > 0 (netDifference positive)", () => {
+    const r = calc.compareLeaveSellBack({ basePay: 5000, bah: 2000, bas: 460, days: 20 });
+    expect(r.netDifference).toBeGreaterThan(0);
+  });
+  it("with zero BAH/BAS the two options are equal", () => {
+    const r = calc.compareLeaveSellBack({ basePay: 5000, bah: 0, bas: 0, days: 20 });
+    expect(r.netDifference).toBe(0);
+  });
+});
+
 describe("tspKeepVsRoll", () => {
   it("flags the age-55 rule and projects fee drag", () => {
     const r = calc.tspKeepVsRoll({ ageAtSeparation: 56, tradBalance: 200000, years: 20, advisoryFeePct: 1, tspFeePct: 0.05 });

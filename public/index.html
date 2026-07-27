@@ -1029,6 +1029,21 @@ a.sr-only:focus, a.sr-only:focus-visible {
           <p class="text-xs text-navy-400 mt-2 italic">Fee drag assumes ~6% growth and the TSP's ~0.05% expense ratio. Not investment advice — vet any advisor on <a href="https://brokercheck.finra.org" target="_blank" rel="noopener" class="text-gold-500 hover:underline">FINRA BrokerCheck</a>.</p>
         </div>
 
+        <div class="border-t" style="border-color:rgba(26,39,68,0.08);"></div>
+
+        <!-- 8. Terminal leave vs. sell back -->
+        <div>
+          <h3 class="text-base font-semibold text-navy-700 mb-3 flex items-center gap-2"><i data-lucide="plane" class="w-4 h-4 text-gold-500"></i> Terminal Leave vs. Selling Leave Back</h3>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtLeaveDays">Days to compare</label><input type="number" id="dtLeaveDays" class="input-field" min="0" max="120" value="60" /></div>
+            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtLeaveBase">Base pay ($/mo)</label><input type="number" id="dtLeaveBase" class="input-field" min="0" step="50" /></div>
+            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtLeaveBah">BAH ($/mo)</label><input type="number" id="dtLeaveBah" class="input-field" min="0" step="50" placeholder="0 if you live in barracks" /></div>
+            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtLeaveBas">BAS ($/mo)</label><input type="number" id="dtLeaveBas" class="input-field" min="0" step="10" /></div>
+          </div>
+          <div id="dtLeaveResult" class="bg-navy-50 rounded-xl p-4 text-sm"></div>
+          <p class="text-xs text-navy-400 mt-2 italic">Selling leave pays base pay only (no BAH/BAS) as a one-time lump sum, taxed at ~22% federal withholding. Terminal leave keeps you on active duty — full pay plus tax-exempt BAH/BAS — for the same days, but delays your separation date and any civilian paycheck that would start after it. This compares take-home dollars only; it doesn't weigh starting a civilian job earlier, which sell-back enables and terminal leave doesn't.</p>
+        </div>
+
       </div>
     </div>
   </div>
@@ -1085,7 +1100,7 @@ import {
   computeRetirementPay, milestoneStatus, computeMilestones, classifyDayMeter, buildICS, encodeState, decodeState, isValidState,
   DATA_VINTAGE, FLAG_OFFICER_GRADES,
   computeSBP, compareConcurrentReceipt, TRICARE_FEES_2026, estimateRetireeHealthcareCost,
-  compareTricarePrimeSelect, compareStates, estimateStateTaxOnRetiredPay, estimatePPM, tspKeepVsRoll
+  compareTricarePrimeSelect, compareStates, estimateStateTaxOnRetiredPay, estimatePPM, tspKeepVsRoll, compareLeaveSellBack
 } from '/js/calc.js';
 import * as store from '/js/store.js';
 // ===== DATA =====
@@ -2740,13 +2755,17 @@ function renderDecisionTools(isRet) {
   setv('dtTspRoth', 0);
   setv('dtTspAdvFee', 1.0);
   setv('dtTspYears', 20);
+  setv('dtLeaveDays', s.leaveDays || 60);
+  setv('dtLeaveBase', Math.round(basePay));
+  setv('dtLeaveBah', 0); // varies enormously by ZIP/dependency status — no safe default
+  setv('dtLeaveBas', s.rankCat === 'O' ? 328.48 : 476.95); // 2026 BAS: officer vs. enlisted/warrant
 
   recalcAllTools();
 }
 
 function persistTools() {
   if (!state || !state.firstName) return;
-  const ids = ['dtSbpBase','dtSbpRetAge','dtSbpSpouseAge','dtCrGross','dtCrRating','dtCrCombat','dtCrBracket','dtHcGroup','dtHcCoverage','dtHcRx','dtHcFedvip','dtPsVisits','dtStPay','dtStStates','dtPpmGcc','dtPpmExpenses','dtTspAge','dtTspTrad','dtTspRoth','dtTspAdvFee','dtTspYears'];
+  const ids = ['dtSbpBase','dtSbpRetAge','dtSbpSpouseAge','dtCrGross','dtCrRating','dtCrCombat','dtCrBracket','dtHcGroup','dtHcCoverage','dtHcRx','dtHcFedvip','dtPsVisits','dtStPay','dtStStates','dtPpmGcc','dtPpmExpenses','dtTspAge','dtTspTrad','dtTspRoth','dtTspAdvFee','dtTspYears','dtLeaveDays','dtLeaveBase','dtLeaveBah','dtLeaveBas'];
   const t = {};
   ids.forEach(id => { const el = $(id); if (el) t[id] = el.value; });
   t.dtPsLowCost = $('dtPsLowCost').checked;
@@ -2756,8 +2775,32 @@ function persistTools() {
 }
 
 function recalcAllTools() {
-  recalcSBP(); recalcCRSC(); recalcHealthcare(); recalcPrimeSelect(); recalcBestState(); recalcPPM(); recalcTSPRoll();
+  recalcSBP(); recalcCRSC(); recalcHealthcare(); recalcPrimeSelect(); recalcBestState(); recalcPPM(); recalcTSPRoll(); recalcLeaveSellBack();
   if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function recalcLeaveSellBack() {
+  const days = _n('dtLeaveDays');
+  if (days <= 0) { $('dtLeaveResult').innerHTML = '<p class="text-navy-400">Enter days to compare terminal leave against selling them back.</p>'; return; }
+  const r = compareLeaveSellBack({ basePay: _n('dtLeaveBase'), bah: _n('dtLeaveBah'), bas: _n('dtLeaveBas'), days });
+  const winnerLabel = r.netDifference > 0 ? 'Terminal leave' : (r.netDifference < 0 ? 'Selling back' : 'Both are equal');
+  $('dtLeaveResult').innerHTML = `
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <p class="text-xs text-navy-400 uppercase tracking-wide mb-1">Sell Leave Back</p>
+        <p class="text-lg font-bold tabular-nums text-navy-700">${fmtCurrencyWhole(r.sellBackNet)}</p>
+        <p class="text-xs text-navy-400">net of ${fmtCurrencyWhole(r.sellBackGross)} gross (base pay only)</p>
+      </div>
+      <div>
+        <p class="text-xs text-navy-400 uppercase tracking-wide mb-1">Terminal Leave</p>
+        <p class="text-lg font-bold tabular-nums text-navy-700">${fmtCurrencyWhole(r.terminalLeaveNet)}</p>
+        <p class="text-xs text-navy-400">net of ${fmtCurrencyWhole(r.terminalLeaveGross)} gross (pay + BAH + BAS)</p>
+      </div>
+    </div>
+    <div class="flex items-center justify-between mt-3 pt-3 border-t" style="border-color:rgba(26,39,68,0.1);">
+      <span class="font-semibold text-navy-700">${escapeHtml(winnerLabel)} nets more</span>
+      <span class="font-bold tabular-nums" style="color:#c9a227;">${r.netDifference === 0 ? '—' : (r.netDifference > 0 ? '+' : '') + fmtCurrencyWhole(r.netDifference)}</span>
+    </div>`;
 }
 
 function recalcSBP() {
