@@ -1,0 +1,350 @@
+/* ===== app.css =====
+   Component and layout styles for index.html.
+
+   Previously an inline <style> block. An inline stylesheet requires
+   `style-src 'unsafe-inline'`, which is exactly the directive that lets an injected
+   <style> or style attribute restyle the page (overlay a fake dialog, hide a warning
+   banner). Moving it here is half of what lets style-src become plain 'self'; the other
+   half is the style="..." attributes that used to be scattered through the markup and
+   the JS templates, now expressed as the classes below.
+*/
+/* ----- Self-hosted Inter -----
+   Was two <link>s to fonts.googleapis.com + fonts.gstatic.com. Self-hosting removes the last
+   third-party origins from the CSP (style-src and font-src both become 'self'), stops every
+   visitor's browser announcing this app to Google, and removes a render-blocking third-party
+   round trip. Files are copied from @fontsource/inter by `npm run build:fonts`.
+   font-display:swap so text is readable immediately rather than invisible while loading. */
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/inter-400.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 500; font-display: swap; src: url('/fonts/inter-500.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 600; font-display: swap; src: url('/fonts/inter-600.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 700; font-display: swap; src: url('/fonts/inter-700.woff2') format('woff2'); }
+
+:root {
+  --navy: #1a2744;
+  --navy-dark: #0c1220;
+  --gold: #c9a227;
+  --gold-light: #f5e199;
+  --bg: #f8f9fa;
+  --white: #ffffff;
+}
+* { box-sizing: border-box; }
+body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: #1a2744; margin: 0; }
+.fade-in { animation: fadeIn 0.5s ease forwards; opacity: 0; }
+.fade-in-up { animation: fadeInUp 0.5s ease forwards; opacity: 0; }
+@keyframes fadeIn { to { opacity: 1; } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+.stagger-7 { animation-delay: 0.35s; }
+.stagger-8 { animation-delay: 0.4s; }
+.stagger-9 { animation-delay: 0.45s; }
+.stagger-10 { animation-delay: 0.5s; }
+.stagger-11 { animation-delay: 0.55s; }
+.stagger-12 { animation-delay: 0.6s; }
+.progress-animate { transition: width 1.2s cubic-bezier(0.4,0,0.2,1); }
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; }
+.toggle-track { width: 44px; height: 24px; border-radius: 12px; background: #ced4da; position: relative; cursor: pointer; transition: background 0.2s; }
+.toggle-track.active { background: var(--gold); }
+.toggle-thumb { width: 20px; height: 20px; border-radius: 50%; background: white; position: absolute; top: 2px; left: 2px; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.toggle-track.active .toggle-thumb { transform: translateX(20px); }
+.phase-content { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; }
+.phase-content.open { max-height: 3000px; }
+.tooltip-container { position: relative; display: inline-flex; }
+/* max-width caps the box to the viewport regardless of the width set here or inline
+   on a specific instance (280px/300px on a couple of tooltips) — a fixed width alone
+   overflows off-screen when the trigger sits near a viewport edge on a narrow phone. */
+.tooltip-box { display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: var(--navy); color: white; padding: 8px 12px; border-radius: 8px; font-size: 12px; line-height: 1.5; width: 260px; max-width: calc(100vw - 24px); z-index: 50; margin-bottom: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+.tooltip-container:hover .tooltip-box, .tooltip-container:focus-within .tooltip-box { display: block; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--navy); color: white; padding: 12px 24px; border-radius: 12px; font-size: 14px; font-weight: 500; z-index: 100; transition: transform 0.3s ease, opacity 0.3s ease; opacity: 0; pointer-events: none; }
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+.input-field { background: #e9ecef; border: 2px solid transparent; border-radius: 12px; padding: 10px 14px; font-size: 15px; width: 100%; transition: all 0.2s; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #1a2744; }
+.input-field:focus { outline: none; background: white; border-color: #836616; box-shadow: 0 0 0 3px rgba(201,162,39,0.15); }
+.input-field::placeholder { color: #67779e; }
+select.input-field { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23667' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+.radio-card { border: 2px solid #e9ecef; border-radius: 12px; padding: 12px 16px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 10px; background: white; }
+.radio-card:hover { border-color: #c9a227; }
+.radio-card.selected { border-color: #836616; background: #fdf9ed; }
+.radio-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #ced4da; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.radio-card.selected .radio-dot { border-color: #836616; }
+.radio-card.selected .radio-dot::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #836616; }
+.helper-text { font-size: 12px; color: #415586; margin-top: 4px; line-height: 1.4; }
+.error-msg { font-size: 12px; color: #b91c1c; margin-top: 4px; display: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* The skip link is meant to be sr-only until it receives keyboard focus, at which
+   point a sighted keyboard user needs to actually see it to know where they landed. */
+a.sr-only:focus, a.sr-only:focus-visible {
+  position: fixed; top: 8px; left: 8px; width: auto; height: auto; padding: 10px 16px;
+  margin: 0; overflow: visible; clip: auto; white-space: normal; z-index: 1000;
+  background: #1a2744; color: #fff; border-radius: 8px; font-size: 14px; font-weight: 600;
+}
+.error-msg.show { display: block; }
+.input-field.error { border-color: #ef4444; }
+.section-card { background: white; border-radius: 16px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(26,39,68,0.06); }
+.milestone-card { background: white; border-radius: 14px; padding: 16px; box-shadow: 0 1px 4px rgba(26,39,68,0.06); display: flex; flex-direction: column; gap: 6px; transition: transform 0.2s; }
+.milestone-card:hover { transform: translateY(-2px); }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.status-green { background: #10b981; }
+.status-gold { background: #f59e0b; }
+.status-red { background: #ef4444; }
+.branch-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 9999px; font-size: 13px; font-weight: 600; color: white; }
+.resource-card { background: white; border-radius: 14px; padding: 20px; box-shadow: 0 1px 4px rgba(26,39,68,0.06); }
+.resource-card h4 { font-weight: 600; font-size: 15px; margin-bottom: 8px; color: #1a2744; }
+.resource-card a { color: #836616; text-decoration: none; font-size: 13px; font-weight: 500; display: block; margin-bottom: 4px; word-break: break-all; }
+.resource-card a:hover { text-decoration: underline; }
+.phase-header { display: flex; align-items: center; gap: 12px; padding: 16px; cursor: pointer; border-radius: 12px; transition: background 0.2s; user-select: none; }
+.phase-header:hover { background: #f0f2f6; }
+.check-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; }
+.check-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: #c9a227; flex-shrink: 0; margin-top: 2px; cursor: pointer; }
+.sb-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; vertical-align: middle; margin-left: 6px; }
+.sb-badge-auto { background: #d1fae5; color: #047857; }
+.sb-badge-manual { background: #fef3c7; color: #b45309; }
+.sb-policy-note { margin-top: 6px; font-size: 13px; line-height: 1.5; padding: 8px 12px; border-radius: 10px; }
+.sb-edit-feedback { margin-top: 6px; font-size: 13px; line-height: 1.5; padding: 8px 12px; border-radius: 10px; display: none; }
+.sb-edit-feedback.show { display: block; }
+.va-rating-btn { min-width: 52px; padding: 8px 6px; border: 2px solid #e9ecef; border-radius: 10px; background: white; cursor: pointer; text-align: center; font-size: 13px; font-weight: 600; color: #415586; transition: all 0.2s; }
+.va-rating-btn:hover { border-color: #c9a227; color: #a6841e; }
+.va-rating-btn.active { border-color: #836616; background: #fdf9ed; color: #836616; }
+/* Non-color cue for the selected rating (WCAG 1.4.1) — a checkmark in addition to color. */
+.va-rating-btn.active::after { content: ' \2713'; }
+.income-table-row { transition: background 0.15s; }
+.income-table-row.highlighted { background: #fdf9ed !important; font-weight: 600; }
+.income-table-row.crdp-eligible { background: rgba(16,185,129,0.04); }
+.income-table-row.va-waiver { background: rgba(239,68,68,0.03); }
+.bar-segment { transition: width 1s cubic-bezier(0.4,0,0.2,1); }
+.insight-card { border-radius: 14px; padding: 16px 20px; }
+.pay-section-inner { max-height: 0; overflow: hidden; transition: max-height 0.5s ease; }
+.pay-section-inner.open { max-height: 12000px; }
+.tsp-withdrawal-card { border: 2px solid #e9ecef; border-radius: 12px; padding: 12px 16px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 10px; background: white; }
+.tsp-withdrawal-card:hover { border-color: #c9a227; }
+.tsp-withdrawal-card.selected { border-color: #c9a227; background: #fdf9ed; }
+.tsp-withdrawal-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #ced4da; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.tsp-withdrawal-card.selected .tsp-withdrawal-dot { border-color: #c9a227; }
+.tsp-withdrawal-card.selected .tsp-withdrawal-dot::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #c9a227; }
+.range-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 8px; border-radius: 5px; background: linear-gradient(to right, #e9ecef, #c9a227); outline: none; }
+.range-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #c9a227; cursor: pointer; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+.range-slider::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: #c9a227; cursor: pointer; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+
+/* Horizontal transition timeline */
+.timeline-scroll { overflow-x: auto; padding: 4px 0 10px; }
+.timeline-scroll:focus-visible { outline: 2px solid #836616; outline-offset: 2px; }
+.timeline-track { position: relative; min-width: 640px; height: 160px; }
+.timeline-axis { position: absolute; left: 8px; right: 8px; top: 78px; height: 4px; border-radius: 2px; background: #e9ecef; }
+.timeline-fill { position: absolute; left: 8px; top: 78px; height: 4px; border-radius: 2px; background: linear-gradient(90deg,#1a2744,#c9a227); }
+.tl-marker { position: absolute; top: 0; height: 160px; width: 84px; transform: translateX(-50%); }
+.tl-marker .tl-dot { position: absolute; top: 71px; left: 50%; transform: translateX(-50%); width: 14px; height: 14px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.25); }
+.tl-marker .tl-box { position: absolute; left: 50%; transform: translateX(-50%); width: 84px; text-align: center; }
+.tl-marker .tl-box.tl-above { bottom: 90px; }
+.tl-marker .tl-box.tl-below { top: 96px; }
+.tl-label { font-size: 10px; font-weight: 600; line-height: 1.2; color: #1a2744; }
+.tl-date { font-size: 10px; color: #415586; }
+.tl-status { font-size: 9px; font-weight: 600; line-height: 1.3; color: #415586; }
+.tl-dot.status-green { background:#10b981; } .tl-dot.status-gold { background:#f59e0b; } .tl-dot.status-red { background:#ef4444; }
+/* Keyboard focus visibility for custom (div-based) controls */
+.toggle-track:focus-visible, .radio-card:focus-visible, .tsp-withdrawal-card:focus-visible, .va-rating-btn:focus-visible, .phase-header:focus-visible, [role="button"]:focus-visible { outline: 2px solid #836616; outline-offset: 2px; }
+/* Disclaimer banner */
+.app-disclaimer-bar { background:#faf0cc; color:#5f490e; font-size:12px; line-height:1.4; padding:8px 16px; text-align:center; }
+
+/* Shared modal */
+#appModal { border: none; border-radius: 16px; padding: 24px; max-width: 520px; width: calc(100vw - 32px); box-shadow: 0 20px 50px rgba(26,39,68,0.28); color: #1a2744; }
+#appModal::backdrop { background: rgba(12,18,32,0.55); }
+#appModal .modal-btn { font-size: 14px; font-weight: 600; padding: 10px 16px; border-radius: 10px; border: none; cursor: pointer; }
+#appModal .modal-btn-primary { background: #a6841e; color: #fff; }
+#appModal .modal-btn-secondary { background: #f0f2f6; color: #1a2744; }
+#appModal .modal-btn-danger { background: #b91c1c; color: #fff; }
+#appModal .modal-btn:focus-visible { outline: 2px solid #836616; outline-offset: 2px; }
+#appModal input[readonly] { font-family: monospace; font-size: 12px; }
+
+/* The read-only warning has to stay in view. Someone on a shared /p/<id> link can otherwise
+   scroll thousands of pixels down, tick checklist boxes, and never learn their changes are
+   being discarded — the banner explaining that was at the very top of the page. */
+#readOnlyBanner.is-sticky {
+  position: sticky; top: 56px; z-index: 35;
+  margin-bottom: 20px; box-shadow: 0 4px 14px rgba(26,39,68,0.10);
+}
+/* Controls a read-only viewer cannot meaningfully use are disabled outright rather than
+   silently swallowing input. */
+.readonly-plan input[type="checkbox"]:disabled { cursor: not-allowed; opacity: 0.55; }
+.readonly-plan .check-item label { cursor: not-allowed; }
+
+/* 180-day meter */
+.day-meter-container { padding: 20px; border-radius: 16px; background: linear-gradient(135deg,#f8f9fa 0%,#f0f2f6 100%); margin-bottom: 20px; border: 2px solid #e9ecef; transition: all .3s ease; }
+.day-meter-container.warning { border-color: #f59e0b; background: linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%); }
+.day-meter-container.danger { border-color: #ef4444; background: linear-gradient(135deg,#fef2f2 0%,#fee2e2 100%); }
+.day-meter-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.day-meter-label { font-weight: 600; font-size: 14px; color: #1a2744; }
+.day-meter-value { font-size: 18px; font-weight: 700; }
+.day-meter-bar { width: 100%; height: 12px; border-radius: 9999px; background: #e9ecef; overflow: hidden; margin-bottom: 12px; box-shadow: inset 0 2px 4px rgba(0,0,0,.05); }
+.day-meter-fill { height: 100%; border-radius: 9999px; background: linear-gradient(90deg,#10b981,#059669); transition: width .6s cubic-bezier(.4,0,.2,1), background .3s ease; }
+.day-meter-fill.warning { background: linear-gradient(90deg,#f59e0b,#d97706); }
+.day-meter-fill.danger { background: linear-gradient(90deg,#ef4444,#dc2626); }
+.day-meter-breakdown { display: grid; grid-template-columns: repeat(auto-fit,minmax(120px,1fr)); gap: 12px; margin-bottom: 12px; }
+.day-meter-item { padding: 12px; border-radius: 10px; background: #fff; border: 1px solid #e9ecef; text-align: center; }
+.day-meter-item-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #415586; letter-spacing: .02em; margin-bottom: 4px; }
+.day-meter-item-value { font-size: 20px; font-weight: 700; color: #1a2744; }
+.day-meter-item-color { width: 8px; height: 8px; border-radius: 50%; margin: 4px auto 0; }
+.day-meter-message { font-size: 13px; line-height: 1.5; display: flex; align-items: flex-start; gap: 8px; padding: 12px; border-radius: 10px; }
+.day-meter-message.success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+.day-meter-message.warning { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.day-meter-message.danger { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+/* Timeline calendar */
+.cal-month-card { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 1px 4px rgba(26,39,68,.06); margin-bottom: 16px; }
+.cal-grid-table { width: 100%; border-collapse: separate; border-spacing: 1px; background: #e9ecef; border-radius: 8px; overflow: hidden; table-layout: fixed; }
+.cal-dow { background: #f0f2f6; padding: 8px 4px; text-align: center; font-size: 11px; font-weight: 600; color: #415586; }
+.cal-dow abbr { text-decoration: none; }
+.cal-day { background: #fff; padding: 6px; height: 84px; vertical-align: top; border: 1px solid transparent; }
+.cal-day.other-month { background: #f8f9fa; color: #adb5bd; }
+.cal-day.is-today { border-color: #c9a227; border-width: 2px; }
+.cal-day-num { font-size: 12px; font-weight: 600; display: block; }
+.cal-event { display: block; padding: 1px 4px; margin-top: 3px; border-radius: 3px; color: #fff; font-size: 9px; font-weight: 600; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-narrow-summary { display: none; }
+/* Below ~400px the 7-column grid renders day text at ~7px — unreadable, and the chips are
+   truncated past recognition. Drop the grid entirely and show the same information as a
+   sentence, which is both legible and what a screen reader gets anyway. */
+@media (max-width: 400px) {
+  .cal-grid-table { display: none; }
+  .cal-narrow-summary { display: block; }
+}
+
+/* .fade-in/.fade-in-up start at opacity:0 and rely on the animation to reach opacity:1
+   — with animations suppressed, that final state never arrives and the content they're
+   on (including the entire results screen) stays permanently invisible. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+  .fade-in, .fade-in-up { opacity: 1 !important; animation: none !important; transform: none !important; }
+}
+
+@media print {
+  /* The horizontal timeline packs ~20+ milestones into a fixed-width proportional
+     axis; collapsing its min-width for print only makes markers overlap worse. The
+     Key Milestone Dates card grid above it already covers the same information in a
+     print-friendly layout, so just omit the timeline on paper. */
+  .timeline-scroll { display: none !important; }
+  body { background: white !important; color: black !important; font-size: 11px; }
+  .no-print { display: none !important; }
+  .phase-content { max-height: none !important; overflow: visible !important; }
+  .pay-section-inner { max-height: none !important; overflow: visible !important; }
+  .milestone-card, .section-card, .resource-card { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
+  .section-card { page-break-inside: avoid; }
+  h2 { page-break-after: avoid; }
+  footer { page-break-before: always; }
+  /* Colored chips/bars/badges carry their contrast from a background color set via an
+     inline style or a color utility class; browsers omit backgrounds from print output
+     by default, which turns e.g. white chip text invisible on a plain page. */
+  /* #tspFullIncomeSummary is the single biggest number on the page and prints white-on-white
+     without this; .bar-segment prints as empty rows. Both matter on a document people bring
+     to a TAP counselor. */
+  .cal-event, #preBar > div, #countdownHero, .branch-badge, .status-dot, .tl-dot,
+  .day-meter-fill, .day-meter-item-color, #tspFullIncomeSummary, #tspFullIncomeSummary *,
+  .bar-segment, .income-table-row.highlighted, .income-table-row.crdp-eligible,
+  .income-table-row.va-waiver, .insight-card, #incomeTableWaiverNote, .sb-badge,
+  .day-meter-message, .day-meter-container {
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  /* The bar chart's segments are pure background colour with no text — give them a printable
+     outline so the comparison survives a black-and-white printer too. */
+  .bar-segment { border: 1px solid #333 !important; }
+  .cal-month-card { break-inside: avoid; }
+}
+
+/* ===== Palette utilities =====
+   These exist so no style="..." attribute is written into markup or into an innerHTML
+   template. That is what lets the CSP drop `style-src 'unsafe-inline'`: with it enabled,
+   any HTML an attacker manages to inject can also carry its own styling — enough to hide a
+   warning banner or overlay a convincing fake dialog. Values are unchanged from the inline
+   styles they replace; this is a mechanical migration (scripts/inline-style-codemod.mjs). */
+.t-gold { color: #c9a227; }
+.t-gold-dark { color: #a6841e; }
+.t-gold-light { color: #f5e199; }
+.t-danger { color: #b91c1c; }
+.t-danger-bright { color: #ef4444; }
+.t-warn { color: #f59e0b; }
+.t-success { color: #047857; }
+.t-success-bright { color: #10b981; }
+.t-info { color: #3b82f6; }
+.t-info-dark { color: #1e40af; }
+.t-indigo { color: #3730a3; }
+.t-medium { font-weight: 500; }
+
+.rule-soft { border-color: rgba(26,39,68,0.08); }
+.rule { border-color: rgba(26,39,68,0.1); }
+.rule-gold { border-color: rgba(166,132,30,0.25); }
+
+.btn-gold { background: #a6841e; }
+.btn-blue { background: #1e40af; }
+.btn-indigo { background: #3730a3; }
+.btn-gold-gradient { background: linear-gradient(135deg, #c9a227 0%, #a6841e 100%); }
+.btn-navy-gold { background: #1a2744; color: #c9a227; }
+
+.swatch-navy { background: #1a2744; }
+.swatch-gold { background: #c9a227; }
+.swatch-sb { background: #3468b0; }
+.swatch-ptdy { background: #836616; }
+.swatch-leave { background: #2d6a4f; }
+.swatch-sep { background: #b91c1c; }
+
+.surface-muted { background: #f0f2f6; }
+.surface-track { background: #e9ecef; }
+.surface-gold { background: #fdf9ed; }
+.surface-success { background: #d1fae5; }
+.surface-scrim { background: rgba(0,0,0,0.08); }
+
+.chip-info { background: #dbeafe; color: #1e40af; }
+.chip-success { background: #d1fae5; color: #047857; }
+.chip-success-inverse { background: #fff; color: #047857; }
+.chip-danger { background: #fee2e2; color: #b91c1c; }
+.chip-warn { background: #fef3c7; color: #92400e; }
+.chip-neutral { background: #e2e8f0; color: #475569; }
+
+.note-gold { background: #fdf9ed; border: 1px solid #f0d266; }
+.note-gold-text { color: #92400e; }
+.note-warn { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.note-warn-alt { color: #b45309; }
+.note-danger { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+.note-danger-deep { color: #991b1b; }
+.note-info { background: #dbeafe; border: 1px solid #93c5fd; }
+.note-info-text { color: #1e40af; }
+.note-indigo { background: #e0e7ff; border: 1px solid #a5b4fc; }
+.note-plain { margin-bottom: 0; background: #f8fafc; border: 1px solid #e2e8f0; }
+.note-quote { background: #f7f8fb; border: 1px solid rgba(26,39,68,0.08); border-left: 3px solid #c9a227; }
+
+.panel-navy { background: linear-gradient(135deg, #1a2744 0%, #2e3f66 100%); color: #fff; }
+.panel-navy-plain { background: linear-gradient(135deg, #1a2744 0%, #2e3f66 100%); }
+.meter-fill-gold { width: 0%; background: linear-gradient(90deg, #c9a227, #f5e199); }
+
+.card-flush { padding: 0; overflow: hidden; }
+.pad-sm { padding: 8px 12px; }
+.flex-card { flex: 1; min-width: 150px; }
+.is-hidden { display: none; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.tip-300 { width: 300px; }
+.tip-280 { width: 280px; }
+.w-0 { width: 0%; }
+.max-w-110 { max-width: 110px; }
+.span-full { grid-column: 1 / -1; }
+.noscript-card {
+  max-width: 640px; margin: 2rem auto; padding: 1rem 1.25rem;
+  border: 1px solid #c9a227; border-radius: 12px; background: #fff;
+  color: #1a2744; font-family: sans-serif; text-align: center;
+}
+
+/* ----- Classes replacing the last of the dynamic inline styles -----
+   Values that come from a fixed palette became classes; only genuinely computed values
+   (a percentage width, a per-milestone colour) still vary, and those are applied through
+   the CSSOM by paintDynamicStyles() in app.js rather than as style="" attributes. */
+.income-table-row.highlighted { border-left: 3px solid #c9a227; }
+.bar-row { transition: opacity 0.2s; }
+.bar-seg-ret { background: #1a2744; }
+.bar-seg-va { background: #c9a227; }
+.op-80 { opacity: 0.8; }
+.phase-pct { background: #f0f2f6; color: #67779e; }
+.phase-pct.is-complete { background: #d1fae5; color: #047857; }
+.phase-bar { background: #c9a227; }
+.phase-bar.is-complete { background: #10b981; }
+.task-text.is-done { text-decoration: line-through; opacity: 0.5; }
