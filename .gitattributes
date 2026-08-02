@@ -1,0 +1,21 @@
+# Normalize line endings so the deploy's "are the generated assets stale?" gate compares
+# like with like. Without this, `npm run build` on a Windows checkout rewrites generated
+# files with CRLF and `git diff --exit-code` reports drift that doesn't exist — a confusing
+# failure in a step whose whole job is to catch real drift.
+* text=auto eol=lf
+
+# Fonts and other binaries must never be line-ending converted. Git currently infers this
+# correctly, but inference is not something to leave a 24 KB woff2 depending on: a corrupted
+# font fails at render time, on the deployed site, with no build error anywhere.
+*.woff2 binary
+*.woff   binary
+*.ttf    binary
+*.png    binary
+*.jpg    binary
+*.ico    binary
+
+# Generated — collapse them in diffs and mark them so reviewers know not to hand-edit.
+public/js/icons.generated.js  linguist-generated=true
+public/js/pay-tables.generated.js linguist-generated=true
+public/css/tailwind.css       linguist-generated=true
+package-lock.json             linguist-generated=true
