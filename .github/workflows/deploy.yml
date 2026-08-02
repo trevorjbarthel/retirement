@@ -35,6 +35,39 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      # Everything under public/ is what actually ships, but some of it is generated
+      # (Tailwind CSS, the icon sprite, the self-hosted fonts). If someone adds a class or an
+      # icon and forgets to rebuild, the deploy silently serves stale assets — or, for icons,
+      # blank spaces. Rebuild and fail on any difference.
+      - name: Verify committed build artifacts are current
+        run: |
+          npm run build
+          git diff --exit-code -- public/css/tailwind.css public/js/icons.generated.js public/fonts \
+            || { echo "::error::Generated assets are stale — run 'npm run build' and commit the result."; exit 1; }
+      # Migrations are irreversible and this app has no account system to recover from — a
+      # plan's edit key exists only in its owner's URL bar — so capture a rollback point
+      # before migrating.
+      #
+      # This records D1 Time Travel's pre-migration BOOKMARK, not the data. Do NOT change
+      # this to `wrangler d1 export` + upload-artifact: this repository is public, workflow
+      # artifacts on a public repo are downloadable by anyone, and `mtc-db` holds every
+      # user's name, rank, separation date, location, TSP balance and VA rating. Time Travel
+      # keeps the restore point inside Cloudflare where the data already lives.
+      #
+      # To roll back:  npx wrangler d1 time-travel restore mtc-db --bookmark <printed value>
+      - name: Record a D1 rollback point
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx wrangler d1 time-travel info mtc-db | tee time-travel.txt
+          {
+            echo "### D1 rollback point (pre-migration)"
+            echo '```'
+            cat time-travel.txt
+            echo '```'
+            echo "Restore with: \`npx wrangler d1 time-travel restore mtc-db --bookmark <bookmark>\`"
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Apply D1 migrations
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

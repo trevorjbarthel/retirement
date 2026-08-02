@@ -26,8 +26,22 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
+      # The dispatch input is passed through an env var and validated, NOT interpolated
+      # straight into the shell. `${{ github.event.inputs.year }}` is attacker-influenced
+      # text expanded into a script in a job that holds `contents: write` — a classic
+      # script-injection sink. The env indirection means the value is data, never syntax.
+      - name: Validate year input
+        env:
+          YEAR_INPUT: ${{ github.event.inputs.year }}
+        run: |
+          if [ -n "$YEAR_INPUT" ] && ! printf '%s' "$YEAR_INPUT" | grep -Eq '^[0-9]{4}$'; then
+            echo "::error::year must be a 4-digit year (got: $YEAR_INPUT)"
+            exit 1
+          fi
       - name: Regenerate pay tables from DFAS
-        run: node scripts/update-pay-tables.mjs --year "${{ github.event.inputs.year }}" --write --strict
+        env:
+          YEAR_INPUT: ${{ github.event.inputs.year }}
+        run: node scripts/update-pay-tables.mjs --year "$YEAR_INPUT" --write --strict
       - name: Run tests
         run: npm test
       - name: Open PR with refreshed tables
@@ -40,6 +54,10 @@ jobs:
             Automated regeneration of the basic-pay tables from the official DFAS pages.
 
             **Review the numbers in `public/data/pay-tables.json` before merging.**
+
+            The UI's "as of" label is derived from `PAY_TABLES`' own year keys
+            (`PAY_TABLE_YEAR` in `calc.js`), so it follows this data automatically — there is
+            no separate label to update by hand, which is why `add-paths` can stay narrow.
           add-paths: |
             public/js/pay-tables.generated.js
             public/data/pay-tables.json
