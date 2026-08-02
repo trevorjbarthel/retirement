@@ -1,13 +1,31 @@
-# Applies to every response served from public/ (Workers Static Assets honors
-# _headers the same way Cloudflare Pages does). The app's front end is a single
-# static index.html with an inline <script type="module"> and inline <style> —
-# splitting those into external files to drop 'unsafe-inline' is tracked separately
-# (see README "Notes & follow-ups"); until then, connect-src/frame-ancestors/etc.
-# still meaningfully limit what an XSS payload (or a compromised third-party script)
-# could do, even though script-src/style-src can't be fully locked down yet.
+# Applies to every response served from public/ (Workers Static Assets honors _headers the
+# same way Cloudflare Pages does). Worker-generated responses (/api/*, the calendar feed) get
+# their own headers from middleware in src/index.ts — _headers does NOT cover them.
+#
+# script-src is now plain 'self'. The app shell moved out of an inline <script> into
+# /js/app.js, and the ~96 KB unpkg Lucide bundle was replaced by a self-hosted sprite
+# (scripts/build-icons.mjs). There is no third-party script origin and no inline script left,
+# so neither an injected <script> nor a compromised CDN can execute anything.
+#
+# style-src is plain 'self' too: the inline <style> block moved to /css/app.css and all 151
+# style="..." attributes became classes. Genuinely computed values (a bar width, a
+# per-milestone colour) are applied through the CSSOM, which CSP does not restrict. With
+# 'unsafe-inline' present, any markup an attacker injected could also carry its own styling —
+# enough to hide the read-only warning banner or overlay a convincing fake dialog.
+#
+# Fonts are self-hosted from /fonts, so fonts.googleapis.com / fonts.gstatic.com are gone as
+# well. That leaves NO third-party origin anywhere, which is why default-src can be 'none':
+# anything not explicitly named below is denied outright.
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
   Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=(), usb=()
   X-Frame-Options: DENY
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+
+# The font files are content-stable and versioned by filename, so they can be cached hard.
+# index.html deliberately is not: it is the entry point that references everything else.
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable

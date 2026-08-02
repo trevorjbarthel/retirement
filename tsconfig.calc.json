@@ -5,10 +5,15 @@
   // file ships un-typechecked. Run via `npm run typecheck`.
   //
   // checkJs is on so body-level mistakes (e.g. calling a string method on a number) are
-  // caught. noImplicitAny is relaxed because the file predates JSDoc annotations; add
-  // @param/@returns over time to tighten coverage without a big-bang rewrite. The browser
-  // glue (store.js/auth-ui.js) is intentionally excluded until it carries JSDoc, since
-  // checkJs flags CDN globals (window.lucide) and inferred-callback arity there.
+  // caught. noImplicitAny is relaxed because these files predate JSDoc annotations; add
+  // @param/@returns over time to tighten coverage without a big-bang rewrite.
+  //
+  // app.js and store.js are included now that the app shell is a real file rather than an
+  // inline <script> checked by a bespoke regex+`node --check` script (scripts/check-index-
+  // script.mjs, since deleted). That script could only catch syntax errors; tsc catches
+  // typos in property names, bad arity, and null dereferences.
+  // strictNullChecks stays off here: the DOM layer is full of `$('id').value` calls that
+  // would each need a guard, and turning it on is a separate, deliberate pass.
   "compilerOptions": {
     "target": "ES2022",
     "module": "ES2022",
@@ -19,10 +24,20 @@
     "allowJs": true,
     "checkJs": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    // app.js imports its siblings by absolute URL path ('/js/calc.js') because that is what
+    // the BROWSER resolves against the site root. Map those back to the filesystem so tsc
+    // can follow them; without this every cross-module call is silently `any`.
+    // Paths are resolved relative to this file, so no (deprecated) baseUrl is needed.
+    "paths": {
+      "/js/*": ["./public/js/*"]
+    }
   },
   "include": [
     "public/js/calc.js",
-    "public/js/pay-tables.generated.js"
+    "public/js/pay-tables.generated.js",
+    "public/js/store.js",
+    "public/js/app.js",
+    "public/js/icons.js"
   ]
 }
