@@ -11,11 +11,15 @@
   // Serve the front-end (public/) via Workers Static Assets.
   // run_worker_first ensures /api/* always invokes the Worker before asset matching;
   // every other path is served edge-direct from public/ (fast, no Worker cost).
+  //
+  // The calendar feed must be listed too. Without it the SPA fallback answers
+  // /p/<id>/calendar.ics with index.html — a calendar client would subscribe successfully
+  // and then silently receive HTML forever, which is worse than a clean failure.
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": ["/api/*", "/p/*/calendar.ics"]
   },
 
   "d1_databases": [

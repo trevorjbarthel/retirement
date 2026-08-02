@@ -1,0 +1,13 @@
+-- Index `updated_at` so a plan's age can be queried without a full table scan.
+--
+-- Rows in `plans` currently grow monotonically forever: nothing expires, and until the
+-- DELETE endpoint landed nothing removed them either. Any retention policy — "purge plans
+-- untouched for N years", or simply reporting how many stale rows exist — has to filter on
+-- `updated_at`, and there was no index to do it against.
+--
+-- Deliberately NOT paired with an automatic purge in this migration. Deleting a plan is
+-- irreversible and unrecoverable here (a plan's edit key exists only in its owner's URL
+-- bar — there is no email to warn them on), so the retention window is a policy decision
+-- for the operator to make explicitly, not something a schema migration should start doing
+-- on its own. See README "Retention".
+CREATE INDEX IF NOT EXISTS idx_plans_updated_at ON plans (updated_at);

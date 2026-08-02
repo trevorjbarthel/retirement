@@ -1,13 +1,13 @@
 import { Hono } from "hono";
 import type { AppContext } from "../env";
 import { jsonError } from "../lib/json";
-import { createPlan, getPlan, updatePlanCAS } from "../db/queries";
+import { createPlan, getPlan, updatePlanCAS, deletePlanByKey } from "../db/queries";
 import { randomToken, hashToken } from "../lib/tokens";
 // Reuse the browser's own allow-list validator so the server enforces the exact same
 // shape the client does — this is what makes a hostile plan (e.g. transType/branch set
 // to a script payload) structurally unable to reach the database at all, rather than
 // relying solely on the client to behave.
-import { isValidState } from "../../public/js/calc.js";
+import { sanitizeState } from "../../public/js/calc.js";
 
 const api = new Hono<AppContext>();
 
@@ -54,15 +54,23 @@ async function readJsonCapped(request: Request, maxBytes: number): Promise<{ ok:
   }
 }
 
-// Returns the JSON string, null if not a plain object / fails the shared shape
-// validator, or "__too_large__" if over budget. Size is checked before shape so an
-// oversized payload is always rejected as "too large" regardless of its content,
-// rather than spending cycles deep-validating something we're rejecting anyway.
+// Returns the JSON string of a SANITIZED projection of the plan, null if not a plain object
+// / fails the shared shape validator, or "__too_large__" if over budget. Size is checked
+// before shape so an oversized payload is always rejected as "too large" regardless of its
+// content, rather than spending cycles deep-validating something we're rejecting anyway.
+//
+// Critically this stores `sanitizeState(plan)` — a projection built from the field
+// allow-list — not the caller's object. isValidState alone never rejected UNKNOWN keys, so
+// `/api/p` would happily persist arbitrary extra properties, making it an unauthenticated
+// 64 KiB-per-row blob host with no expiry. The projection means only plan shape lands in D1.
 function validPlanJson(plan: unknown): string | null {
   if (typeof plan !== "object" || plan === null || Array.isArray(plan)) return null;
-  const planJson = JSON.stringify(plan);
+  // Size-check the INPUT first so a huge payload is rejected before any deep work.
+  if (enc.encode(JSON.stringify(plan)).byteLength > MAX_PLAN_BYTES) return "__too_large__";
+  const clean = sanitizeState(plan);
+  if (!clean) return null;
+  const planJson = JSON.stringify(clean);
   if (enc.encode(planJson).byteLength > MAX_PLAN_BYTES) return "__too_large__";
-  if (!isValidState(plan)) return null;
   return planJson;
 }
 
@@ -71,16 +79,36 @@ function schemaVersionOf(body: any): number {
   return Number.isInteger(raw) && raw >= 1 && raw <= 1000 ? raw : 1;
 }
 
-// Best-effort per-IP throttle. No-op when the given limiter isn't bound (local dev /
-// tests / unprovisioned deploy); never blocks on a limiter failure.
-async function throttled(c: any, limiter: any, keyPrefix: string): Promise<boolean> {
+// Warn ONCE per isolate when a limiter we expect to exist isn't bound. `throttled()` fails
+// open in three separate ways (dev mode, missing binding, thrown call) and previously
+// emitted no signal at all for any of them — so an unprovisioned or renamed binding meant
+// silently unlimited writes, indistinguishable from a working limiter.
+const warnedLimiters = new Set<string>();
+function warnMissingLimiter(name: string) {
+  if (warnedLimiters.has(name)) return;
+  warnedLimiters.add(name);
+  console.warn(`[rate-limit] ${name} is not bound — requests are NOT being throttled. Check unsafe.bindings in wrangler.jsonc.`);
+}
+
+// Best-effort throttle. No-op when the given limiter isn't bound (local dev / tests /
+// unprovisioned deploy); never blocks on a limiter failure.
+//
+// `extraKey` lets a route throttle on something other than the IP. Keying writes on the
+// PLAN ID as well as the IP matters for this audience specifically: a base network NATs
+// thousands of people behind one address, so a purely IP-keyed limit both punishes innocent
+// neighbours and lets one attacker with many addresses hammer a single plan.
+async function throttled(c: any, limiter: any, keyPrefix: string, extraKey?: string): Promise<boolean> {
   if (c.env.APP_ENV === "development") return false; // skip in local dev / tests
-  if (!limiter) return false;
+  if (!limiter) { warnMissingLimiter(keyPrefix.toUpperCase() + "_LIMITER"); return false; }
   const ip = c.req.header("cf-connecting-ip") ?? "ip-unknown";
+  const key = extraKey ? `${keyPrefix}:${ip}:${extraKey}` : `${keyPrefix}:${ip}`;
   try {
-    const { success } = await limiter.limit({ key: `${keyPrefix}:${ip}` });
+    const { success } = await limiter.limit({ key });
     return !success;
-  } catch {
+  } catch (e) {
+    // Swallowed deliberately — a limiter outage must not take the API down — but no longer
+    // silently: an operator needs to be able to see it in the logs.
+    console.warn(`[rate-limit] ${keyPrefix} limiter threw, failing open:`, (e as Error)?.message ?? e);
     return false;
   }
 }
@@ -117,6 +145,11 @@ api.post("/p", async (c) => {
 
 // Read a plan by id (read-only; no key needed).
 api.get("/p/:id", async (c) => {
+  // Reads are throttled too. The id is unguessable, so this isn't an enumeration defence so
+  // much as cheap protection against a leaked link being scraped in a tight loop.
+  if (await throttled(c, c.env.UPDATE_LIMITER, "read", c.req.param("id"))) {
+    return jsonError(c, "rate_limited", 429, "Too many requests. Please wait a moment.");
+  }
   const row = await getPlan(c.env.DB, c.req.param("id"));
   if (!row) return jsonError(c, "not_found", 404);
   let plan: unknown;
@@ -132,10 +165,10 @@ api.get("/p/:id", async (c) => {
 
 // Update a plan. Requires the edit key; uses optimistic concurrency on rev.
 api.put("/p/:id", async (c) => {
-  if (await throttled(c, c.env.UPDATE_LIMITER, "update")) {
+  const id = c.req.param("id");
+  if (await throttled(c, c.env.UPDATE_LIMITER, "update", id)) {
     return jsonError(c, "rate_limited", 429, "Too many edits from your network. Please wait a moment.");
   }
-  const id = c.req.param("id");
   const read = await readJsonCapped(c.req.raw, MAX_BODY_BYTES);
   if (!read.ok) return read.tooLarge ? jsonError(c, "too_large", 413, "Plan is too large.") : jsonError(c, "invalid_input", 400);
   const body = read.body;
@@ -168,6 +201,31 @@ api.put("/p/:id", async (c) => {
     { error: "conflict", current: { plan, schema_version: r.current.schema_version, updated_at: r.current.updated_at, rev: r.current.rev } },
     409,
   );
+});
+
+// Delete a plan. Requires the edit key — the same capability that authorizes a write.
+//
+// Until this existed there was NO way to remove a plan: a member who over-shared their link
+// had no recourse, and rows accumulated forever with no expiry. The plan holds a name, rank,
+// separation date, location, TSP balance and VA rating, so "you can never delete it" was not
+// a defensible position for a tool aimed at service members.
+api.delete("/p/:id", async (c) => {
+  const id = c.req.param("id");
+  if (await throttled(c, c.env.UPDATE_LIMITER, "delete", id)) {
+    return jsonError(c, "rate_limited", 429, "Too many requests. Please wait a moment.");
+  }
+  const read = await readJsonCapped(c.req.raw, MAX_BODY_BYTES);
+  // The key may arrive in the body or the Authorization header; a DELETE with no body is
+  // legitimate for some clients, so an unparseable body is not itself an error.
+  const bodyKey = read.ok ? String((read as { ok: true; body: any }).body?.edit_key ?? "") : "";
+  const headerKey = (c.req.header("authorization") ?? "").replace(/^Bearer\s+/i, "");
+  const editKey = bodyKey || headerKey;
+  if (!editKey) return jsonError(c, "forbidden", 403, "An edit key is required to delete a plan.");
+
+  const r = await deletePlanByKey(c.env.DB, id, await hashToken(editKey));
+  if (r.ok) return c.json({ deleted: true });
+  if (r.reason === "not_found") return jsonError(c, "not_found", 404);
+  return jsonError(c, "forbidden", 403, "That edit key does not match this plan.");
 });
 
 export default api;
