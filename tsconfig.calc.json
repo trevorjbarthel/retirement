@@ -31,13 +31,8 @@
     // Paths are resolved relative to this file, so no (deprecated) baseUrl is needed.
     "paths": {
       "/js/*": ["./public/js/*"]
-    }
+    },
+    "types": ["vitest/globals"]
   },
-  "include": [
-    "public/js/calc.js",
-    "public/js/pay-tables.generated.js",
-    "public/js/store.js",
-    "public/js/app.js",
-    "public/js/icons.js"
-  ]
+  "include": ["public/js/*.js", "test/dom/**/*.ts"]
 }

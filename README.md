@@ -16,7 +16,7 @@ A copy is also kept in `localStorage` so the same browser can recover.
 
 | Layer | What |
 |------|------|
-| Front‑end | `public/index.html` (markup only) + ES modules `public/js/{app,calc,store,icons}.js`, styles in `public/css/{tailwind,app}.css`. **No inline script, no inline style, no third‑party origin.** |
+| Front‑end | `public/index.html` (markup only) + ES modules under `public/js/` — `app.js` boots the feature modules (`setup-form`, `plan-io`, `results`, `calendar-view`, `pay-estimator`, `decision-tools`, `phases`, `tabs`, `dom`, `ui-state`) over `calc.js` + `store.js`; styles in `public/css/{tailwind,app}.css`. **No inline script, no inline style, no third‑party origin.** |
 | Worker API | `src/` — [Hono](https://hono.dev) app: `POST /api/p`, `GET /api/p/:id`, `PUT /api/p/:id` |
 | Access model | **Capability URLs, no accounts.** A plan's public `id` (the `/p/<id>` path) is a read‑only token; a separate secret `edit_key` (the `#k=<key>` hash) is required to write. Only the SHA‑256 of the edit key is stored. |
 | Data | D1 (`migrations/0001_init.sql`): one `plans` row, keyed by `id`, holding the plan JSON + `edit_key_hash` + a monotonic `rev`. |
@@ -26,10 +26,13 @@ A copy is also kept in `localStorage` so the same browser can recover.
   by the browser, the Worker (write validation + the calendar feed), and the test suite —
   one source of truth. Everything domain-shaped lives here: the deadline engine, the pay and
   VA math, the phase checklist, the plan allow-list.
-- `public/js/app.js` is the DOM layer: rendering and event wiring, and nothing else. Its
-  module-scope `let`s are the app's mutable UI state and stay in one module deliberately —
-  an imported binding is read-only, so splitting them would turn every assignment into a
-  setter for no benefit.
+- `public/js/app.js` is the entry point: it wires the feature modules in order and boots the
+  right plan, nothing else. Each feature module owns one tab or one concern (`decision-tools.js`
+  generates its nine calculators from a single `TOOLS` spec — add a tool there, not in
+  `index.html`). Mutable state shared between features lives in `ui-state.js` as ONE exported
+  object (`ui.state`, `ui.toggles`, …) — an imported binding is read-only, an object's
+  properties are not — and every guard (`check:no-inline`, `check:icons`, `tsconfig.calc.json`)
+  discovers the module list rather than enumerating it.
 - `public/js/icons.js` + `icons.generated.js` replace the CDN icon library with inline path
   data for just the icons this app uses (`npm run build:icons`, ~17 KB vs ~96 KB gzipped).
 - `public/js/store.js` is the persistence seam: it creates a plan on first save,
@@ -66,7 +69,9 @@ npm run dev        # wrangler dev — serves public/ + the API at http://127.0.0
 ## Test
 
 ```bash
-npm test           # vitest: pure-function tests (calc.js) + Worker/D1 integration (Miniflare)
+npm test           # vitest: calc.js unit tests + Worker/D1 integration (Miniflare) + DOM tests + parser tests
+npm run test:dom   # just the DOM-layer suite (happy-dom, test/dom/): form ↔ plan round trip,
+                   # decision-tool override precedence, tab restore, the fetch timeout
 npm run typecheck  # tsc on src/ + test/, tsc on public/js/*, then the icon + CSP guards
 npm run build      # regenerate the icon sprite, fonts, and Tailwind CSS
 ```
@@ -151,6 +156,18 @@ the official DFAS pages**. The committed data lives in `public/data/pay-tables.j
   the first live run, those grades show a tailored manual‑entry prompt. The first
   live fetch must run where outbound internet is available (the Action runner).
 
+- **Bracket keys are completed years.** `"2 or less"` → key `0`, `"Over N"` → key `N`: DoD FMR
+  Vol. 7A pays the "Over N" rate from the day after completing N years, so a member who answers
+  "years of service: 20" is priced at Over 20, and a fractional YOS inside the High-3 walk
+  (19.5) still lands on Over 18. The parser test pins this; the pinned dollar values in
+  `test/calc.test.ts` are the guard against a regression.
+- **Three years are committed (2024, 2025, 2026)** so a High-3 average over the last 36 months
+  is computed from real tables rather than borrowing one year for all three. DFAS blocks the
+  fetch script from some networks (HTTP 403) and its HTML pages only ever show the current year;
+  the prior-year tables were taken from dated Wayback Machine captures of the same DFAS pages
+  (June 2024, June 2025) and cross-checked against the published raises (5.2% / 4.5% + junior
+  enlisted / 3.8%). Note DFAS's page *titles* lag a year behind their contents.
+
 ## Notes & follow‑ups
 
 - **Content Security Policy.** `public/_headers` covers **static asset** responses; Worker
@@ -176,11 +193,14 @@ the official DFAS pages**. The committed data lives in `public/data/pay-tables.j
   production, so it needs a gate rather than vigilance.
 
 - **Retention / deletion.** `DELETE /api/p/:id` (key-gated) removes a plan, and the results
-  screen exposes it as a "Delete plan" button. There is still **no automatic expiry**:
-  `migrations/0003` adds an index on `updated_at` so a retention policy *can* be written, but
-  none is enforced, deliberately — deletion here is unrecoverable and there is no email to warn
-  anyone on, so the retention window is an explicit operator decision rather than something a
-  migration starts doing on its own.
+  screen exposes it as a "Delete plan" button. A nightly cron trigger (`wrangler.jsonc`
+  `triggers.crons`, handled in `src/index.ts` → `src/lib/retention.ts`) also deletes any plan
+  **neither edited nor opened for two years**. "Opened" counts: `GET /api/p/:id` and the
+  calendar feed stamp `last_accessed_at` (`migrations/0004`, at most once a day) separately from
+  `updated_at`, so a member who only ever reads their plan — or whose calendar client polls the
+  feed — is never swept. The window is long and the definition of activity generous because
+  deletion is unrecoverable and there is no email to warn anyone on; the hero tooltip tells
+  visitors about it.
 
 - **Deploy safety.** `deploy.yml` fails the build if any generated asset (Tailwind CSS, the
   icon sprite, the fonts) is stale, then records a **D1 Time Travel bookmark** in the run

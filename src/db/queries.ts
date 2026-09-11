@@ -8,6 +8,34 @@ export interface PlanRow {
   rev: number;
   created_at: number;
   updated_at: number;
+  // Last read (page load or calendar-feed poll), unix seconds; 0 for rows that predate it.
+  // Distinct from updated_at so a read never changes the plan's version or its feed's DTSTAMP.
+  last_accessed_at: number;
+}
+
+// How often the access stamp is rewritten: once a day is plenty for a two-year retention
+// window and keeps a busy calendar subscription from turning every poll into a write.
+export const ACCESS_TOUCH_INTERVAL_SECONDS = 86400;
+
+/** Record that a plan was read. A no-op if it was already stamped within the interval. */
+export async function touchPlanAccess(db: D1Database, id: string, now = nowSeconds()): Promise<boolean> {
+  const res = await db
+    .prepare("UPDATE plans SET last_accessed_at = ? WHERE id = ? AND last_accessed_at < ?")
+    .bind(now, id, now - ACCESS_TOUCH_INTERVAL_SECONDS)
+    .run();
+  return res.meta.changes === 1;
+}
+
+/**
+ * Delete every plan that has neither been edited nor read since `cutoffSeconds`. Returns the
+ * number removed. The caller (src/lib/retention.ts) owns the policy; this only applies it.
+ */
+export async function purgeStalePlans(db: D1Database, cutoffSeconds: number): Promise<number> {
+  const res = await db
+    .prepare("DELETE FROM plans WHERE MAX(updated_at, last_accessed_at) < ?")
+    .bind(cutoffSeconds)
+    .run();
+  return res.meta.changes;
 }
 
 /** Result of a compare-and-set plan update. */

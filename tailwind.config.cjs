@@ -8,7 +8,10 @@ module.exports = {
           100: "#d9dde8",
           200: "#b3bbcf",
           300: "#8d99b7",
-          400: "#67779e",
+          // 400 is the colour of almost all small copy (helper text, subtitles, footnotes).
+          // #67779e measured 4.46:1 on white and 3.98:1 on navy-50 cards — under WCAG AA's
+          // 4.5:1 for body text. #5a6a92 clears 4.5 on every surface it sits on.
+          400: "#5a6a92",
           500: "#415586",
           600: "#2e3f66",
           700: "#1a2744",

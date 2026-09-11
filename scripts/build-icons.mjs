@@ -15,7 +15,9 @@ import { join } from "node:path";
 
 const ICON_DIR = "node_modules/lucide-static/icons";
 const OUT = "public/js/icons.generated.js";
-const SOURCES = ["public/index.html", "public/js/app.js", "public/js/calc.js"];
+// Every file that can reference an icon — discovered, so a new feature module cannot ship an
+// icon name the sprite does not carry.
+const SOURCES = ["public/index.html", ...readdirSync("public/js").filter((f) => f.endsWith(".js") && !f.endsWith(".generated.js")).map((f) => "public/js/" + f)];
 
 // Icons referenced somewhere the scanner can't see them literally (none today). Kept as an
 // explicit escape hatch so a future dynamic case has an honest home instead of a silent gap.

@@ -252,3 +252,61 @@ describe("routing", () => {
     expect((await res.json<{ error: string }>()).error).toBe("not_found");
   });
 });
+
+// ----- retention: reads count as activity; the nightly sweep removes what nobody touches -----
+import { env } from "cloudflare:test";
+import { purgeStalePlans, touchPlanAccess, ACCESS_TOUCH_INTERVAL_SECONDS } from "../src/db/queries";
+import { runRetentionSweep, RETENTION_DAYS } from "../src/lib/retention";
+
+const rowOf = (id: string) =>
+  env.DB.prepare("SELECT updated_at, last_accessed_at FROM plans WHERE id = ?").bind(id).first<{ updated_at: number; last_accessed_at: number }>();
+
+describe("retention", () => {
+  it("stamps last_accessed_at on a read, at most once per interval, without touching updated_at", async () => {
+    const { id } = await createPlan();
+    const before = (await rowOf(id))!;
+    expect(before.last_accessed_at).toBe(0);
+    expect(await touchPlanAccess(env.DB, id, 1_000_000)).toBe(true);
+    // Inside the interval the stamp is left alone (no write per poll).
+    expect(await touchPlanAccess(env.DB, id, 1_000_000 + ACCESS_TOUCH_INTERVAL_SECONDS - 1)).toBe(false);
+    expect(await touchPlanAccess(env.DB, id, 1_000_000 + ACCESS_TOUCH_INTERVAL_SECONDS + 1)).toBe(true);
+    const after = (await rowOf(id))!;
+    expect(after.last_accessed_at).toBe(1_000_000 + ACCESS_TOUCH_INTERVAL_SECONDS + 1);
+    expect(after.updated_at).toBe(before.updated_at);
+  });
+
+  it("GET /api/p/:id and the calendar feed both record access", async () => {
+    const { id } = await createPlan();
+    expect((await api(`/api/p/${id}`)).status).toBe(200);
+    // The touch runs off the response path; give it a tick.
+    await new Promise((r) => setTimeout(r, 50));
+    expect((await rowOf(id))!.last_accessed_at).toBeGreaterThan(0);
+
+    const { id: id2 } = await createPlan();
+    expect((await api(`/p/${id2}/calendar.ics`)).status).toBe(200);
+    await new Promise((r) => setTimeout(r, 50));
+    expect((await rowOf(id2))!.last_accessed_at).toBeGreaterThan(0);
+  });
+
+  it("the sweep removes only plans neither edited nor read inside the window", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const old = now - (RETENTION_DAYS + 1) * 86400;
+    const { id: staleId } = await createPlan();
+    const { id: readRecentlyId } = await createPlan();
+    const { id: editedRecentlyId } = await createPlan();
+    const { id: freshId } = await createPlan();
+    // Backdate three of them; the "read recently" one is old by edit date but was opened.
+    await env.DB.prepare("UPDATE plans SET updated_at = ?, last_accessed_at = 0 WHERE id = ?").bind(old, staleId).run();
+    await env.DB.prepare("UPDATE plans SET updated_at = ?, last_accessed_at = ? WHERE id = ?").bind(old, now - 86400, readRecentlyId).run();
+    await env.DB.prepare("UPDATE plans SET updated_at = ?, last_accessed_at = ? WHERE id = ?").bind(now - 86400, old, editedRecentlyId).run();
+
+    const removed = await runRetentionSweep(env.DB, now);
+    expect(removed).toBeGreaterThanOrEqual(1);
+    expect((await api(`/api/p/${staleId}`)).status).toBe(404);
+    expect((await api(`/api/p/${readRecentlyId}`)).status).toBe(200);
+    expect((await api(`/api/p/${editedRecentlyId}`)).status).toBe(200);
+    expect((await api(`/api/p/${freshId}`)).status).toBe(200);
+    // Idempotent: a second sweep finds nothing new.
+    expect(await purgeStalePlans(env.DB, now - RETENTION_DAYS * 86400)).toBe(0);
+  });
+});

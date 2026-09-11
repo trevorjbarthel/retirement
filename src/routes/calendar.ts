@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import type { AppContext } from "../env";
 import { jsonError } from "../lib/json";
 import { getPlan } from "../db/queries";
+import { throttled } from "../lib/ratelimit";
+import { recordAccess } from "./plan";
 // calc.js is already the single source of truth for the deadline engine and is imported by
 // the write path too — the feed therefore cannot drift from what the page shows.
 import { computeMilestones, buildICS, isValidState } from "../../public/js/calc.js";
@@ -17,8 +19,16 @@ const cal = new Hono<AppContext>();
 // Read-only and keyed on the public id, exactly like /p/<id>: no edit key, no writes.
 cal.get("/:id/calendar.ics", async (c) => {
   const id = c.req.param("id");
+  // Same throttle as GET /api/p/:id — this was the one public read path without one, and it
+  // is the more expensive of the two (it runs the whole deadline engine per request).
+  if (await throttled(c, c.env.UPDATE_LIMITER, "feed", id)) {
+    return jsonError(c, "rate_limited", 429, "Too many requests. Please wait a moment.");
+  }
   const row = await getPlan(c.env.DB, id);
   if (!row) return jsonError(c, "not_found", 404);
+  // A calendar client polling this feed is someone still relying on the plan — that keeps
+  // it out of the retention sweep.
+  recordAccess(c, id);
 
   let plan: any;
   try {

@@ -1,7 +1,8 @@
 import { Hono } from "hono";
-import type { AppContext } from "./env";
+import type { AppContext, Env } from "./env";
 import apiRoutes from "./routes/plan";
 import calendarRoutes from "./routes/calendar";
+import { runRetentionSweep } from "./lib/retention";
 
 const app = new Hono<AppContext>();
 
@@ -39,4 +40,10 @@ app.all("/api/*", (c) => c.json({ error: "not_found" }, 404));
 // most asset requests never reach the Worker; SPA fallback serves index.html for /p/<id>.
 app.all("*", (c) => c.env.ASSETS.fetch(c.req.raw));
 
-export default app;
+export default {
+  fetch: app.fetch,
+  // Nightly retention sweep — see src/lib/retention.ts for the policy and its rationale.
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(runRetentionSweep(env.DB));
+  },
+};

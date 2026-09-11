@@ -1,11 +1,18 @@
 // Pure parser for the official DFAS "Basic Pay" HTML pages → normalized pay table.
 // No network / fs here so it's trivially unit-testable against saved fixtures.
 //
-// Key convention (correct & consistent, unlike the original hand-built seed):
-//   "2 or less" column      -> key 2
-//   "Over N"   column       -> key N + 1   (an integer-YOS member is "over N" at N+1)
+// Key convention — the key is the COMPLETED years of service at which a column's rate starts:
+//   "2 or less" column      -> key 0
+//   "Over N"   column       -> key N
 //   consecutive equal (flat) values are collapsed to the first key they appear at.
-// getBasePay2026()'s "highest key <= YOS" lookup then resolves the right cell.
+// DoD FMR Vol. 7A ch. 1: a member draws the "Over N" rate from the day after completing N
+// years, so someone who answers "years of service: 20" is paid at "Over 20". The lookup in
+// calc.js (highest key <= YOS) then resolves the right cell for an integer OR a fractional
+// YOS (19.5 -> "Over 18"), which is what the High-3 month-by-month walk relies on.
+//
+// The previous convention ("Over N" -> N + 1) read integer YOS as "not yet over N", so a
+// 20-year retiree was priced at the Over-18 rate; and the hand-built seed it replaced had
+// keyed "Over 4" as 6, "Over 6" as 8, and so on. Both understated pay for most members.
 
 import { parse } from "node-html-parser";
 
@@ -21,8 +28,8 @@ export function parseThreshold(label) {
 
 export function keyForColumn(th) {
   if (!th) return null;
-  if (th.kind === "floor") return 2;
-  return th.n + 1; // "Over N" applies to integer YOS >= N+1
+  if (th.kind === "floor") return 0;
+  return th.n; // "Over N" applies from the day after completing N years
 }
 
 export function parseMoney(s) {

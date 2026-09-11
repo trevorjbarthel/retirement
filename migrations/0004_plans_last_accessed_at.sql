@@ -1,0 +1,11 @@
+-- Track when a plan was last READ, separately from when it was last edited.
+--
+-- Retention (src/lib/retention.ts) deletes plans untouched for two years. "Touched" has to
+-- include reads — a member who opens their link every month, or whose calendar client polls
+-- the feed, is still relying on the plan even if they never edit it — but a read must not
+-- bump `updated_at`: that column is the plan's version (it feeds `rev` handling and the
+-- calendar feed's DTSTAMP), and a poll changing it would make every poll look like an edit.
+--
+-- Additive and safe to run on a live database. Existing rows start at 0, so their retention
+-- clock runs from `updated_at` alone until they are next opened.
+ALTER TABLE plans ADD COLUMN last_accessed_at INTEGER NOT NULL DEFAULT 0;

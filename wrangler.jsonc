@@ -35,6 +35,12 @@
     "APP_ENV": "production"
   },
 
+  // Nightly retention sweep (src/lib/retention.ts): deletes plans neither edited nor opened
+  // for two years. 03:00 UTC is a quiet hour for a U.S. audience.
+  "triggers": {
+    "crons": ["0 3 * * *"]
+  },
+
   // Per-IP throttles to blunt abuse. Active only when APP_ENV != "development" (so
   // local dev / tests skip them). CREATE_LIMITER guards POST /api/p (new plans);
   // UPDATE_LIMITER guards PUT /api/p/:id (edits) and is more generous since a single

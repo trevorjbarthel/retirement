@@ -17,5 +17,7 @@
     "verbatimModuleSyntax": false
   },
   "include": ["src/**/*.ts", "test/**/*.ts"],
-  "exclude": ["node_modules", "public", ".wrangler"]
+  // test/dom runs in happy-dom against the browser modules; it is typechecked by
+  // tsconfig.calc.json (DOM lib + the /js/* path map), not against the Workers types here.
+  "exclude": ["node_modules", "public", ".wrangler", "test/dom"]
 }

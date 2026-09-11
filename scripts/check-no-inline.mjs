@@ -4,9 +4,13 @@
 // working fine in a dev server that doesn't apply _headers — the worst possible failure mode.
 //
 // This runs in `npm run typecheck`, so CI catches it before deploy.
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 
-const FILES = ["public/index.html", "public/js/app.js", "public/css/app.css"];
+// Every hand-written front-end file. The JS list is discovered rather than enumerated so a
+// new feature module is guarded the moment it exists; generated files are excluded because
+// the icon sprite legitimately carries SVG path data.
+const JS_FILES = readdirSync("public/js").filter((f) => f.endsWith(".js") && !f.endsWith(".generated.js")).map((f) => "public/js/" + f);
+const FILES = ["public/index.html", "public/css/app.css", ...JS_FILES];
 const failures = [];
 
 // Blank out comment bodies (keeping newlines so line numbers stay correct) before scanning.

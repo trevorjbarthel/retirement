@@ -17,8 +17,21 @@ describe("getBasePay2026", () => {
   // positive number". Update these deliberately, in the same change, whenever the
   // pay tables are refreshed for a new year.
   it("pins exact 2026 DFAS values for spot-checked grade/YOS combinations", () => {
+    // Integer YOS N is paid at the "Over N" rate (DoD FMR 7A: from the day after completing N years).
     expect(calc.getBasePay2026("E-9", 20)).toBeCloseTo(8105.1, 2);
     expect(calc.getBasePay2026("O-5", 20)).toBeCloseTo(12032.7, 2);
+    expect(calc.getBasePay2026("E-7", 20)).toBeCloseTo(6245.7, 2); // was priced at Over-18 ($6,177.30) by the old keys
+    expect(calc.getBasePay2026("E-7", 19.5)).toBeCloseTo(6177.3, 2); // a fractional YOS is still inside Over-18
+    expect(calc.getBasePay2026("E-7", 6)).toBeCloseTo(4843.8, 2); // Over 6, not Over 4
+    expect(calc.getBasePay2026("O-5", 18)).toBeCloseTo(11713.8, 2); // the step the hand-built seed had dropped
+    expect(calc.getBasePay2026("O-6", 18)).toBeCloseTo(13115.4, 2);
+  });
+  it("carries the prior two years too, with the raises DFAS actually published", () => {
+    expect(calc.PAY_TABLE_YEARS).toEqual([2026, 2025, 2024]);
+    expect(calc.getBasePayForYear(2025, "E-7", 20)!.pay).toBeCloseTo(6017.1, 2);
+    expect(calc.getBasePayForYear(2024, "E-7", 20)!.pay).toBeCloseTo(5757.9, 2);
+    // 2025 -> 2026 was a flat 3.8% for every uncapped grade (rounded to the dime by DFAS).
+    expect(calc.getBasePayForYear(2026, "E-7", 20)!.pay / calc.getBasePayForYear(2025, "E-7", 20)!.pay).toBeCloseTo(1.038, 3);
   });
 });
 
@@ -186,6 +199,15 @@ describe("compareConcurrentReceipt", () => {
     const r = calc.compareConcurrentReceipt({ grossRetiredPay: 3000, vaRating: 30, combatRelatedPct: 0, yos: 20 });
     expect(r.crdpEligible).toBe(false);
   });
+  it("sizes the waiver on the household VA figure when one is supplied, so it agrees with the Pay tab", () => {
+    const household = calc.vaCompensation({ rating: 50, spouse: true, childrenU18: 1 });
+    expect(household).toBeGreaterThan(calc.VA_RATES[50]);
+    const r = calc.compareConcurrentReceipt({ grossRetiredPay: 3000, vaRating: 50, yos: 20, vaComp: household });
+    expect(r.vaComp).toBe(household);
+    expect(r.waived).toBeCloseTo(household, 2);
+    // Without it, the veteran-alone table is still the fallback.
+    expect(calc.compareConcurrentReceipt({ grossRetiredPay: 3000, vaRating: 50, yos: 20 }).vaComp).toBe(calc.VA_RATES[50]);
+  });
 });
 
 describe("estimateRetireeHealthcareCost + TRICARE_FEES_2026", () => {
@@ -207,6 +229,29 @@ describe("compareStates", () => {
     expect(ranked[0].code).toBe("TX");
     expect(ranked[0].estAnnualTax).toBe(0);
     expect(ranked[ranked.length - 1].code).toBe("CA");
+  });
+});
+
+describe("estimateStateTaxOnRetiredPay with statutory exemption caps", () => {
+  it("taxes only the retired pay ABOVE a state's dollar cap", () => {
+    // Virginia exempts the first $40,000: a $36k pension owes nothing, a $60k one owes on $20k.
+    expect(calc.estimateStateTaxOnRetiredPay("VA", 36000)!.estAnnualTax).toBe(0);
+    const va = calc.estimateStateTaxOnRetiredPay("VA", 60000)!;
+    expect(va.estAnnualTax).toBe(Math.round(20000 * 0.0575 * 0.55));
+    expect(va.note).toMatch(/First \$40,000/);
+  });
+  it("distinguishes partial states by their caps instead of halving every one identically", () => {
+    // Georgia ($65k exempt) covers a $60k pension entirely; Delaware ($12.5k) does not.
+    expect(calc.estimateStateTaxOnRetiredPay("GA", 60000)!.estAnnualTax).toBe(0);
+    expect(calc.estimateStateTaxOnRetiredPay("DE", 60000)!.estAnnualTax).toBeGreaterThan(0);
+    const ranked = calc.compareStates(["DE", "GA", "KY"], 60000);
+    expect(ranked[0].code).toBe("GA");
+  });
+  it("keeps the halved effective-rate fallback for partial exemptions with no fixed cap", () => {
+    // Rhode Island's exemption is age-conditioned, so no cap is modelled.
+    const ri = calc.estimateStateTaxOnRetiredPay("RI", 60000)!;
+    expect(ri.estAnnualTax).toBe(Math.round(60000 * 0.0599 * 0.55 * 0.5));
+    expect(ri.note).toMatch(/Partial exemption/);
   });
 });
 
@@ -341,11 +386,25 @@ describe("computeMilestones", () => {
     expect(byLabel(sep2.milestones, "SBP Withdrawal Window Closes")).toBeFalsy();
   });
 
-  it("GI Bill TEB milestone only appears under 16 YOS — a 20-YOS retiree is categorically ineligible to transfer", () => {
-    const ineligible = calc.computeMilestones({ ...basePlan, giBill: true, yos: 20 }, today, sep);
-    const eligible = calc.computeMilestones({ ...basePlan, giBill: true, yos: 12, transType: "Separation" }, today, sep);
-    expect(byLabel(ineligible.milestones, "GI Bill Transfer (TEB) — Approve Before 16 Years of Service")).toBeFalsy();
-    expect(byLabel(eligible.milestones, "GI Bill Transfer (TEB) — Approve Before 16 Years of Service")).toBeTruthy();
+  it("TEB is a deadline only while 4 more years can still be obligated — never gated on 16 YOS (the cap Congress blocked in P.L. 116-92)", () => {
+    const TEB = "GI Bill Transfer (TEB) — Approve Before This Date";
+    const CLOSED = "GI Bill transfer window has closed";
+    const farOut = new Date("2032-06-30T00:00:00");
+    // A 20-year member with a date six years away CAN still transfer; the old rule hid it.
+    const stillPossible = calc.computeMilestones({ ...basePlan, giBill: true, yos: 20 }, today, farOut);
+    // A 12-year member 11 months out cannot, however few years they have — the old rule
+    // showed them a deadline four years in the future, after they'd already separated.
+    const tooLate = calc.computeMilestones({ ...basePlan, giBill: true, yos: 12, transType: "Separation" }, today, sep);
+    expect(byLabel(stillPossible.milestones, TEB)).toBeTruthy();
+    expect(stillPossible.advisories.find((a) => a.label === CLOSED)).toBeFalsy();
+    expect(byLabel(tooLate.milestones, TEB)).toBeFalsy();
+    const closed = tooLate.advisories.find((a) => a.label === CLOSED);
+    expect(closed).toBeTruthy();
+    expect(closed!.closed).toBe(true);
+    // Not offered at all without the GI Bill flag, in either form.
+    const off = calc.computeMilestones({ ...basePlan, giBill: false }, today, sep);
+    expect(byLabel(off.milestones, TEB)).toBeFalsy();
+    expect(off.advisories.find((a) => a.label === CLOSED)).toBeFalsy();
   });
 
   it("CRDP/CRSC open season only appears for Retirement + a VA claim, dated Jan 1 (not Dec 1)", () => {
@@ -395,13 +454,20 @@ describe("computeMilestones", () => {
     expect(calc.computeMilestones(basePlan, today, sep).advisories).toEqual([]);
   });
 
-  it("anchors the TEB deadline to the 16-year mark, not to the separation date", () => {
-    const r = calc.computeMilestones({ ...basePlan, giBill: true, yos: 12, transType: "Separation" }, today, sep);
-    const m = byLabel(r.milestones, "GI Bill Transfer (TEB) — Approve Before 16 Years of Service");
-    // 4 years of service remaining from today — and well before separation, which is the
-    // point: anchoring to `sep` put the deadline after the member was already ineligible.
-    expect(calc.daysBetween(today, m.date)).toBeGreaterThan(3.9 * 365);
-    expect(calc.daysBetween(today, m.date)).toBeLessThan(4.1 * 365);
+  it("anchors the TEB deadline four years before separation — the service obligation — not to years of service", () => {
+    const farOut = new Date("2032-06-30T00:00:00");
+    const r = calc.computeMilestones({ ...basePlan, giBill: true, yos: 30 }, today, farOut);
+    const m = byLabel(r.milestones, "GI Bill Transfer (TEB) — Approve Before This Date");
+    expect(m).toBeTruthy();
+    expect(m.date.getTime()).toBe(calc.tebApprovalDeadline(farOut).getTime());
+    expect(calc.daysBetween(m.date, farOut)).toBe(4 * 365 + 1);
+    // The phase checklist reads the same cutoff, so its task text agrees with the milestone.
+    const dates = { today, sep: farOut, termStart: farOut, ptdyStart: farOut, ptdyEnd: farOut, sbStart: farOut, sbEnd: farOut, tapDeadline: farOut };
+    const tebTask = calc.buildPhases({ ...basePlan, giBill: true, yos: 30 }, dates)[0].tasks.find((t) => t.id === "teb");
+    expect(tebTask!.text).toMatch(/get APPROVAL/);
+    const lateDates = { ...dates, sep };
+    const lateTask = calc.buildPhases({ ...basePlan, giBill: true, yos: 30 }, lateDates)[0].tasks.find((t) => t.id === "teb");
+    expect(lateTask!.text).toMatch(/no longer possible/);
   });
 
   it("gates retiree-only entitlements: FEDVIP and MIC3 never appear for a separatee", () => {
@@ -494,13 +560,18 @@ describe("compareScenarios", () => {
     expect(r.deltas.activeDutyBaseDelta).toBeLessThan(0);
   });
 
-  it("is all-schedule, no-money when years of service don't change", () => {
+  it("keeps the multiplier fixed when years of service don't change; only the High-3 creeps", () => {
     const shifted = { ...base, sepDate: "2027-09-30", yos: 20 };
     const r = calc.compareScenarios(base, shifted, today)!;
     expect(r.deltas.yos).toBe(0);
     expect(r.deltas.multiplierPct).toBe(0);
-    expect(r.deltas.retiredPayMonthly).toBe(0);
-    // …but the schedule genuinely moves.
+    // With real 2024/2025/2026 tables, three more months inside the 36-month window fall in a
+    // newer (higher) pay year, so the High-3 average — and retired pay — rise slightly even at
+    // the same multiplier. That is correct; what must NOT happen is a multiplier change.
+    expect(r.deltas.retiredPayMonthly).toBeGreaterThanOrEqual(0);
+    const crossing = calc.compareScenarios(base, { ...base, sepDate: "2028-06-30", yos: 21 }, today)!;
+    expect(crossing.deltas.retiredPayMonthly).toBeGreaterThan(r.deltas.retiredPayMonthly);
+    // …and the schedule genuinely moves.
     expect(r.b.terminalLeaveStart.getTime()).toBeGreaterThan(r.a.terminalLeaveStart.getTime());
   });
 
@@ -668,9 +739,14 @@ describe("CSB/REDUX", () => {
     expect(calc.computeRetirementPay({ basePay: 10000, yos: 24, system: "redux" }).monthly).toBe(5400);
     expect(calc.computeRetirementPay({ basePay: 10000, yos: 24, system: "high3" }).monthly).toBe(6000);
   });
-  it("caps at 75%, the same ceiling High-3 reaches at 30 years", () => {
+  it("reaches 75% at 30, then keeps accruing 2.5%/yr to 100% at 40 like every system (FY2007 NDAA lifted the old ceiling)", () => {
     expect(calc.computeRetirementPay({ basePay: 10000, yos: 30, system: "redux" }).pct).toBeCloseTo(0.75, 4);
-    expect(calc.computeRetirementPay({ basePay: 10000, yos: 40, system: "redux" }).pct).toBeCloseTo(0.75, 4);
+    expect(calc.computeRetirementPay({ basePay: 10000, yos: 34, system: "redux" }).pct).toBeCloseTo(0.85, 4);
+    expect(calc.computeRetirementPay({ basePay: 10000, yos: 40, system: "redux" }).pct).toBeCloseTo(1.0, 4);
+    expect(calc.computeRetirementPay({ basePay: 10000, yos: 40, system: "high3" }).pct).toBeCloseTo(1.0, 4);
+    // Nothing pays more than 100% of the High-3 average, however long the career.
+    expect(calc.computeRetirementPay({ basePay: 10000, yos: 44, system: "redux" }).pct).toBeCloseTo(1.0, 4);
+    expect(calc.computeRetirementPay({ basePay: 10000, yos: 44, system: "high3" }).pct).toBeCloseTo(1.0, 4);
   });
   it("an unrecognised system falls back to High-3, never to BRS", () => {
     // The inline copy in index.html used `system === 'high3' ? 0.025 : 0.02`, the inverse of
@@ -772,10 +848,14 @@ describe("computeHigh3", () => {
     expect(promotedRecently.monthly).toBeLessThan(longInGrade.monthly);
   });
   it("reports when it had to borrow another year's pay table", () => {
-    // Only 2026 is committed today, so a 2026 separation must borrow for 2024/2025 months.
+    // 2024-2026 are committed. A Sep-2026 separation reaches back into 2023, so it borrows…
     const r = calc.computeHigh3({ grade: "O-5", yos: 22, sepDate: "2026-09-30" })!;
     expect(r.estimatedFromSingleYear).toBe(true);
-    expect(r.yearsUsed).toContain(2026);
+    expect(r.yearsUsed).toEqual([2024, 2025, 2026]);
+    // …while a Jan-2027 separation is covered exactly by the three real tables.
+    const exact = calc.computeHigh3({ grade: "O-5", yos: 22, sepDate: "2027-01-31" })!;
+    expect(exact.estimatedFromSingleYear).toBe(false);
+    expect(exact.yearsUsed).toEqual([2024, 2025, 2026]);
   });
   it("returns null for an unusable date or unknown grade", () => {
     expect(calc.computeHigh3({ grade: "E-7", yos: 20, sepDate: "not-a-date" })).toBeNull();
@@ -788,7 +868,7 @@ describe("getBasePayForYear", () => {
     expect(calc.getBasePayForYear(2026, "E-6", 12)!.exact).toBe(true);
     const borrowed = calc.getBasePayForYear(2019, "E-6", 12)!;
     expect(borrowed.exact).toBe(false);
-    expect(borrowed.year).toBe(2026);
+    expect(borrowed.year).toBe(Math.min(...calc.PAY_TABLE_YEARS)); // nearest available: the oldest table
   });
   it("falls to the lowest bracket rather than NaN on unusable YOS", () => {
     expect(calc.getBasePayForYear(2026, "E-6", NaN as any)!.pay).toBe(calc.getBasePay2026("E-6", 0));

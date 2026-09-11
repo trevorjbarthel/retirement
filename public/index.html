@@ -51,11 +51,15 @@
   </div>
   <h1 id="setupTitle" class="text-2xl md:text-3xl font-bold text-navy-700 mb-2" tabindex="-1">Military Transition Calculator</h1>
   <p class="text-navy-400 text-sm md:text-base max-w-md mx-auto">Your personalized transition plan — built around your dates.</p>
+  <!-- Seven required fields stand between a first-time visitor and any output at all, on a
+       tool that spreads by word of mouth and gets demoed to TAP classes. Let people see what
+       they're filling the form out FOR — before the form, not under its submit button. -->
+  <p class="text-sm text-navy-500 mt-3">Just looking? <button type="button" id="samplePlanBtn" class="font-semibold text-gold-700 underline hover:no-underline">See a sample plan</button> — nothing is saved.</p>
   <div class="tooltip-container inline-flex mt-3">
     <span class="inline-flex items-center gap-1 text-xs text-navy-400 cursor-help bg-navy-50 px-3 py-1.5 rounded-full" tabindex="0" aria-describedby="tip-how-to-use">
       <i data-lucide="info" class="w-3.5 h-3.5"></i> How to use this tool
     </span>
-    <div class="tooltip-box" id="tip-how-to-use">Enter your service details and key dates below. We'll calculate every milestone, build a personalized checklist, and estimate your retirement pay. Your plan is saved to this site at a private, unguessable link — there are no accounts and no password, so <strong>anyone with that link can open it</strong>. A copy is also kept in this browser. You can permanently delete your plan at any time from the link banner on the results screen.</div>
+    <div class="tooltip-box" id="tip-how-to-use">Enter your service details and key dates below. We'll calculate every milestone, build a personalized checklist, and estimate your retirement pay. Your plan is saved to this site at a private, unguessable link — there are no accounts and no password, so <strong>anyone with that link can open it</strong>. A copy is also kept in this browser. You can permanently delete your plan at any time from the link banner on the results screen, and a plan that nobody opens or edits for two years is deleted automatically.</div>
   </div>
 </div>
 
@@ -83,6 +87,16 @@
 
 <!-- Form -->
 <form id="setup-form" class="space-y-5 fade-in stagger-2" autocomplete="off">
+
+<!-- Two steps: the seven fields a plan NEEDS, then the details that refine it. A first-time
+     visitor can build after step 1 (the rest take sensible defaults) and refine later via
+     "Edit My Info"; the step buttons let anyone jump between the two. -->
+<nav class="setup-steps" aria-label="Setup steps">
+  <button type="button" class="setup-step-btn is-current" data-step="1" aria-current="step"><span class="setup-step-num">1</span> About you &amp; your date</button>
+  <button type="button" class="setup-step-btn" data-step="2"><span class="setup-step-num">2</span> Leave, BAH &amp; details <span class="setup-step-opt">optional</span></button>
+</nav>
+
+<div id="setupStep1" class="setup-step space-y-5">
 
 <!-- Section 1: About You -->
 <div class="section-card">
@@ -165,20 +179,29 @@
 
 <!-- Section 2: Key Dates -->
 <div class="section-card">
-  <h2 class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-lucide="calendar" class="w-5 h-5 text-gold-500"></i> Key Dates</h2>
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <h2 class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-lucide="calendar" class="w-5 h-5 text-gold-500"></i> Your Date</h2>
+  <div class="grid grid-cols-1 gap-4">
     <div>
       <label class="block text-sm font-medium text-navy-600 mb-1" for="sepDate">Estimated Retirement / Separation Date <span class="text-danger-500">*</span></label>
       <input type="date" id="sepDate" class="input-field" required aria-describedby="err-sepDate" />
       <div class="error-msg" id="err-sepDate">Date must be in the future.</div>
     </div>
-    <div>
-      <label class="block text-sm font-medium text-navy-600 mb-1" for="todayDate">Today's Date</label>
-      <input type="date" id="todayDate" class="input-field" />
-      <p class="helper-text">Auto-set. Edit only if needed.</p>
-    </div>
+    <!-- "Today" is always the real date: the plan re-stamps it on every load, so a typed
+         value never survived a reload anyway. Kept as a hidden field because every date
+         calculation reads it. -->
+    <div class="hidden"><input type="date" id="todayDate" tabindex="-1" aria-hidden="true" /></div>
   </div>
 </div>
+
+<div class="setup-step-actions">
+  <button type="submit" class="setup-primary btn-gold-gradient">Build My Transition Plan →</button>
+  <button type="button" class="setup-secondary" data-goto-step="2">Add leave, BAH &amp; details first</button>
+  <p class="text-xs text-navy-400 mt-2">Leave, permissive TDY and SkillBridge take sensible defaults until you set them — you can add them any time from "Edit My Info".</p>
+</div>
+
+</div>
+
+<div id="setupStep2" class="setup-step space-y-5" hidden>
 
 <!-- Section 3: Leave & Time Off -->
 <div class="section-card">
@@ -196,7 +219,7 @@
       </span>
     </label>
     <input type="number" id="bah" class="input-field" inputmode="decimal" min="0" step="50" placeholder="e.g., 2400 — 0 if you live in barracks" />
-    <p class="helper-text">Tax-free, and the single biggest thing civilian salary comparisons miss. Used by the terminal-leave and "what salary do I need" tools. <a href="https://www.travel.dod.mil/Allowances/Basic-Allowance-for-Housing/BAH-Calculator/" target="_blank" rel="noopener" class="text-gold-600 hover:underline">Look up your BAH →</a></p>
+    <p class="helper-text">Tax-free, and the single biggest thing civilian salary comparisons miss. Used by the terminal-leave and "what salary do I need" tools. <a href="https://www.travel.dod.mil/Allowances/Basic-Allowance-for-Housing/BAH-Calculator/" target="_blank" rel="noopener" class="text-gold-700 hover:underline">Look up your BAH →</a></p>
   </div>
   <div class="mb-4">
     <div class="flex items-center justify-between mb-1">
@@ -288,14 +311,13 @@
 
 <!-- Submit -->
 <div id="form-status" aria-live="assertive" class="sr-only"></div>
-<button type="submit" id="submitBtn" class="w-full py-3.5 rounded-xl font-semibold text-white text-base transition-all hover:shadow-lg active:scale-[0.98] btn-gold-gradient">
+<button type="submit" id="submitBtn" class="w-full py-3.5 rounded-xl font-semibold text-base transition-all hover:shadow-lg active:scale-[0.98] btn-gold-gradient">
   Build My Transition Plan →
 </button>
+<button type="button" class="setup-secondary w-full mt-2" data-goto-step="1">← Back to step 1</button>
+
+</div>
 <p class="text-center text-xs text-navy-400 mt-3"><i data-lucide="lock" class="w-3 h-3 inline-block mr-1 align-[-2px]"></i> There are no accounts. Your plan is saved at a private link only you have — bookmark it to come back and edit later.</p>
-<!-- Seven required fields stand between a first-time visitor and any output at all, on a
-     tool that spreads by word of mouth and gets demoed to TAP classes. Let people see what
-     they're filling the form out FOR. -->
-<p class="text-center text-xs text-navy-400 mt-2 mb-6">Just looking? <button type="button" id="samplePlanBtn" class="font-semibold text-gold-700 underline hover:no-underline">See a sample plan</button> — nothing is saved.</p>
 </form>
 </div>
 </div>
@@ -304,7 +326,7 @@
 <div id="results-screen" class="hidden flex-1">
 
 <!-- Header Bar -->
-<div class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-navy-100 rule-soft">
+<div id="resultsHeader" class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-navy-100 rule-soft">
   <div class="max-w-6xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between flex-wrap gap-2">
     <div class="flex items-center gap-3 flex-wrap">
       <button id="editBtn" class="no-print flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-700 transition-colors px-2 py-1 rounded-lg hover:bg-navy-50">
@@ -382,17 +404,34 @@
   </div>
 </div>
 
-<!-- READ-ONLY BANNER (viewing someone else's link) -->
-<div id="readOnlyBanner" class="no-print hidden section-card note-info">
-  <div class="flex items-center gap-3 flex-wrap">
-    <i data-lucide="eye" class="w-5 h-5 flex-shrink-0 t-info-dark"></i>
-    <p class="flex-1 text-sm text-navy-700 min-w-[220px]">You're viewing a shared plan (read-only). Changes you make here won't be saved.</p>
-    <button id="makeCopyBtn" class="text-sm font-semibold text-white px-3 py-2 rounded-lg btn-blue"><i data-lucide="copy-plus" class="w-4 h-4 inline align-[-2px]"></i> Make my own copy</button>
+<!-- Sticky sub-header: the read-only warning and the tab strip travel together, so the
+     two can't compete for the same sticky slot. `top` is --header-h, published by a
+     ResizeObserver in app.js because the header wraps to 2-3 rows on narrow phones. -->
+<div id="resultsSubnav" class="results-subnav no-print">
+  <!-- READ-ONLY BANNER (viewing someone else's link) -->
+  <div id="readOnlyBanner" class="no-print hidden section-card note-info">
+    <div class="flex items-center gap-3 flex-wrap">
+      <i data-lucide="eye" class="w-5 h-5 flex-shrink-0 t-info-dark"></i>
+      <p class="flex-1 text-sm text-navy-700 min-w-[220px]">You're viewing a shared plan (read-only). Changes you make here won't be saved.</p>
+      <button id="makeCopyBtn" class="text-sm font-semibold text-white px-3 py-2 rounded-lg btn-blue"><i data-lucide="copy-plus" class="w-4 h-4 inline align-[-2px]"></i> Make my own copy</button>
+    </div>
+  </div>
+  <div id="resultsTablist" class="results-tabs" role="tablist" aria-label="Plan sections">
+    <button type="button" id="tab-overview" class="results-tab" role="tab" aria-selected="true" aria-controls="panel-overview" tabindex="0"><i data-lucide="flag" class="w-4 h-4"></i><span>Overview</span></button>
+    <button type="button" id="tab-pay" class="results-tab" role="tab" aria-selected="false" aria-controls="panel-pay" tabindex="-1"><i data-lucide="wallet" class="w-4 h-4"></i><span>Pay &amp; Income</span></button>
+    <button type="button" id="tab-tools" class="results-tab" role="tab" aria-selected="false" aria-controls="panel-tools" tabindex="-1"><i data-lucide="calculator" class="w-4 h-4"></i><span>Decision Tools</span></button>
+    <button type="button" id="tab-checklist" class="results-tab" role="tab" aria-selected="false" aria-controls="panel-checklist" tabindex="-1"><i data-lucide="list-checks" class="w-4 h-4"></i><span>Checklist</span></button>
+    <button type="button" id="tab-resources" class="results-tab" role="tab" aria-selected="false" aria-controls="panel-resources" tabindex="-1"><i data-lucide="external-link" class="w-4 h-4"></i><span>Resources</span></button>
   </div>
 </div>
 
+<!-- Five sibling panels, one visible at a time via the `hidden` attribute. Every panel is a
+     direct child of this column: a panel nested inside another would hide its own parent. -->
+<!-- ===== TAB: OVERVIEW ===== -->
+<div id="panel-overview" class="tab-panel space-y-6" role="tabpanel" aria-labelledby="tab-overview">
+
 <!-- A. COUNTDOWN HERO -->
-<div id="countdownHero" class="section-card text-center fade-in-up panel-navy">
+<div id="countdownHero" class="section-card text-center panel-navy">
   <div class="py-4 md:py-6">
     <p id="countdownNumber" class="text-5xl md:text-7xl font-bold tabular-nums t-gold"></p>
     <p class="text-lg md:text-xl font-medium mt-2 text-white/90" id="countdownLabel"></p>
@@ -411,16 +450,17 @@
 </div>
 
 <!-- B. MILESTONE DATES -->
-<div class="fade-in-up stagger-2">
+<div>
   <h2 class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-lucide="flag" class="w-5 h-5 text-gold-500"></i> Key Milestone Dates</h2>
   <div id="milestoneGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+  <button type="button" id="milestoneMoreBtn" class="no-print mt-3 text-sm font-medium text-navy-500 hover:text-navy-700 px-3 py-2 rounded-lg hover:bg-navy-50" aria-controls="milestoneGrid" aria-expanded="false" hidden></button>
 </div>
 
 <!-- ADVISORIES — dated guidance that is deliberately NOT a deadline, so it never renders as overdue -->
-<div id="advisoryPanel" class="fade-in-up stagger-2 hidden"></div>
+<div id="advisoryPanel" class="hidden"></div>
 
 <!-- B2. HORIZONTAL TIMELINE -->
-<div class="section-card fade-in-up stagger-2">
+<div class="section-card">
   <h2 class="text-lg font-semibold text-navy-700 mb-1 flex items-center gap-2"><i data-lucide="git-commit-horizontal" class="w-5 h-5 text-gold-500"></i> Transition Timeline</h2>
   <p class="text-xs text-navy-400 mb-1" id="timelineHint">From today to your freedom day — scroll horizontally to see every milestone in order.</p>
   <!-- A scrollable region must be keyboard-reachable to be operable at all (WCAG 2.1.1).
@@ -433,7 +473,7 @@
 </div>
 
 <!-- C. PRE-TRANSITION SUMMARY -->
-<div class="section-card fade-in-up stagger-3">
+<div class="section-card">
   <h2 class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-lucide="bar-chart-3" class="w-5 h-5 text-gold-500"></i> Total Pre-Transition Period</h2>
 
   <div id="dayMeter" class="day-meter-container">
@@ -456,9 +496,9 @@
 </div>
 
 <!-- C2. TIMELINE CALENDAR -->
-<div class="fade-in-up stagger-3">
+<div>
   <div class="section-card card-flush">
-    <div id="calendarHeader" class="flex items-center gap-3 px-6 py-5 cursor-pointer select-none hover:bg-navy-50 transition-colors rounded-t-2xl" role="button" tabindex="0" aria-expanded="false" aria-controls="calendarContent">
+    <div id="calendarHeader" class="flex items-center gap-3 px-6 py-5 cursor-pointer select-none hover:bg-navy-50 transition-colors rounded-t-2xl" role="button" tabindex="0" aria-expanded="true" aria-controls="calendarContent">
       <div class="flex-1">
         <h2 class="text-lg font-semibold text-navy-700 flex items-center gap-2">
           <i data-lucide="calendar" class="w-5 h-5 text-gold-500"></i> Timeline Calendar
@@ -467,7 +507,7 @@
       </div>
       <i data-lucide="chevron-down" class="w-5 h-5 text-navy-400 flex-shrink-0 transition-transform" id="calendarChevron"></i>
     </div>
-    <div id="calendarContent" class="pay-section-inner">
+    <div id="calendarContent" class="pay-section-inner open">
       <div class="px-6 pb-6">
         <div class="no-print flex items-center justify-between mb-4 gap-2">
           <button type="button" id="calPrevBtn" class="p-2 rounded-lg hover:bg-navy-50 text-navy-500 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent" aria-label="Previous month"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
@@ -489,10 +529,15 @@
   </div>
 </div>
 
+</div>
+
+<!-- ===== TAB: PAY & INCOME ===== -->
+<div id="panel-pay" class="tab-panel space-y-6" role="tabpanel" aria-labelledby="tab-pay" hidden>
+
 <!-- ===== PAY & INCOME ESTIMATOR ===== -->
-<div id="payEstimatorSection" class="fade-in-up stagger-4">
+<div id="payEstimatorSection">
   <div class="section-card card-flush">
-    <div id="payEstimatorHeader" class="flex items-center gap-3 px-6 py-5 cursor-pointer select-none hover:bg-navy-50 transition-colors rounded-t-2xl" role="button" tabindex="0" aria-expanded="false" aria-controls="payEstimatorContent">
+    <div id="payEstimatorHeader" class="flex items-center gap-3 px-6 py-5 cursor-pointer select-none hover:bg-navy-50 transition-colors rounded-t-2xl" role="button" tabindex="0" aria-expanded="true" aria-controls="payEstimatorContent">
       <div class="flex-1">
         <h2 class="text-lg font-semibold text-navy-700 flex items-center gap-2">
           <i data-lucide="wallet" class="w-5 h-5 text-gold-500"></i> Pay &amp; Income Estimator
@@ -502,7 +547,7 @@
       <i data-lucide="chevron-down" class="w-5 h-5 text-navy-400 flex-shrink-0 transition-transform" id="payChevron"></i>
     </div>
 
-    <div id="payEstimatorContent" class="pay-section-inner">
+    <div id="payEstimatorContent" class="pay-section-inner open">
       <div class="px-6 pb-6 space-y-6">
 
         <!-- Separation notice -->
@@ -560,7 +605,7 @@
             <p id="payBrsNote" class="text-xs text-gold-700 text-center mt-1 hidden">With BRS, you also receive up to 5% TSP matching from DoD during service.</p>
             <p id="payReduxNote" class="text-xs text-gold-700 text-center mt-1 hidden">CSB/REDUX also carries a reduced cost-of-living adjustment (CPI − 1%) with a one-time catch-up at age 62. That erosion is <em>not</em> modeled here, so your real lifetime value is lower than this monthly figure suggests.</p>
           </div>
-          <p id="payTableVintageNote" class="text-xs text-navy-400 mt-2 italic">Source: dfas.mil. Retired pay is computed from the average of your highest 36 months of basic pay (High-3), assembled from the pay tables this app holds — not from your current month alone. Where a month falls outside the available tables it is estimated, and the note above says so. Contact DFAS for your official figure.</p>
+          <details class="method-note"><summary>How this is estimated</summary><p id="payTableVintageNote">Source: dfas.mil. Retired pay is computed from the average of your highest 36 months of basic pay (High-3), assembled from the pay tables this app holds — not from your current month alone. Where a month falls outside the available tables it is estimated, and the note above says so. Contact DFAS for your official figure.</p></details>
         </div>
 
         <div class="border-t rule-soft"></div>
@@ -580,7 +625,7 @@
               <p id="vaCompDepNote" class="text-xs text-navy-500 mt-2"></p>
             </div>
           </div>
-          <p class="text-xs text-navy-400 italic">Effective Dec 1, 2025 COLA. Your household (spouse / dependents, set below and in your plan) is included in the figure above. VA pays no dependent allowance below a 30% rating. Amounts also vary with the number and ages of children and with a dependent parent — see va.gov/disability/compensation-rates for your exact entitlement.</p>
+          <details class="method-note"><summary>How this is estimated</summary><p>Effective Dec 1, 2025 COLA. Your household (spouse / dependents, set below and in your plan) is included in the figure above. VA pays no dependent allowance below a 30% rating. Amounts also vary with the number and ages of children and with a dependent parent — see va.gov/disability/compensation-rates for your exact entitlement.</p></details>
           <div class="mt-3 flex items-center justify-between">
             <label class="text-sm font-medium text-navy-600" id="depToggleLabel">I have dependents</label>
             <div class="toggle-track" id="depToggle"><div class="toggle-thumb"></div></div>
@@ -622,7 +667,7 @@
             </table>
           </div>
           <p id="incomeTableWaiverNote" class="text-xs mt-2 hidden rounded-lg p-3 note-warn"></p>
-          <p class="text-xs text-navy-400 mt-2 italic">The Retirement Pay column is shown <em>after</em> the VA waiver, so Total Monthly is what you would actually receive. CRDP restores the waived amount only at 20+ years of service and a 50%+ rating; CRSC may restore the combat-related portion instead (see the CRDP vs CRSC tool below).</p>
+          <details class="method-note"><summary>How this is estimated</summary><p>The Retirement Pay column is shown <em>after</em> the VA waiver, so Total Monthly is what you would actually receive. CRDP restores the waived amount only at 20+ years of service and a 50%+ rating; CRSC may restore the combat-related portion instead (see the CRDP vs CRSC tool below).</p></details>
           <div class="mt-6">
             <h4 class="text-sm font-semibold text-navy-600 mb-3">Income by VA Rating — Visual Comparison</h4>
             <div id="incomeBarChart" class="space-y-1.5"></div>
@@ -777,13 +822,13 @@
             </div>
           </div>
 
-          <p class="text-xs text-navy-400 mt-3 italic leading-relaxed">All figures are estimates for planning purposes only. TSP projections assume consistent growth and do not account for market volatility, taxes, or inflation. Consult a CERTIFIED FINANCIAL PLANNER® or your installation's Personal Financial Counselor before making financial decisions.</p>
+          <details class="method-note"><summary>How this is estimated</summary><p>All figures are estimates for planning purposes only. TSP projections assume consistent growth and do not account for market volatility, taxes, or inflation. Consult a CERTIFIED FINANCIAL PLANNER® or your installation's Personal Financial Counselor before making financial decisions.</p></details>
 
           <!-- TSP Resources -->
           <div class="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-xs">
-            <a href="https://www.tsp.gov/calculators/" target="_blank" rel="noopener" class="text-gold-500 hover:underline">TSP Official Calculator</a>
-            <a href="https://www.tsp.gov/calculators/tsp-annuity-calculator/" target="_blank" rel="noopener" class="text-gold-500 hover:underline">TSP Annuity Calculator</a>
-            <a href="https://www.tsp.gov/tsp-basics/when-you-separate/" target="_blank" rel="noopener" class="text-gold-500 hover:underline">TSP Withdrawal Options</a>
+            <a href="https://www.tsp.gov/calculators/" target="_blank" rel="noopener" class="text-gold-700 hover:underline">TSP Official Calculator</a>
+            <a href="https://www.tsp.gov/calculators/tsp-annuity-calculator/" target="_blank" rel="noopener" class="text-gold-700 hover:underline">TSP Annuity Calculator</a>
+            <a href="https://www.tsp.gov/tsp-basics/when-you-separate/" target="_blank" rel="noopener" class="text-gold-700 hover:underline">TSP Withdrawal Options</a>
           </div>
         </div>
         <!-- ===== END TSP ESTIMATOR ===== -->
@@ -805,169 +850,8 @@
   </div>
 </div>
 
-<!-- D2. DECISION TOOLS & CALCULATORS -->
-<div id="decisionToolsSection" class="fade-in-up stagger-4">
-  <div class="section-card card-flush">
-    <div id="decisionToolsHeader" class="flex items-center gap-3 px-6 py-5 cursor-pointer select-none hover:bg-navy-50 transition-colors rounded-t-2xl" role="button" tabindex="0" aria-expanded="false" aria-controls="decisionToolsContent">
-      <div class="flex-1">
-        <h2 class="text-lg font-semibold text-navy-700 flex items-center gap-2"><i data-lucide="calculator" class="w-5 h-5 text-gold-500"></i> Decision Tools &amp; Calculators</h2>
-        <p class="text-xs text-navy-400 mt-0.5">Estimate the big, irreversible decisions — SBP, concurrent receipt, healthcare, domicile, your move, and your TSP</p>
-      </div>
-      <i data-lucide="chevron-down" class="w-5 h-5 text-navy-400 flex-shrink-0 transition-transform" id="decisionToolsChevron"></i>
-    </div>
-    <div id="decisionToolsContent" class="pay-section-inner">
-      <div class="px-6 pb-6 space-y-6">
-
-        <!-- 1. SBP -->
-        <div>
-          <h3 class="text-base font-semibold text-navy-700 mb-3 flex items-center gap-2"><i data-lucide="shield" class="w-4 h-4 text-gold-500"></i> SBP Premium &amp; Break-Even</h3>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtSbpBase">SBP base amount ($/mo)</label><input type="number" id="dtSbpBase" class="input-field" min="0" step="50" /></div>
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtSbpRetAge">Your age at retirement</label><input type="number" id="dtSbpRetAge" class="input-field" min="37" max="70" value="45" /></div>
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtSbpSpouseAge">Spouse age (optional)</label><input type="number" id="dtSbpSpouseAge" class="input-field" min="18" max="100" /></div>
-          </div>
-          <div id="dtSbpResult" class="bg-navy-50 rounded-xl p-4 text-sm"></div>
-          <p class="text-xs text-navy-400 mt-2 italic">Premium = 6.5% of the elected base amount; survivor annuity = 55% of base. Coverage is paid-up only after 360 payments AND age 70. The SBP-DIC offset was repealed in 2023. <a href="https://www.dfas.mil/RetiredMilitary/provide/sbp/" target="_blank" rel="noopener" class="text-gold-500 hover:underline">DFAS SBP →</a></p>
-        </div>
-
-        <div class="border-t rule-soft"></div>
-
-        <!-- 2. CRDP vs CRSC -->
-        <div>
-          <h3 class="text-base font-semibold text-navy-700 mb-3 flex items-center gap-2"><i data-lucide="git-compare" class="w-4 h-4 text-gold-500"></i> CRDP vs. CRSC Net Pay</h3>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtCrGross">Gross retired pay ($/mo)</label><input type="number" id="dtCrGross" class="input-field" min="0" step="50" /></div>
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtCrRating">VA rating</label><select id="dtCrRating" class="input-field"></select></div>
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtCrCombat">Combat-related %</label><input type="number" id="dtCrCombat" class="input-field" min="0" max="100" value="0" /></div>
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtCrBracket">Marginal tax rate</label><select id="dtCrBracket" class="input-field"><option value="0.10">10%</option><option value="0.12">12%</option><option value="0.22" selected>22%</option><option value="0.24">24%</option><option value="0.32">32%</option></select></div>
-          </div>
-          <div id="dtCrResult" class="bg-navy-50 rounded-xl p-4 text-sm"></div>
-          <p class="text-xs text-navy-400 mt-2 italic">VA comp offsets retired pay dollar-for-dollar. CRDP (auto at 20yr + 50%+) is taxable; CRSC (combat-related, requires DD 2860) is tax-free. Estimates only. <a href="https://www.dfas.mil/RetiredMilitary/disability/" target="_blank" rel="noopener" class="text-gold-500 hover:underline">DFAS →</a></p>
-        </div>
-
-        <div class="border-t rule-soft"></div>
-
-        <!-- 3. Retiree healthcare cost -->
-        <div>
-          <h3 class="text-base font-semibold text-navy-700 mb-3 flex items-center gap-2"><i data-lucide="heart-pulse" class="w-4 h-4 text-gold-500"></i> Retiree Healthcare Cost (TRICARE Select + FEDVIP)</h3>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtHcGroup">TRICARE group</label><select id="dtHcGroup" class="input-field"><option value="A">Group A (enlisted/commissioned before Jan 1 2018)</option><option value="B">Group B (on/after Jan 1 2018)</option></select></div>
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtHcCoverage">Coverage</label><select id="dtHcCoverage" class="input-field"><option value="family">Family</option><option value="individual">Individual</option></select></div>
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtHcRx">Est. annual Rx ($)</label><input type="number" id="dtHcRx" class="input-field" min="0" step="50" value="0" /></div>
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtHcFedvip">FEDVIP premium ($/mo)</label><input type="number" id="dtHcFedvip" class="input-field" min="0" step="5" value="0" /></div>
-          </div>
-          <div id="dtHcResult" class="bg-navy-50 rounded-xl p-4 text-sm"></div>
-          <p class="text-xs text-navy-400 mt-2 italic">CY2026 TRICARE Select enrollment fees. Medically retired members &amp; survivors (Group A) pay $0. Active-duty healthcare costs $0 — budget for the jump. <a href="https://tricare.mil/Costs/PayFees/SelectFees" target="_blank" rel="noopener" class="text-gold-500 hover:underline">TRICARE fees →</a></p>
-        </div>
-
-        <div class="border-t rule-soft"></div>
-
-        <!-- 4. Prime vs Select -->
-        <div>
-          <h3 class="text-base font-semibold text-navy-700 mb-3 flex items-center gap-2"><i data-lucide="git-fork" class="w-4 h-4 text-gold-500"></i> TRICARE Prime vs. Select</h3>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3 items-end">
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtPsVisits">Expected doctor visits</label><select id="dtPsVisits" class="input-field"><option value="low">Low</option><option value="moderate" selected>Moderate</option><option value="high">High</option></select></div>
-            <label class="flex items-center gap-2 text-sm text-navy-600"><input type="checkbox" id="dtPsLowCost" checked /> I prioritize lowest cost</label>
-            <label class="flex items-center gap-2 text-sm text-navy-600"><input type="checkbox" id="dtPsFlex" /> I want provider flexibility / no referrals</label>
-          </div>
-          <div id="dtPsResult" class="bg-navy-50 rounded-xl p-4 text-sm"></div>
-          <p class="text-xs text-navy-400 mt-2 italic">Decide within 90 days of retirement (retroactive up to 12 months). General guidance, not a coverage determination. <a href="https://www.tricare.mil/Plans/HealthPlans" target="_blank" rel="noopener" class="text-gold-500 hover:underline">Compare plans →</a></p>
-        </div>
-
-        <div class="border-t rule-soft"></div>
-
-        <!-- 5. Best state of residence -->
-        <div>
-          <h3 class="text-base font-semibold text-navy-700 mb-3 flex items-center gap-2"><i data-lucide="map" class="w-4 h-4 text-gold-500"></i> Best State of Residence (Domicile)</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtStPay">Annual retired pay ($)</label><input type="number" id="dtStPay" class="input-field" min="0" step="500" /></div>
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtStStates">Candidate states (2-letter codes)</label><input type="text" id="dtStStates" class="input-field" placeholder="e.g., TX, CA, VA, FL" /></div>
-          </div>
-          <div id="dtStResult" class="bg-navy-50 rounded-xl p-4 text-sm"></div>
-          <p class="text-xs text-navy-400 mt-2 italic">Estimates tax on military RETIRED pay only (VA comp is always tax-free). "Taxed" uses the top marginal rate as an upper bound; partial exemptions vary. Confirm with a tax pro. </p>
-        </div>
-
-        <div class="border-t rule-soft"></div>
-
-        <!-- 6. PPM / DITY -->
-        <div>
-          <h3 class="text-base font-semibold text-navy-700 mb-3 flex items-center gap-2"><i data-lucide="truck" class="w-4 h-4 text-gold-500"></i> PPM / DITY Move Estimator</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtPpmGcc">Government Constructed Cost / GCC ($)</label><input type="number" id="dtPpmGcc" class="input-field" min="0" step="100" placeholder="Ask your TMO for the GCC estimate" /></div>
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtPpmExpenses">Your expected expenses ($)</label><input type="number" id="dtPpmExpenses" class="input-field" min="0" step="100" value="0" /></div>
-          </div>
-          <div id="dtPpmResult" class="bg-navy-50 rounded-xl p-4 text-sm"></div>
-          <p class="text-xs text-navy-400 mt-2 italic">Incentive is 100% of GCC (2025+); profit (incentive minus documented expenses) is taxable and withheld at ~22%. <a href="https://www.move.mil/moving-guide/ppm" target="_blank" rel="noopener" class="text-gold-500 hover:underline">Move.mil PPM →</a></p>
-        </div>
-
-        <div class="border-t rule-soft"></div>
-
-        <!-- 7. TSP keep vs roll -->
-        <div>
-          <h3 class="text-base font-semibold text-navy-700 mb-3 flex items-center gap-2"><i data-lucide="landmark" class="w-4 h-4 text-gold-500"></i> TSP: Keep-In vs. Roll-Out</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 mb-3">
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtTspAge">Age at separation</label><input type="number" id="dtTspAge" class="input-field" min="37" max="70" value="45" /></div>
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtTspTrad">Traditional ($)</label><input type="number" id="dtTspTrad" class="input-field" min="0" step="1000" /></div>
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtTspRoth">Roth ($)</label><input type="number" id="dtTspRoth" class="input-field" min="0" step="1000" value="0" /></div>
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtTspAdvFee">Advisory fee (%)</label><input type="number" id="dtTspAdvFee" class="input-field" min="0" max="5" step="0.05" value="1.0" /></div>
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtTspYears">Years invested</label><input type="number" id="dtTspYears" class="input-field" min="1" max="50" value="20" /></div>
-          </div>
-          <div id="dtTspResult" class="bg-navy-50 rounded-xl p-4 text-sm"></div>
-          <p class="text-xs text-navy-400 mt-2 italic">Fee drag assumes ~6% growth and the TSP's ~0.05% expense ratio. Not investment advice — vet any advisor on <a href="https://brokercheck.finra.org" target="_blank" rel="noopener" class="text-gold-500 hover:underline">FINRA BrokerCheck</a>.</p>
-        </div>
-
-        <div class="border-t rule-soft"></div>
-
-        <!-- 8. Terminal leave vs. sell back -->
-        <div>
-          <h3 class="text-base font-semibold text-navy-700 mb-3 flex items-center gap-2"><i data-lucide="plane" class="w-4 h-4 text-gold-500"></i> Terminal Leave vs. Selling Leave Back</h3>
-          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-3">
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtLeaveDays">Days to compare</label><input type="number" id="dtLeaveDays" class="input-field" inputmode="numeric" min="0" max="120" value="60" /></div>
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtLeaveAlreadySold">Days sold earlier</label><input type="number" id="dtLeaveAlreadySold" class="input-field" inputmode="numeric" min="0" max="60" value="0" aria-describedby="dtLeaveSoldHelp" /><p id="dtLeaveSoldHelp" class="text-xs text-navy-400 mt-1">Counts against the 60-day career cap.</p></div>
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtLeaveBase">Base pay ($/mo)</label><input type="number" id="dtLeaveBase" class="input-field" inputmode="decimal" min="0" step="50" /></div>
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtLeaveBah">BAH ($/mo)</label><input type="number" id="dtLeaveBah" class="input-field" inputmode="decimal" min="0" step="50" placeholder="0 if in barracks" /></div>
-            <div><label class="block text-xs font-medium text-navy-600 mb-1" for="dtLeaveBas">BAS ($/mo)</label><input type="number" id="dtLeaveBas" class="input-field" inputmode="decimal" min="0" step="10" /></div>
-          </div>
-          <div id="dtLeaveResult" class="bg-navy-50 rounded-xl p-4 text-sm"></div>
-          <p class="text-xs text-navy-400 mt-2 italic">Selling leave pays base pay only (no BAH/BAS) as a one-time lump sum, taxed at ~22% federal withholding, and is capped at 60 days across your whole career (37 U.S.C. 501). Terminal leave keeps you on active duty — full pay plus tax-exempt BAH/BAS — for the same days, but delays your separation date and any civilian paycheck that would start after it. This compares take-home dollars only; it doesn't weigh starting a civilian job earlier, which sell-back enables and terminal leave doesn't.</p>
-        </div>
-
-        <div class="border-t rule-soft"></div>
-
-        <!-- 9. Civilian salary break-even -->
-        <div>
-          <h3 class="text-base font-semibold text-navy-700 mb-3 flex items-center gap-2"><i data-lucide="briefcase" class="w-4 h-4 text-gold-500"></i> What Civilian Salary Do I Need to Break Even?</h3>
-          <p class="text-xs text-navy-500 mb-3 leading-relaxed">Military pay looks smaller than it is: BAH and BAS are completely untaxed, and healthcare is nearly free. A civilian offer has to clear a higher bar than your base pay to leave you where you are today. This works out that bar.</p>
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
-            <div>
-              <label class="block text-xs font-medium text-navy-600 mb-1" for="dtSalFiling">Tax filing status</label>
-              <select id="dtSalFiling" class="input-field">
-                <option value="single">Single</option>
-                <option value="joint">Married filing jointly</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-navy-600 mb-1" for="dtSalHealth">Civilian health premium ($/mo)</label>
-              <input type="number" id="dtSalHealth" class="input-field" inputmode="decimal" min="0" step="25" value="0" aria-describedby="dtSalHealthHelp" />
-              <p id="dtSalHealthHelp" class="text-xs text-navy-400 mt-1">Your share of the premium, not the employer's.</p>
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-navy-600 mb-1" for="dtSal401k">Employer 401(k) match (%)</label>
-              <input type="number" id="dtSal401k" class="input-field" inputmode="decimal" min="0" max="25" step="0.5" value="0" aria-describedby="dtSal401kHelp" />
-              <p id="dtSal401kHelp" class="text-xs text-navy-400 mt-1">Shown separately — deferred pay, not take-home.</p>
-            </div>
-          </div>
-          <div id="dtSalResult" class="bg-navy-50 rounded-xl p-4 text-sm"></div>
-          <p class="text-xs text-navy-400 mt-2 italic">Uses 2026 federal brackets and the standard deduction, FICA at 7.65%, and your state's damped effective rate. Your retired pay (if any) is counted as continuing income, which lowers the salary you need. Bonuses, equity, PTO, commute and relocation costs are not modeled — treat the result as the floor of a negotiating range, not a precise target.</p>
-        </div>
-
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- D2. SCENARIO COMPARISON -->
-<div class="section-card fade-in-up stagger-4 no-print" id="scenarioPanel">
+<div class="section-card no-print" id="scenarioPanel">
   <h2 class="text-lg font-semibold text-navy-700 mb-1 flex items-center gap-2"><i data-lucide="git-compare" class="w-5 h-5 text-gold-500"></i> Compare a Different Date</h2>
   <p class="text-xs text-navy-400 mb-4">Moving your date isn't just a schedule change: crossing a longevity step or another year of service changes both your High-3 average and your multiplier — for life. Try a date and see the trade.</p>
   <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
@@ -991,32 +875,66 @@
   <div id="scenarioResult" class="text-sm"></div>
 </div>
 
+</div>
+
+<!-- ===== TAB: DECISION TOOLS ===== -->
+<div id="panel-tools" class="tab-panel space-y-6" role="tabpanel" aria-labelledby="tab-tools" hidden>
+
+<!-- D2. DECISION TOOLS & CALCULATORS -->
+<div id="decisionToolsSection">
+  <div class="section-card card-flush">
+    <div id="decisionToolsHeader" class="flex items-center gap-3 px-6 py-5 cursor-pointer select-none hover:bg-navy-50 transition-colors rounded-t-2xl" role="button" tabindex="0" aria-expanded="true" aria-controls="decisionToolsContent">
+      <div class="flex-1">
+        <h2 class="text-lg font-semibold text-navy-700 flex items-center gap-2"><i data-lucide="calculator" class="w-5 h-5 text-gold-500"></i> Decision Tools &amp; Calculators</h2>
+        <p class="text-xs text-navy-400 mt-0.5">Estimate the big, irreversible decisions — SBP, concurrent receipt, healthcare, domicile, your move, and your TSP</p>
+      </div>
+      <i data-lucide="chevron-down" class="w-5 h-5 text-navy-400 flex-shrink-0 transition-transform" id="decisionToolsChevron"></i>
+    </div>
+    <div id="decisionToolsContent" class="pay-section-inner open">
+      <!-- The nine calculators are generated from the TOOLS spec in js/decision-tools.js. -->
+      <div id="decisionToolsList" class="px-6 pb-6 space-y-6"></div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- ===== TAB: CHECKLIST ===== -->
+<div id="panel-checklist" class="tab-panel space-y-6" role="tabpanel" aria-labelledby="tab-checklist" hidden>
+
 <!-- E. PHASE CHECKLIST -->
-<div class="fade-in-up stagger-5">
+<div>
   <h2 class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-lucide="list-checks" class="w-5 h-5 text-gold-500"></i> Personalized Phase Checklist</h2>
   <div id="phaseList" class="space-y-3"></div>
 </div>
 
 <!-- E2. THINGS TO THINK ABOUT -->
-<div class="fade-in-up stagger-6">
+<div>
   <div class="section-card card-flush">
-    <div id="thinkAboutHeader" class="flex items-center gap-3 px-6 py-5 cursor-pointer select-none hover:bg-navy-50 transition-colors rounded-t-2xl" role="button" tabindex="0" aria-expanded="false" aria-controls="thinkAboutContent">
+    <div id="thinkAboutHeader" class="flex items-center gap-3 px-6 py-5 cursor-pointer select-none hover:bg-navy-50 transition-colors rounded-t-2xl" role="button" tabindex="0" aria-expanded="true" aria-controls="thinkAboutContent">
       <div class="flex-1">
         <h2 class="text-lg font-semibold text-navy-700 flex items-center gap-2"><i data-lucide="brain" class="w-5 h-5 text-gold-500"></i> Things to Think About</h2>
         <p class="text-xs text-navy-400 mt-0.5">Big, often-overlooked decisions and the personal side of retiring — not a checklist, but worth a hard think</p>
       </div>
       <i data-lucide="chevron-down" class="w-5 h-5 text-navy-400 flex-shrink-0 transition-transform" id="thinkChevron"></i>
     </div>
-    <div id="thinkAboutContent" class="pay-section-inner">
+    <div id="thinkAboutContent" class="pay-section-inner open">
       <div class="px-6 pb-6"><div id="thinkAboutGrid" class="space-y-3"></div></div>
     </div>
   </div>
 </div>
 
+</div>
+
+<!-- ===== TAB: RESOURCES ===== -->
+<div id="panel-resources" class="tab-panel space-y-6" role="tabpanel" aria-labelledby="tab-resources" hidden>
+
 <!-- F. RESOURCES -->
-<div class="fade-in-up stagger-6">
+<div>
   <h2 class="text-lg font-semibold text-navy-700 mb-4 flex items-center gap-2"><i data-lucide="external-link" class="w-5 h-5 text-gold-500"></i> Key Resources</h2>
   <div id="resourceGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+</div>
+
 </div>
 
 </div>
@@ -1033,7 +951,7 @@
        placed to catch a wrong one are the members living it. There was no way to tell us. -->
   <p class="text-xs text-navy-400 mt-2 no-print">
     Spotted a wrong date or figure?
-    <a href="https://github.com/trevorjbarthel/retirement/issues/new?title=Data%20correction&labels=data" target="_blank" rel="noopener" class="text-gold-600 underline hover:no-underline">Report it</a>
+    <a href="https://github.com/trevorjbarthel/retirement/issues/new?title=Data%20correction&labels=data" target="_blank" rel="noopener" class="text-gold-700 underline hover:no-underline">Report it</a>
     — corrections are welcome and cited.
   </p>
   <p class="text-xs text-navy-400 mt-1">Made by Copilot</p>

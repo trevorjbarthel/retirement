@@ -95,23 +95,23 @@ export const STATE_TAX_DATA = {
   'AL': { name:'Alabama', militaryRetirementTax:'exempt', topRate:5.0, note:'Military retirement pay is fully exempt from Alabama income tax.' },
   'AK': { name:'Alaska', militaryRetirementTax:'exempt', topRate:0, note:'Alaska has no state income tax.' },
   'AZ': { name:'Arizona', militaryRetirementTax:'exempt', topRate:2.5, note:'Military retirement pay is fully exempt from Arizona income tax (as of 2021).' },
-  'AR': { name:'Arkansas', militaryRetirementTax:'partial', topRate:3.9, note:'Military retirement pay is partially exempt (first $6,000 exempt for under age 59½; fully exempt at 59½+).' },
-  'CA': { name:'California', militaryRetirementTax:'partial', topRate:13.3, note:'Up to $20,000 of military retirement pay exempt for AGI ≤$125,000 (single) / ≤$250,000 (joint), tax years 2025–2029 (SB 132).' },
+  'AR': { name:'Arkansas', militaryRetirementTax:'partial', topRate:3.9, exemptionCap:6000, note:'Military retirement pay is partially exempt (first $6,000 exempt for under age 59½; fully exempt at 59½+).' },
+  'CA': { name:'California', militaryRetirementTax:'partial', topRate:13.3, exemptionCap:20000, note:'Up to $20,000 of military retirement pay exempt for AGI ≤$125,000 (single) / ≤$250,000 (joint), tax years 2025–2029 (SB 132).' },
   'CO': { name:'Colorado', militaryRetirementTax:'partial', topRate:4.4, note:'Up to $24,000 of military retirement pay exempt for those 65+; $20,000 for ages 55–64.' },
   'CT': { name:'Connecticut', militaryRetirementTax:'exempt', topRate:6.99, lastVerified:'2026-08', note:'Military retirement pay is fully exempt from Connecticut income tax. (The old 50%-under-$75k/$100k-AGI rule was superseded — full exemption has been in effect since 2015.)' },
-  'DE': { name:'Delaware', militaryRetirementTax:'partial', topRate:6.6, note:'Up to $12,500 of military retirement pay is exempt.' },
+  'DE': { name:'Delaware', militaryRetirementTax:'partial', topRate:6.6, exemptionCap:12500, note:'Up to $12,500 of military retirement pay is exempt.' },
   'FL': { name:'Florida', militaryRetirementTax:'exempt', topRate:0, note:'Florida has no state income tax — very favorable for retirees.' },
-  'GA': { name:'Georgia', militaryRetirementTax:'partial', topRate:4.99, note:'Up to $65,000 of military retirement pay exempt for retirees of any age, starting tax year 2026.' },
+  'GA': { name:'Georgia', militaryRetirementTax:'partial', topRate:4.99, exemptionCap:65000, note:'Up to $65,000 of military retirement pay exempt for retirees of any age, starting tax year 2026.' },
   'HI': { name:'Hawaii', militaryRetirementTax:'exempt', topRate:11.0, note:'Military retirement pay is fully exempt from Hawaii income tax.' },
   'ID': { name:'Idaho', militaryRetirementTax:'partial', topRate:5.3, note:'Exempt up to the indexed max Social Security benefit (~$40,536 for 2026) for retirees who are disabled, 62+, or otherwise required to file.' },
   'IL': { name:'Illinois', militaryRetirementTax:'exempt', topRate:4.95, note:'Military retirement pay is fully exempt from Illinois income tax.' },
   'IN': { name:'Indiana', militaryRetirementTax:'exempt', topRate:3.05, note:'Military retirement pay is fully exempt from Indiana income tax.' },
   'IA': { name:'Iowa', militaryRetirementTax:'exempt', topRate:3.8, note:'Military retirement pay is fully exempt from Iowa income tax (flat 3.8% rate as of 2026).' },
   'KS': { name:'Kansas', militaryRetirementTax:'exempt', topRate:5.58, note:'Military retirement pay is fully exempt from Kansas income tax.' },
-  'KY': { name:'Kentucky', militaryRetirementTax:'partial', topRate:3.5, note:'Up to $31,110 of military retirement pay is exempt; retirees who left service before 1/1/1998 are fully exempt.' },
+  'KY': { name:'Kentucky', militaryRetirementTax:'partial', topRate:3.5, exemptionCap:31110, note:'Up to $31,110 of military retirement pay is exempt; retirees who left service before 1/1/1998 are fully exempt.' },
   'LA': { name:'Louisiana', militaryRetirementTax:'exempt', topRate:3.0, note:'Military retirement pay is fully exempt from Louisiana income tax.' },
   'ME': { name:'Maine', militaryRetirementTax:'exempt', topRate:7.15, note:'Military retirement pay is fully exempt; expanded in 2026 to cover Space Force and NOAA Corps retirees.' },
-  'MD': { name:'Maryland', militaryRetirementTax:'partial', topRate:5.75, note:'Up to $5,000 exempt under age 55; up to $15,000 exempt at 55+. Local taxes also apply.' },
+  'MD': { name:'Maryland', militaryRetirementTax:'partial', topRate:5.75, exemptionCap:5000, note:'Up to $5,000 exempt under age 55; up to $15,000 exempt at 55+. Local taxes also apply.' },
   'MA': { name:'Massachusetts', militaryRetirementTax:'exempt', topRate:5.0, note:'Military retirement pay is fully exempt from Massachusetts income tax.' },
   'MI': { name:'Michigan', militaryRetirementTax:'exempt', topRate:4.25, note:'Military retirement pay is fully exempt from Michigan income tax regardless of age or retirement date.' },
   'MN': { name:'Minnesota', militaryRetirementTax:'taxed', topRate:9.85, note:'Minnesota taxes military retirement pay as regular income (limited exemption for some Combat-Related Special Compensation).' },
@@ -122,7 +122,7 @@ export const STATE_TAX_DATA = {
   'NV': { name:'Nevada', militaryRetirementTax:'exempt', topRate:0, note:'Nevada has no state income tax.' },
   'NH': { name:'New Hampshire', militaryRetirementTax:'exempt', topRate:0, note:'New Hampshire has no income tax on wages/retirement (only taxes interest/dividends, phasing out by 2025).' },
   'NJ': { name:'New Jersey', militaryRetirementTax:'exempt', topRate:10.75, note:'Military retirement pay is fully exempt from New Jersey income tax.' },
-  'NM': { name:'New Mexico', militaryRetirementTax:'partial', topRate:5.9, lastVerified:'2026-08', note:'Up to $30,000 of military retirement pay is exempt (phased in $10k 2022 → $20k 2023 → $30k for tax year 2024 and after).' },
+  'NM': { name:'New Mexico', militaryRetirementTax:'partial', topRate:5.9, exemptionCap:30000, lastVerified:'2026-08', note:'Up to $30,000 of military retirement pay is exempt (phased in $10k 2022 → $20k 2023 → $30k for tax year 2024 and after).' },
   'NY': { name:'New York', militaryRetirementTax:'exempt', topRate:10.9, note:'Military retirement pay from the US government is fully exempt from New York income tax.' },
   'NC': { name:'North Carolina', militaryRetirementTax:'partial', topRate:4.5, note:'Military retirement pay exempt if member had 5+ years of creditable service before August 12, 1989; otherwise taxed.' },
   'ND': { name:'North Dakota', militaryRetirementTax:'exempt', topRate:2.5, note:'Military retirement pay is fully exempt from North Dakota income tax.' },
@@ -137,7 +137,7 @@ export const STATE_TAX_DATA = {
   'TX': { name:'Texas', militaryRetirementTax:'exempt', topRate:0, note:'Texas has no state income tax — very favorable for military retirees.' },
   'UT': { name:'Utah', militaryRetirementTax:'exempt', topRate:4.65, lastVerified:'2026-08', note:'Military retirement pay is effectively fully exempt: SB 11 (2021) created a nonrefundable credit equal to the tax on military retirement pay, for retirees of ANY age, retroactive to 1/1/2021. (Utah’s separate 65+ retirement credit is a different provision.)' },
   'VT': { name:'Vermont', militaryRetirementTax:'partial', topRate:8.75, note:'Fully exempt for AGI ≤$125,000; phases out $125,000–$175,000; fully taxed above $175,000 (effective 2025, Act 71).' },
-  'VA': { name:'Virginia', militaryRetirementTax:'partial', topRate:5.75, lastVerified:'2026-08', note:'Up to $40,000 of military benefits may be subtracted for tax year 2025 and after, with NO age requirement (the age-55 floor was removed starting tax year 2023). Phased in $10k/yr from 2022.' },
+  'VA': { name:'Virginia', militaryRetirementTax:'partial', topRate:5.75, exemptionCap:40000, lastVerified:'2026-08', note:'Up to $40,000 of military benefits may be subtracted for tax year 2025 and after, with NO age requirement (the age-55 floor was removed starting tax year 2023). Phased in $10k/yr from 2022.' },
   'WA': { name:'Washington', militaryRetirementTax:'exempt', topRate:0, note:'Washington has no state income tax.' },
   'WV': { name:'West Virginia', militaryRetirementTax:'exempt', topRate:4.82, note:'Military retirement pay is fully exempt from West Virginia income tax.' },
   'WI': { name:'Wisconsin', militaryRetirementTax:'taxed', topRate:7.65, note:'Wisconsin taxes military retirement pay as regular income.' },
@@ -391,10 +391,10 @@ export const DATA_VINTAGE = {
   tsp: 'IRS Single Life Expectancy Table; annuity factors approximate',
 };
 
-// General/flag officers: basic pay is statutorily capped at Executive Schedule
-// Level II, so BASE_PAY_2026 intentionally omits exact O-8..O-10 rows until the
-// official figures are dropped in. The UI gives these grades a tailored
-// manual-entry prompt instead of a wrong auto-populated number.
+// General/flag officers: basic pay is statutorily capped at Executive Schedule Level II, and
+// the tables now carry the capped O-8..O-10 rows exactly as DFAS publishes them. The UI still
+// keeps a tailored manual-entry prompt for these grades for the case where a table year lacks
+// a row, since a capped figure can also depend on the member's specific pay history.
 export const FLAG_OFFICER_GRADES = ['O-8', 'O-9', 'O-10'];
 
 export const RETIREMENT_SYSTEMS = ['high3', 'brs', 'redux'];
@@ -416,11 +416,15 @@ export function computeRetirementPay({ basePay, yos, system }) {
     mult = 0.035;
     // Below 20 years there is no REDUX retirement to compute; fall back to the High-3 ladder
     // so a mid-career "what if" still returns a sane number instead of a negative multiplier.
-    pct = y >= 20 ? clamp(0.40 + 0.035 * (y - 20), 0.40, 0.75) : y * 0.025;
+    // 40% at 20, +3.5%/yr to 75% at 30 — and then, since the FY2007 NDAA lifted the old 75%
+    // ceiling, +2.5%/yr like every other system. A 34-year REDUX retiree earns 85%, not 75%.
+    pct = y >= 20 ? (y <= 30 ? 0.40 + 0.035 * (y - 20) : 0.75 + 0.025 * (y - 30)) : y * 0.025;
   } else {
     mult = system === 'brs' ? 0.02 : 0.025;
     pct = y * mult;
   }
+  // 100% of the High-3 average at 40 years is the statutory top for every system.
+  pct = clamp(pct, 0, 1);
   return { monthly: Math.round(bp * pct), mult, pct, system: system || 'high3' };
 }
 
@@ -532,15 +536,17 @@ export function computeMilestones(s, today, sep) {
   // ----- Decision / benefit deadlines (retirement-depth expansion) -----
   if (s.vaClaim) milestones.push({ label: 'BDD Filing Window Closes', date: subDays(sep, 90), icon: 'file-clock',
     description: 'Last day to file under Benefits Delivery at Discharge. With 89 or fewer days left you can still file, but as a standard pre-discharge claim rather than BDD.' });
-  // TEB requires the transfer be APPROVED while the member has fewer than 16 years of
-  // total service and can commit to 4 more years — it is not available at separation
-  // itself. Anchoring this to `sep` put the deadline AFTER the point of ineligibility,
-  // which is backwards: the real deadline is the member's own 16-year mark, which for
-  // anyone still eligible falls well before separation.
-  if (s.giBill && s.yos < 16) {
-    milestones.push({ label: 'GI Bill Transfer (TEB) — Approve Before 16 Years of Service',
-      date: addDays(today, Math.round((16 - s.yos) * 365.25)), icon: 'graduation-cap',
-      description: 'A Transfer of Education Benefits must be APPROVED while you have fewer than 16 years of total service, and it obligates 4 more years. This date is your projected 16-year mark.' });
+  // Transfer of Education Benefits (TEB). DoD's 2018 policy capping transfers at 16 years of
+  // service was blocked by the FY2020 NDAA (P.L. 116-92) before it took effect, so years of
+  // service is the WRONG axis. The real constraint is that the transfer must be APPROVED
+  // while the member can still obligate four more years — i.e. at least four years before
+  // separation (and after six years served). For most people using this tool that date is
+  // already behind them; then it is not a deadline to chase but a fact to plan around, and
+  // it goes to `advisories` below so nothing paints it as a missed deadline.
+  const tebDeadline = tebApprovalDeadline(sep);
+  if (s.giBill && today <= tebDeadline) {
+    milestones.push({ label: 'GI Bill Transfer (TEB) — Approve Before This Date', date: tebDeadline, icon: 'graduation-cap',
+      description: 'A Transfer of Education Benefits must be APPROVED while you can still commit to 4 more years of service (and after 6 years served). Past this date you can no longer transfer it — the benefit stays yours to use.' });
   }
   // FEDVIP eligibility for uniformed-service members is limited to RETIREES and their
   // families — a non-retiring separatee is not eligible at all, so showing them a FEDVIP
@@ -593,9 +599,23 @@ export function computeMilestones(s, today, sep) {
       detail: 'About 12 months out: request your Service Treatment Records, line up DBQs and any nexus letters, and get every condition documented in your medical record while you still have military healthcare. VA will not accept the claim itself until 180 days before separation.',
     });
   }
+  if (s.giBill && today > tebDeadline) {
+    advisories.push({
+      label: 'GI Bill transfer window has closed',
+      date: tebDeadline,
+      icon: 'graduation-cap',
+      closed: true,
+      detail: 'A Post-9/11 GI Bill transfer to a spouse or child must be approved while you can still obligate 4 more years of service — that point passed on this date. Nothing is lost: the full benefit remains yours to use. A transfer that was already approved stands, as does its service obligation.',
+    });
+  }
 
   return { milestones, advisories, termStart, ptdyStart, ptdyEnd, sbStart, sbEnd, tapDeadline, firstRetPay };
 }
+
+// The last day a Transfer of Education Benefits can be approved: four years before
+// separation, the service obligation the transfer carries. Shared by the milestone engine
+// and the phase checklist so the two never disagree about whether it is still possible.
+export function tebApprovalDeadline(sep) { return subDays(sep, 4 * 365 + 1); }
 
 // ===== SCENARIO COMPARISON =====
 // "Should I go in March or September?" is the decision transitioning members agonize over
@@ -728,7 +748,13 @@ export function buildPhases(s, dates) {
         T('va-gov-account','Set up and identity-verify your VA.gov account (Login.gov or ID.me) — the gateway to VA benefits'),
         T('va-doc','Begin VA disability documentation — gather medical records'),
         T('va-intent-to-file','File a VA Intent to File (VA Form 21-0966) to lock your earliest effective date; complete the full claim within 1 year'),
-        s.giBill ? T('teb','Submit and get APPROVAL of your Post-9/11 GI Bill transfer (TEB) in milConnect — it must be approved before 16 years of service and cannot be done after you retire') : null,
+        // The 16-year cap this used to cite never took effect (blocked by P.L. 116-92). What
+        // gates a transfer is the four-year obligation, which is impossible inside this
+        // tool's planning window for almost everyone — so say so, rather than send them to
+        // milConnect for a transfer that will be refused.
+        s.giBill ? T('teb', today <= tebApprovalDeadline(sep)
+          ? 'Submit and get APPROVAL of your Post-9/11 GI Bill transfer (TEB) in milConnect while you can still obligate 4 more years of service'
+          : 'Confirm your Post-9/11 GI Bill entitlement in VA.gov — a transfer to family is no longer possible this close to separation, so plan to use it yourself (VR&E may also fit if you file a VA claim)') : null,
         T('housing-research','Research housing options in target location' + loc),
         T('domicile','Confirm or change your state of legal residence (DD Form 2058) — SCRA/MSRRA tax protection ends at retirement'),
         T('estate-docs','Update will, power of attorney, and advance directive'),
@@ -799,7 +825,7 @@ export function buildPhases(s, dates) {
       tasks: [
         T('sb-or-apps', s.sb ? 'Begin SkillBridge program — treat it like your first civilian job' : 'Continue civilian job applications and interviews'),
         T('ref-letters','Request reference/recommendation letters from leadership'),
-        T('pre-ret-brief','Complete pre-retirement briefing (if retiring)'),
+        isRet ? T('pre-ret-brief','Complete your pre-retirement briefing') : null,
         isRet ? T('dfas-setup','Confirm DFAS retirement pay setup') : null,
         isRet ? T('tricare-enroll','Enroll in TRICARE retiree plan (90-day window from your retirement date)') : null,
         isRet ? T('fedvip','Enroll in FEDVIP dental and vision via BENEFEDS before your retirement date (TRDP no longer exists; window closes 60 days after retirement)') : null,
@@ -1035,7 +1061,11 @@ export function decodeState(str) {
 // the base amount; coverage is "paid-up" only after 360 payments AND age 70.
 export const SBP_PARAMS = { premiumRate: 0.065, annuityRate: 0.55, paidUpPayments: 360, paidUpAge: 70 };
 
-export function computeSBP({ baseAmount, retireeAge = 45, spouseAge = null, hasChildren = false }) {
+// Spouse coverage only. The spouse's age does not change the premium (it is a flat 6.5% of
+// the base amount), and child-only coverage is priced actuarially from tables this app does
+// not hold — so neither is accepted here, rather than accepted and silently ignored, which
+// is what an optional "spouse age" input used to do.
+export function computeSBP({ baseAmount, retireeAge = 45 }) {
   baseAmount = Math.max(0, Number(baseAmount) || 0);
   retireeAge = Number(retireeAge) || 0;
   const monthlyPremium = baseAmount * SBP_PARAMS.premiumRate;
@@ -1050,7 +1080,6 @@ export function computeSBP({ baseAmount, retireeAge = 45, spouseAge = null, hasC
     survivorMonthly, survivorAnnual: survivorMonthly * 12,
     paidUpPayments, totalPremiums,
     breakEvenMonths, breakEvenYears: +(breakEvenMonths / 12).toFixed(1),
-    hasChildren: !!hasChildren, spouseAge,
   };
 }
 
@@ -1058,9 +1087,19 @@ export function computeSBP({ baseAmount, retireeAge = 45, spouseAge = null, hasC
 // VA compensation offsets retired pay dollar-for-dollar (the "VA waiver"). CRDP
 // (auto at 20yr + 50%+, TAXABLE) restores the full waiver; CRSC (combat-related,
 // TAX-FREE, requires DD 2860) restores the combat-related portion of the waiver.
-export function compareConcurrentReceipt({ grossRetiredPay, vaRating = 0, combatRelatedPct = 0, marginalRate = 0.22, yos = 20 }) {
+//
+// `vaComp` is the household figure from vaCompensation() when the caller knows the household;
+// the waiver is sized on what VA actually pays, and a married retiree's rate is higher than
+// the veteran-alone table this used to read directly — which had the Pay tab and this tool
+// quoting two different VA amounts for the same person, $190/mo apart at 50%.
+/**
+ * @param {{grossRetiredPay: number, vaRating?: number, combatRelatedPct?: number,
+ *   marginalRate?: number, yos?: number, vaComp?: number|null}} opts
+ */
+export function compareConcurrentReceipt({ grossRetiredPay, vaRating = 0, combatRelatedPct = 0, marginalRate = 0.22, yos = 20, vaComp = null }) {
   grossRetiredPay = Math.max(0, Number(grossRetiredPay) || 0);
-  const vaComp = VA_RATES[vaRating] || 0;
+  if (vaComp === null || vaComp === undefined) vaComp = VA_RATES[vaRating] || 0;
+  vaComp = Math.max(0, Number(vaComp) || 0);
   const waived = Math.min(grossRetiredPay, vaComp);
   const residualRetired = grossRetiredPay - waived;
   combatRelatedPct = clamp(Number(combatRelatedPct) || 0, 0, 100);
@@ -1139,8 +1178,19 @@ export function estimateStateTaxOnRetiredPay(code, annualRetiredPay) {
   } else if (d.militaryRetirementTax === 'taxed') {
     estAnnualTax = annualRetiredPay * (d.topRate / 100) * STATE_TAX_EFFECTIVE_FACTOR;
     note = `Approx. ~$${Math.round(estAnnualTax).toLocaleString('en-US')}/yr (effective estimate; ${d.topRate}% top marginal rate — your actual rate is lower in graduated brackets)`;
+  } else if (Number.isFinite(d.exemptionCap)) {
+    // partial, with a statutory dollar cap: only the pay ABOVE the cap is taxed. This is
+    // what makes the domicile comparison rank Georgia ($65k exempt) and Delaware ($12.5k)
+    // differently instead of treating every "partial" state as the same halved rate.
+    const taxable = Math.max(0, annualRetiredPay - d.exemptionCap);
+    estAnnualTax = taxable * (d.topRate / 100) * STATE_TAX_EFFECTIVE_FACTOR;
+    const cap = `$${d.exemptionCap.toLocaleString('en-US')}`;
+    note = taxable > 0
+      ? `First ${cap} of retired pay exempt — approx. ~$${Math.round(estAnnualTax).toLocaleString('en-US')}/yr on the remainder (effective estimate)`
+      : `Fully covered by the ${cap} exemption — $0`;
   } else {
-    // partial — effective-rate estimate, further halved for the partial exemption
+    // partial with an age- or income-conditioned exemption we can't size — effective-rate
+    // estimate, halved for the partial exemption
     estAnnualTax = annualRetiredPay * (d.topRate / 100) * STATE_TAX_EFFECTIVE_FACTOR * 0.5;
     note = `Partial exemption — approx. ~$${Math.round(estAnnualTax).toLocaleString('en-US')}/yr (varies by age/income)`;
   }

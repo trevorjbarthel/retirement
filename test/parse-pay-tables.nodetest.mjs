@@ -19,12 +19,12 @@ const dir = path.dirname(fileURLToPath(import.meta.url));
 const em = readFileSync(path.join(dir, "fixtures", "dfas-em.html"), "utf8");
 const co = readFileSync(path.join(dir, "fixtures", "dfas-co.html"), "utf8");
 
-test("threshold + key mapping (floor → 2, Over N → N+1)", () => {
+test("threshold + key mapping (floor → 0, Over N → N: the completed-years rate starts)", () => {
   assert.deepEqual(parseThreshold("2 or less"), { kind: "floor" });
   assert.deepEqual(parseThreshold("Over 6"), { kind: "over", n: 6 });
   assert.equal(parseThreshold("Years of Service"), null);
-  assert.equal(keyForColumn({ kind: "floor" }), 2);
-  assert.equal(keyForColumn({ kind: "over", n: 6 }), 7);
+  assert.equal(keyForColumn({ kind: "floor" }), 0);
+  assert.equal(keyForColumn({ kind: "over", n: 6 }), 6);
 });
 
 test("money + grade extraction", () => {
@@ -35,19 +35,19 @@ test("money + grade extraction", () => {
   assert.equal(extractGrade("O-1E"), "O-1E");
 });
 
-test("enlisted page: flats collapsed, keys on the N+1 convention", () => {
+test("enlisted page: flats collapsed, keys are the completed years each rate starts at", () => {
   const t = buildTables([em]);
-  assert.deepEqual(t["E-5"], { 2: 3342.9, 3: 3598.2, 4: 3775.8, 5: 3946.8, 7: 4110, 9: 4299.9, 11: 4395.3, 13: 4421.7 });
+  assert.deepEqual(t["E-5"], { 0: 3342.9, 2: 3598.2, 3: 3775.8, 4: 3946.8, 6: 4110, 8: 4299.9, 10: 4395.3, 12: 4421.7 });
   // E-8 has 5 leading blanks (doesn't exist <8 yrs), a duplicate at Over 28, and trailing flats.
-  assert.deepEqual(t["E-8"], { 9: 5656.5, 11: 5907, 13: 6061.8, 15: 6247.2, 17: 6448.2, 19: 6811.2, 21: 6995.4, 23: 7308.3, 25: 7481.7, 27: 7908.9, 31: 8067.3 });
+  assert.deepEqual(t["E-8"], { 8: 5656.5, 10: 5907, 12: 6061.8, 14: 6247.2, 16: 6448.2, 18: 6811.2, 20: 6995.4, 22: 7308.3, 24: 7481.7, 26: 7908.9, 30: 8067.3 });
 });
 
 test("officer page: known grades + a NEW grade (O-8) is populated", () => {
   const t = buildTables([co]);
-  assert.deepEqual(t["O-1"], { 2: 4150.2, 3: 4320, 4: 5222.4 });
+  assert.deepEqual(t["O-1"], { 0: 4150.2, 2: 4320, 3: 5222.4 });
   assert.equal(Object.keys(t["O-3"]).length, 9);
   // O-8 was absent from the original table; the parser fills it from the DFAS row.
-  assert.deepEqual(t["O-8"], { 21: 12000, 23: 12300, 25: 12600, 27: 13000, 31: 13500 });
+  assert.deepEqual(t["O-8"], { 20: 12000, 22: 12300, 24: 12600, 26: 13000, 30: 13500 });
 });
 
 test("validation flags missing grades but accepts present ones", () => {

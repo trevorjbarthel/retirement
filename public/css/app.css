@@ -29,22 +29,12 @@
 }
 * { box-sizing: border-box; }
 body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: #1a2744; margin: 0; }
+/* Entrance fade for the setup screen only. The results sections used to carry a staggered
+   .fade-in-up cascade too; now that they live in tab panels toggled with display:none, a
+   per-section animation would replay in full on every tab switch — see .tab-panel below. */
 .fade-in { animation: fadeIn 0.5s ease forwards; opacity: 0; }
-.fade-in-up { animation: fadeInUp 0.5s ease forwards; opacity: 0; }
 @keyframes fadeIn { to { opacity: 1; } }
-@keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-.stagger-1 { animation-delay: 0.05s; }
 .stagger-2 { animation-delay: 0.1s; }
-.stagger-3 { animation-delay: 0.15s; }
-.stagger-4 { animation-delay: 0.2s; }
-.stagger-5 { animation-delay: 0.25s; }
-.stagger-6 { animation-delay: 0.3s; }
-.stagger-7 { animation-delay: 0.35s; }
-.stagger-8 { animation-delay: 0.4s; }
-.stagger-9 { animation-delay: 0.45s; }
-.stagger-10 { animation-delay: 0.5s; }
-.stagger-11 { animation-delay: 0.55s; }
-.stagger-12 { animation-delay: 0.6s; }
 .progress-animate { transition: width 1.2s cubic-bezier(0.4,0,0.2,1); }
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
@@ -65,7 +55,7 @@ input[type="number"] { -moz-appearance: textfield; }
 .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 .input-field { background: #e9ecef; border: 2px solid transparent; border-radius: 12px; padding: 10px 14px; font-size: 15px; width: 100%; transition: all 0.2s; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #1a2744; }
 .input-field:focus { outline: none; background: white; border-color: #836616; box-shadow: 0 0 0 3px rgba(201,162,39,0.15); }
-.input-field::placeholder { color: #67779e; }
+.input-field::placeholder { color: #5a6a92; }
 select.input-field { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23667' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
 .radio-card { border: 2px solid #e9ecef; border-radius: 12px; padding: 12px 16px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 10px; background: white; }
 .radio-card:hover { border-color: #c9a227; }
@@ -88,6 +78,9 @@ a.sr-only:focus, a.sr-only:focus-visible {
 .section-card { background: white; border-radius: 16px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(26,39,68,0.06); }
 .milestone-card { background: white; border-radius: 14px; padding: 16px; box-shadow: 0 1px 4px rgba(26,39,68,0.06); display: flex; flex-direction: column; gap: 6px; transition: transform 0.2s; }
 .milestone-card:hover { transform: translateY(-2px); }
+/* The card sets display:flex, which would otherwise outrank the [hidden] reset at equal
+   specificity — the Overview's "show all" fold depends on this. Print restores every card. */
+.milestone-card[hidden] { display: none; }
 .status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .status-green { background: #10b981; }
 .status-gold { background: #f59e0b; }
@@ -162,10 +155,17 @@ a.sr-only:focus, a.sr-only:focus-visible {
 
 /* The read-only warning has to stay in view. Someone on a shared /p/<id> link can otherwise
    scroll thousands of pixels down, tick checklist boxes, and never learn their changes are
-   being discarded — the banner explaining that was at the very top of the page. */
-#readOnlyBanner.is-sticky {
-  position: sticky; top: 56px; z-index: 35;
-  margin-bottom: 20px; box-shadow: 0 4px 14px rgba(26,39,68,0.10);
+   being discarded — the banner explaining that was at the very top of the page. It now
+   rides inside the sticky .results-subnav together with the tab strip (so the two can't
+   compete for the same sticky slot); .is-sticky only adds the emphasis. */
+#readOnlyBanner.is-sticky { margin-bottom: 12px; box-shadow: 0 4px 14px rgba(26,39,68,0.10); }
+/* On a phone the stuck header + banner + tab strip was ~310px of an 812px screen. Keep the
+   warning one compact line there; the "Make my own copy" action stays a tap away. */
+@media (max-width: 640px) {
+  #readOnlyBanner.is-sticky { padding: 10px 14px; margin-bottom: 8px; }
+  #readOnlyBanner.is-sticky > div { gap: 8px; }
+  #readOnlyBanner.is-sticky p { font-size: 12px; line-height: 1.35; min-width: 0; }
+  #readOnlyBanner.is-sticky button { padding: 6px 10px; font-size: 12px; }
 }
 /* Controls a read-only viewer cannot meaningfully use are disabled outright rather than
    silently swallowing input. */
@@ -212,12 +212,12 @@ a.sr-only:focus, a.sr-only:focus-visible {
   .cal-narrow-summary { display: block; }
 }
 
-/* .fade-in/.fade-in-up start at opacity:0 and rely on the animation to reach opacity:1
-   — with animations suppressed, that final state never arrives and the content they're
-   on (including the entire results screen) stays permanently invisible. */
+/* .fade-in starts at opacity:0 and relies on the animation to reach opacity:1 — with
+   animations suppressed, that final state never arrives and the content it's on (the
+   entire setup screen) stays permanently invisible. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
-  .fade-in, .fade-in-up { opacity: 1 !important; animation: none !important; transform: none !important; }
+  .fade-in { opacity: 1 !important; animation: none !important; transform: none !important; }
 }
 
 @media print {
@@ -230,6 +230,12 @@ a.sr-only:focus, a.sr-only:focus-visible {
   .no-print { display: none !important; }
   .phase-content { max-height: none !important; overflow: visible !important; }
   .pay-section-inner { max-height: none !important; overflow: visible !important; }
+  /* Every tab prints, in document order; the strip itself is .no-print. margin-top stands
+     in for the column's space-y-6, which skips [hidden] siblings. */
+  .tab-panel[hidden] { display: block !important; margin-top: 24px; }
+  /* The milestone grid's "show all" fold is a screen convenience; paper gets every card. */
+  .milestone-card[hidden] { display: flex !important; }
+  .tab-panel { animation: none !important; }
   .milestone-card, .section-card, .resource-card { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
   .section-card { page-break-inside: avoid; }
   h2 { page-break-after: avoid; }
@@ -259,7 +265,12 @@ a.sr-only:focus, a.sr-only:focus-visible {
    any HTML an attacker manages to inject can also carry its own styling — enough to hide a
    warning banner or overlay a convincing fake dialog. Values are unchanged from the inline
    styles they replace; this is a mechanical migration (scripts/inline-style-codemod.mjs). */
-.t-gold { color: #c9a227; }
+/* Gold TEXT (headline dollar figures, per-day premiums) is gold-700 on light surfaces:
+   the brand gold #c9a227 measures 2.4:1 on white and 2.3:1 on the navy-50 result cards, which
+   fails WCAG AA even for large bold text. On the navy panels the bright gold is the one that
+   passes (6.1:1), so it is restored there. Icons keep the brand gold — they are decorative. */
+.t-gold { color: #836616; }
+.panel-navy .t-gold, .panel-navy-plain .t-gold { color: #c9a227; }
 .t-gold-dark { color: #a6841e; }
 .t-gold-light { color: #f5e199; }
 .t-danger { color: #b91c1c; }
@@ -276,10 +287,13 @@ a.sr-only:focus, a.sr-only:focus-visible {
 .rule { border-color: rgba(26,39,68,0.1); }
 .rule-gold { border-color: rgba(166,132,30,0.25); }
 
-.btn-gold { background: #a6841e; }
+/* White on #a6841e was 3.5:1 at button text size; gold-700 gives 5.4:1. */
+.btn-gold { background: #836616; }
 .btn-blue { background: #1e40af; }
 .btn-indigo { background: #3730a3; }
-.btn-gold-gradient { background: linear-gradient(135deg, #c9a227 0%, #a6841e 100%); }
+/* The primary button keeps the brand gradient but carries NAVY text (6.1:1 on the light end)
+   instead of white (3.5:1). */
+.btn-gold-gradient { background: linear-gradient(135deg, #c9a227 0%, #a6841e 100%); color: #1a2744; }
 .btn-navy-gold { background: #1a2744; color: #c9a227; }
 
 .swatch-navy { background: #1a2744; }
@@ -302,6 +316,7 @@ a.sr-only:focus, a.sr-only:focus-visible {
 .chip-warn { background: #fef3c7; color: #92400e; }
 .chip-neutral { background: #e2e8f0; color: #475569; }
 
+.note-success { background: #d1fae5; color: #047857; border: 1px solid #a7f3d0; }
 .note-gold { background: #fdf9ed; border: 1px solid #f0d266; }
 .note-gold-text { color: #92400e; }
 .note-warn { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
@@ -319,6 +334,18 @@ a.sr-only:focus, a.sr-only:focus-visible {
 .meter-fill-gold { width: 0%; background: linear-gradient(90deg, #c9a227, #f5e199); }
 
 .card-flush { padding: 0; overflow: hidden; }
+
+/* "How this is estimated" disclosures. Every result block used to end in an italic
+   paragraph of caveats; on a page that already carries a global disclaimer that read as
+   noise and pushed the numbers apart. The caveats are kept, one click away. */
+.method-note { margin-top: 10px; font-size: 12px; line-height: 1.5; color: #5a6a92; }
+.method-note summary { cursor: pointer; font-weight: 500; color: #415586; list-style: none; display: inline-flex; align-items: center; gap: 4px; }
+.method-note summary::-webkit-details-marker { display: none; }
+.method-note summary::before { content: '▸'; font-size: 10px; transition: transform .15s; }
+.method-note[open] summary::before { transform: rotate(90deg); }
+.method-note summary:focus-visible { outline: 2px solid #836616; outline-offset: 2px; border-radius: 4px; }
+.method-note > p { margin: 6px 0 0; }
+@media print { .method-note > p { display: block; } .method-note summary { display: none; } }
 .pad-sm { padding: 8px 12px; }
 .flex-card { flex: 1; min-width: 150px; }
 .is-hidden { display: none; }
@@ -343,8 +370,48 @@ a.sr-only:focus, a.sr-only:focus-visible {
 .bar-seg-ret { background: #1a2744; }
 .bar-seg-va { background: #c9a227; }
 .op-80 { opacity: 0.8; }
-.phase-pct { background: #f0f2f6; color: #67779e; }
+.phase-pct { background: #f0f2f6; color: #5a6a92; }
 .phase-pct.is-complete { background: #d1fae5; color: #047857; }
 .phase-bar { background: #c9a227; }
 .phase-bar.is-complete { background: #10b981; }
 .task-text.is-done { text-decoration: line-through; opacity: 0.5; }
+
+/* ===== Setup steps =====
+   The form is two steps: the seven required fields, then the optional details. Both step
+   buttons are always live so nobody is trapped in a wizard. */
+.setup-steps { display: flex; gap: 8px; margin-bottom: 4px; }
+.setup-step-btn { flex: 1; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 12px; background: #fff; color: #415586; font: inherit; font-size: 13px; font-weight: 500; text-align: left; cursor: pointer; transition: border-color .15s, background .15s; }
+.setup-step-btn:hover { border-color: #c9a227; }
+.setup-step-btn.is-current { border-color: #836616; background: #fdf9ed; color: #1a2744; font-weight: 600; }
+.setup-step-btn:focus-visible { outline: 2px solid #836616; outline-offset: 2px; }
+.setup-step-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #e9ecef; color: #415586; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.setup-step-btn.is-current .setup-step-num { background: #836616; color: #fff; }
+.setup-step-opt { margin-left: auto; font-size: 11px; font-weight: 500; color: #5a6a92; }
+.setup-step-actions { text-align: center; }
+.setup-primary { width: 100%; padding: 14px; border: 0; border-radius: 12px; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; transition: box-shadow .2s, transform .1s; }
+.setup-primary:hover { box-shadow: 0 8px 20px rgba(26,39,68,0.15); }
+.setup-primary:active { transform: scale(0.98); }
+.setup-secondary { display: inline-block; margin-top: 10px; padding: 8px 12px; border: 0; border-radius: 8px; background: transparent; color: #415586; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; }
+.setup-secondary:hover { background: #f0f2f6; color: #1a2744; }
+.setup-primary:focus-visible, .setup-secondary:focus-visible { outline: 2px solid #836616; outline-offset: 2px; }
+@media (max-width: 480px) { .setup-step-btn { font-size: 12px; padding: 8px 10px; } .setup-step-opt { display: none; } }
+
+/* ===== Results tabs =====
+   Five sibling panels under the results column, one visible at a time via the `hidden`
+   attribute (Tailwind's preflight maps [hidden] to display:none — never give .tab-panel a
+   display utility, it would win). The strip is sticky just under the header; --header-h is
+   published by a ResizeObserver in app.js because the header wraps to 2-3 rows on phones. */
+.results-subnav { position: sticky; top: var(--header-h, 56px); z-index: 35; background: var(--bg); padding: 4px 0; }
+.results-tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; border-bottom: 1px solid rgba(26,39,68,0.1); }
+.results-tabs::-webkit-scrollbar { display: none; }
+.results-tab { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; border: 0; border-bottom: 2px solid transparent; border-radius: 8px 8px 0 0; background: transparent; color: #415586; font: inherit; font-size: 14px; font-weight: 500; line-height: 1.25; white-space: nowrap; cursor: pointer; transition: color .15s, background .15s, border-color .15s; }
+.results-tab:hover { background: #f0f2f6; color: var(--navy); }
+/* Underline + weight, not colour alone (WCAG 1.4.1). */
+.results-tab[aria-selected="true"] { color: var(--navy); font-weight: 600; border-bottom-color: var(--gold); }
+/* Inset: the strip is overflow-x:auto, so an outside ring would be clipped. */
+.results-tab:focus-visible { outline: 2px solid #836616; outline-offset: -2px; }
+/* One short fade per switch. No static opacity:0 and no fill-mode, so a panel can never be
+   left invisible when the reduced-motion block above collapses the animation to ~0. */
+.tab-panel { animation: tabPanelIn 0.25s ease; }
+@keyframes tabPanelIn { from { opacity: 0; transform: translateY(6px); } }
+@media (max-width: 400px) { .results-tab { padding: 10px 10px; font-size: 13px; } }

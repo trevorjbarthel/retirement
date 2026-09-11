@@ -41,16 +41,25 @@ export function configure({ id, key }) {
   readOnly = !!planId && !editKey;
 }
 
+// A request that never completes must not leave the save indicator on "Saving…" forever. A
+// stalled connection (captive portal, a phone dropping to one bar) is reported as status 0,
+// the same as a refused one, so the transient-retry path in pushPlan() runs.
+const API_TIMEOUT_MS = 10000;
+
 async function apiFetch(path, opts = {}) {
   const method = opts.method || (opts.body !== undefined ? "POST" : "GET");
   /** @type {Record<string, string>} */
   const headers = {};
   if (opts.body !== undefined) headers["Content-Type"] = "application/json";
+  const ctl = typeof AbortController === "function" ? new AbortController() : null;
+  const timer = ctl ? setTimeout(() => ctl.abort(), API_TIMEOUT_MS) : null;
   let res;
   try {
-    res = await fetch(path, { method, headers, body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined });
+    res = await fetch(path, { method, headers, body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined, signal: ctl ? ctl.signal : undefined });
   } catch {
     return { ok: false, status: 0, data: null };
+  } finally {
+    if (timer) clearTimeout(timer);
   }
   let data = null;
   try { data = await res.json(); } catch { /* no body */ }

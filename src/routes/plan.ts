@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import type { AppContext } from "../env";
 import { jsonError } from "../lib/json";
-import { createPlan, getPlan, updatePlanCAS, deletePlanByKey } from "../db/queries";
+import { createPlan, getPlan, updatePlanCAS, deletePlanByKey, touchPlanAccess } from "../db/queries";
 import { randomToken, hashToken } from "../lib/tokens";
+import { throttled } from "../lib/ratelimit";
 // Reuse the browser's own allow-list validator so the server enforces the exact same
 // shape the client does — this is what makes a hostile plan (e.g. transType/branch set
 // to a script payload) structurally unable to reach the database at all, rather than
@@ -74,43 +75,20 @@ function validPlanJson(plan: unknown): string | null {
   return planJson;
 }
 
+// Bump the row's last-access stamp without holding up the response. Failure here must never
+// surface to the reader — it is bookkeeping, not the request.
+export function recordAccess(c: any, id: string) {
+  const work = touchPlanAccess(c.env.DB, id).catch((e: unknown) => console.warn("[retention] touch failed:", (e as Error)?.message ?? e));
+  try {
+    c.executionCtx.waitUntil(work);
+  } catch {
+    /* no execution context (some test harnesses) — the promise still runs */
+  }
+}
+
 function schemaVersionOf(body: any): number {
   const raw = Math.trunc(Number(body?.schema_version));
   return Number.isInteger(raw) && raw >= 1 && raw <= 1000 ? raw : 1;
-}
-
-// Warn ONCE per isolate when a limiter we expect to exist isn't bound. `throttled()` fails
-// open in three separate ways (dev mode, missing binding, thrown call) and previously
-// emitted no signal at all for any of them — so an unprovisioned or renamed binding meant
-// silently unlimited writes, indistinguishable from a working limiter.
-const warnedLimiters = new Set<string>();
-function warnMissingLimiter(name: string) {
-  if (warnedLimiters.has(name)) return;
-  warnedLimiters.add(name);
-  console.warn(`[rate-limit] ${name} is not bound — requests are NOT being throttled. Check unsafe.bindings in wrangler.jsonc.`);
-}
-
-// Best-effort throttle. No-op when the given limiter isn't bound (local dev / tests /
-// unprovisioned deploy); never blocks on a limiter failure.
-//
-// `extraKey` lets a route throttle on something other than the IP. Keying writes on the
-// PLAN ID as well as the IP matters for this audience specifically: a base network NATs
-// thousands of people behind one address, so a purely IP-keyed limit both punishes innocent
-// neighbours and lets one attacker with many addresses hammer a single plan.
-async function throttled(c: any, limiter: any, keyPrefix: string, extraKey?: string): Promise<boolean> {
-  if (c.env.APP_ENV === "development") return false; // skip in local dev / tests
-  if (!limiter) { warnMissingLimiter(keyPrefix.toUpperCase() + "_LIMITER"); return false; }
-  const ip = c.req.header("cf-connecting-ip") ?? "ip-unknown";
-  const key = extraKey ? `${keyPrefix}:${ip}:${extraKey}` : `${keyPrefix}:${ip}`;
-  try {
-    const { success } = await limiter.limit({ key });
-    return !success;
-  } catch (e) {
-    // Swallowed deliberately — a limiter outage must not take the API down — but no longer
-    // silently: an operator needs to be able to see it in the logs.
-    console.warn(`[rate-limit] ${keyPrefix} limiter threw, failing open:`, (e as Error)?.message ?? e);
-    return false;
-  }
 }
 
 // Create a new plan → returns its public id and the secret edit key (shown once).
@@ -160,6 +138,9 @@ api.get("/p/:id", async (c) => {
     // returning 200 here previously let the client cache the null over a good local copy.
     return jsonError(c, "server_error", 500, "This plan's data could not be read.");
   }
+  // A read counts as activity for retention (see src/lib/retention.ts): a plan someone still
+  // opens is not stale, even if they never edit it. Off the response path, at most once a day.
+  recordAccess(c, row.id);
   return c.json({ plan, schema_version: row.schema_version, updated_at: row.updated_at, rev: row.rev });
 });
 

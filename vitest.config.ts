@@ -7,6 +7,8 @@ const migrations = await readD1Migrations(path.join(root, "migrations"));
 
 export default defineWorkersConfig({
   test: {
+    // test/dom runs in happy-dom under vitest.dom.config.ts (npm run test:dom), not in Miniflare.
+    exclude: ["**/node_modules/**", "test/dom/**"],
     setupFiles: ["./test/apply-migrations.ts"],
     poolOptions: {
       workers: {
