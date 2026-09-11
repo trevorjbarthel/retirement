@@ -126,14 +126,28 @@ a.sr-only:focus, a.sr-only:focus-visible {
 /* Horizontal transition timeline */
 .timeline-scroll { overflow-x: auto; padding: 4px 0 10px; }
 .timeline-scroll:focus-visible { outline: 2px solid #836616; outline-offset: 2px; }
-.timeline-track { position: relative; min-width: 640px; height: 160px; }
-.timeline-axis { position: absolute; left: 8px; right: 8px; top: 78px; height: 4px; border-radius: 2px; background: #e9ecef; }
-.timeline-fill { position: absolute; left: 8px; top: 78px; height: 4px; border-radius: 2px; background: linear-gradient(90deg,#1a2744,#c9a227); }
-.tl-marker { position: absolute; top: 0; height: 160px; width: 84px; transform: translateX(-50%); }
-.tl-marker .tl-dot { position: absolute; top: 71px; left: 50%; transform: translateX(-50%); width: 14px; height: 14px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.25); }
-.tl-marker .tl-box { position: absolute; left: 50%; transform: translateX(-50%); width: 84px; text-align: center; }
-.tl-marker .tl-box.tl-above { bottom: 90px; }
-.tl-marker .tl-box.tl-below { top: 96px; }
+/* Geometry (track is 200px tall; the axis runs through y=100):
+     label above  ..80 | shelf 88 | stem 88..94 | dot 93..107 | stem 106..112 | shelf 112 | label below 120..
+   A label that had to move sideways (see dodgeLabels in results.js) gets an elbow leader —
+   stem + shelf + drop — back to its dot; one in place gets a single full stem. */
+.timeline-track { position: relative; min-width: 640px; height: 200px; }
+.timeline-axis { position: absolute; left: 8px; right: 8px; top: 98px; height: 4px; border-radius: 2px; background: #e9ecef; }
+.timeline-fill { position: absolute; left: 8px; top: 98px; height: 4px; border-radius: 2px; background: linear-gradient(90deg,#1a2744,#c9a227); }
+.tl-dot { position: absolute; top: 93px; transform: translateX(-50%); width: 14px; height: 14px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.25); z-index: 2; }
+.tl-box { position: absolute; transform: translateX(-50%); width: 84px; text-align: center; }
+.tl-box.tl-above { bottom: 120px; }
+.tl-box.tl-below { top: 120px; }
+.tl-lead { position: absolute; background: #c5cbd8; }
+.tl-lead-stem, .tl-lead-drop, .tl-lead-full { width: 2px; transform: translateX(-50%); }
+.tl-lead-shelf { height: 2px; }
+.tl-lead-full.tl-above  { top: 80px; height: 14px; }
+.tl-lead-full.tl-below  { top: 106px; height: 14px; }
+.tl-lead-stem.tl-above  { top: 88px; height: 6px; }
+.tl-lead-stem.tl-below  { top: 106px; height: 6px; }
+.tl-lead-shelf.tl-above { top: 87px; }
+.tl-lead-shelf.tl-below { top: 111px; }
+.tl-lead-drop.tl-above  { top: 80px; height: 8px; }
+.tl-lead-drop.tl-below  { top: 112px; height: 8px; }
 .tl-label { font-size: 10px; font-weight: 600; line-height: 1.2; color: #1a2744; }
 .tl-date { font-size: 10px; color: #415586; }
 .tl-status { font-size: 9px; font-weight: 600; line-height: 1.3; color: #415586; }

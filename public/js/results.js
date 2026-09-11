@@ -44,35 +44,91 @@ export function showSetup() {
 // ===== RENDER =====
 // Horizontal timeline: proportional markers from today → freedom day. Status
 // colors come from the same milestoneStatus() the card grid uses.
+// Label geometry, shared with the CSS (.tl-box width, .timeline-track min-width).
+const TL_LABEL_W = 84;
+const TL_LABEL_GAP = 8;
+const TL_PX_PER_MARKER = 90;
+
+// Spread label centres so no two in the same row are closer than `spacing`, keeping each as
+// near its true x as possible. Positions arrive sorted. Clusters of overlapping labels are
+// centred on the mean of their dots, then the whole row is clamped inside [lo, hi] with a
+// forward + backward pass so nothing hangs off either edge of the track.
+function dodgeLabels(xs, spacing, lo, hi) {
+  const clusters = [];
+  for (const x of xs) {
+    let c = { sum: x, n: 1 };
+    clusters.push(c);
+    // Merge leftwards while this cluster overlaps the previous one.
+    while (clusters.length > 1) {
+      const prev = clusters[clusters.length - 2];
+      const prevRight = prev.sum / prev.n + ((prev.n - 1) * spacing) / 2;
+      const curLeft = c.sum / c.n - ((c.n - 1) * spacing) / 2;
+      if (prevRight + spacing <= curLeft) break;
+      clusters.pop();
+      c = { sum: prev.sum + c.sum, n: prev.n + c.n };
+      clusters[clusters.length - 1] = c;
+    }
+  }
+  const out = [];
+  for (const c of clusters) {
+    const left = c.sum / c.n - ((c.n - 1) * spacing) / 2;
+    for (let k = 0; k < c.n; k++) out.push(left + k * spacing);
+  }
+  for (let i = 0; i < out.length; i++) out[i] = Math.max(out[i], lo, i ? out[i - 1] + spacing : lo);
+  for (let i = out.length - 1; i >= 0; i--) out[i] = Math.min(out[i], hi, i < out.length - 1 ? out[i + 1] - spacing : hi);
+  return out;
+}
+
 export function renderTimeline(milestones, today, sep) {
   const track = $('timelineTrack');
   if (!track || !milestones.length) return;
   // A full plan (retirement + VA claim + married + clearance, etc.) can produce 20+
-  // milestones. A fixed 640px track packs most of them into the "today -> separation"
-  // fraction of the axis (everything after separation — HHG/SBP/final-move deadlines
-  // spanning up to 3 years out — stretches the axis while contributing few markers),
-  // so give the track more room per marker instead of letting them pile on top of
-  // each other; .timeline-scroll already scrolls horizontally.
-  track.style.minWidth = Math.max(640, milestones.length * 90) + 'px';
+  // milestones. Give the track room per marker (.timeline-scroll scrolls horizontally) — but
+  // room alone is not enough: BDD close, SkillBridge end, PTDY start/end and terminal leave
+  // can all fall inside a fortnight, so the labels are also dodged sideways (see dodgeLabels)
+  // and joined to their dot by an elbow leader. Everything is laid out in px on the minimum
+  // track width and emitted as percentages, so a wider viewport only spreads things further.
+  const W = Math.max(640, milestones.length * TL_PX_PER_MARKER);
+  track.style.minWidth = W + 'px';
   const times = milestones.map(m => m.date.getTime());
   const axisStart = Math.min(today.getTime(), ...times);
   const axisEnd = Math.max(sep.getTime(), ...times);
   const span = Math.max(1, axisEnd - axisStart);
-  const todayPct = clamp(((today.getTime() - axisStart) / span) * 100, 0, 100);
-  let html = '<div class="timeline-axis"></div><div class="timeline-fill" data-css-width="' + todayPct + '%"></div>';
+  const pad = TL_LABEL_W / 2;
+  const xOf = (t) => pad + clamp((t - axisStart) / span, 0, 1) * (W - 2 * pad);
+  const pct = (px) => (px / W) * 100;
+
+  // Alternate rows by date order, then dodge each row independently.
+  const rows = [[], []];
+  milestones.forEach((m, i) => rows[i % 2].push(i));
+  const labelX = new Array(milestones.length);
+  for (const row of rows) {
+    const placed = dodgeLabels(row.map(i => xOf(times[i])), TL_LABEL_W + TL_LABEL_GAP, pad, W - pad);
+    row.forEach((i, k) => { labelX[i] = placed[k]; });
+  }
+
+  const todayX = xOf(today.getTime());
+  let html = '<div class="timeline-axis"></div><div class="timeline-fill" data-css-width="' + pct(todayX) + '%"></div>';
   milestones.forEach((m, i) => {
-    const pct = clamp(((m.date.getTime() - axisStart) / span) * 100, 0, 100);
+    const x = xOf(times[i]);
+    const lx = labelX[i];
     const st = milestoneStatus(daysBetween(today, m.date));
     const dotClass = st === 'past' ? 'status-red' : (st === 'future' ? 'status-green' : 'status-gold');
     const statusText = st === 'past' ? 'Past' : (st === 'today' ? 'Today' : (st === 'soon' ? 'Due soon' : 'Upcoming'));
     const pos = (i % 2 === 0) ? 'tl-above' : 'tl-below';
-    const safeLabel = escapeHtml(m.label);
-    html += '<div class="tl-marker" data-css-left="' + pct + '%">'
-      // No aria-label here: the whole track is aria-hidden (the milestone grid above is the
-      // accessible representation), so labelling the dots only produced a second reading.
-      + '<span class="tl-dot ' + dotClass + '"></span>'
-      + '<div class="tl-box ' + pos + '"><div class="tl-label">' + safeLabel + '</div><div class="tl-date">' + fmtDateShort(m.date) + '</div><div class="tl-status">' + statusText + '</div></div>'
-      + '</div>';
+    const displaced = Math.abs(lx - x) > 0.5;
+    // No aria-labels here: the whole track is aria-hidden (the milestone grid above is the
+    // accessible representation), so labelling the dots only produced a second reading.
+    html += '<span class="tl-dot ' + dotClass + '" data-css-left="' + pct(x) + '%"></span>';
+    if (displaced) {
+      // Elbow: stem up/down from the dot, a shelf across to the label's x, a short drop.
+      html += '<span class="tl-lead tl-lead-stem ' + pos + '" data-css-left="' + pct(x) + '%"></span>'
+        + '<span class="tl-lead tl-lead-shelf ' + pos + '" data-css-left="' + pct(Math.min(x, lx)) + '%" data-css-width="' + pct(Math.abs(lx - x)) + '%"></span>'
+        + '<span class="tl-lead tl-lead-drop ' + pos + '" data-css-left="' + pct(lx) + '%"></span>';
+    } else {
+      html += '<span class="tl-lead tl-lead-full ' + pos + '" data-css-left="' + pct(x) + '%"></span>';
+    }
+    html += '<div class="tl-box ' + pos + '" data-css-left="' + pct(lx) + '%"><div class="tl-label">' + escapeHtml(m.label) + '</div><div class="tl-date">' + fmtDateShort(m.date) + '</div><div class="tl-status">' + statusText + '</div></div>';
   });
   track.innerHTML = html;
 }
